@@ -8,23 +8,54 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a url('Html.png') no-repeat center center;
+      background-attachment: fixed;
+      background-size: cover;
+      position: relative;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.7);
+      z-index: -1;
+      pointer-events: none;
+    }
     .font-display { font-family: 'Playfair Display', serif; }
+    /* Invoice-style color theme */
+    :root {
+      --inv-bg: #0a0a0a;
+      --inv-bg-elevated: #1a1a1a;
+      --inv-bg-card: #2a2a2a;
+      --inv-bg-hover: #3a3a3a;
+      --inv-text: #e5e5e5;
+      --inv-text-bright: #ffffff;
+      --inv-text-muted: #b3b3b3;
+      --inv-text-subtle: #999999;
+      --inv-border: rgba(255, 255, 255, 0.08);
+      --inv-border-strong: rgba(255, 255, 255, 0.12);
+    }
   </style>
 </head>
-<body class="bg-black text-gray-100">
+<body class="text-[#e5e5e5]">
 
   <!-- Header -->
-  <header class="border-b border-gray-800 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+  <header class="border-b sticky top-0 z-50 backdrop-blur-md border-[rgba(255,255,255,0.08)] bg-[#1a1a1a]">
     <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
       <img src="Logo_2.png" alt="Str84wrD - Straight Forward" class="h-16" />
       <nav class="hidden md:flex gap-10 font-medium text-sm tracking-wide uppercase">
-        <a href="#services" class="hover:text-amber-400 transition-colors duration-300">Services</a>
-        <a href="#portfolio" class="hover:text-amber-400 transition-colors duration-300">Portfolio</a>
-        <a href="#about" class="hover:text-amber-400 transition-colors duration-300">About</a>
-        <a href="#contact" class="hover:text-amber-400 transition-colors duration-300">Contact</a>
+        <a href="#services" class="hover:text-[#ffffff] transition-colors duration-300">Services</a>
+        <a href="#portfolio" class="hover:text-[#ffffff] transition-colors duration-300">Portfolio</a>
+        <a href="#about" class="hover:text-[#ffffff] transition-colors duration-300">About</a>
+        <a href="#contact" class="hover:text-[#ffffff] transition-colors duration-300">Contact</a>
       </nav>
-      <a href="#contact" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black px-6 py-3 rounded-lg font-semibold text-sm tracking-wide uppercase shadow-lg transform transition hover:scale-105">Start Project</a>
+      <a href="start-project.html" class="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#ffffff] border border-[rgba(255,255,255,0.1)] px-6 py-3 rounded-lg font-semibold text-sm tracking-wide uppercase shadow-lg transform transition hover:scale-105">Start Project</a>
     </div>
   </header>
 
@@ -43,47 +74,47 @@
       >
         <source src="hero-slideshow.mp4" type="video/mp4">
         <!-- Fallback gradient if video doesn't load -->
-        <div class="w-full h-full bg-gradient-to-br from-black via-gray-900 to-black"></div>
+        <div class="w-full h-full bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a]"></div>
       </video>
       <!-- Cinematic overlay -->
-      <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/90"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+      <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/90 via-[#0a0a0a]/75 to-[#0a0a0a]/90"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/60 via-transparent to-transparent"></div>
     </div>
     
     <!-- Content -->
     <div class="relative z-10 max-w-7xl mx-auto px-6 w-full">
       <div class="text-center">
         <div class="inline-block mb-6">
-          <span class="text-amber-400 text-sm font-semibold tracking-[0.3em] uppercase">UK Video Production</span>
+          <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">UK Video Production</span>
         </div>
-        <h1 class="font-display text-6xl md:text-7xl lg:text-8xl font-black leading-tight mb-8 text-white drop-shadow-2xl">
+        <h1 class="font-display text-6xl md:text-7xl lg:text-8xl font-black leading-tight mb-8 text-[#ffffff] drop-shadow-2xl">
           Straight Forward<br/>
-          <span class="text-amber-400">Video Production</span>
+          <span class="text-[#e5e5e5]">Video Production</span>
         </h1>
-        <p class="mt-6 text-gray-300 text-xl md:text-2xl leading-relaxed max-w-3xl mx-auto font-light drop-shadow-lg">
+        <p class="mt-6 text-[#cccccc] text-xl md:text-2xl leading-relaxed max-w-3xl mx-auto font-light drop-shadow-lg">
           Premium video production for high-end events, corporate experiences, and cinematic storytelling. 
-          <span class="text-amber-400 font-medium">Professional quality, delivered across the UK.</span>
+          <span class="text-[#ffffff] font-medium">Professional quality, delivered across the UK.</span>
         </p>
         <div class="mt-12 flex flex-wrap justify-center gap-6">
-          <a href="#contact" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black px-10 py-5 rounded-lg font-bold text-lg tracking-wide uppercase shadow-2xl transform transition hover:scale-105">
+          <a href="start-project.html" class="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#ffffff] border border-[rgba(255,255,255,0.1)] px-10 py-5 rounded-lg font-bold text-lg tracking-wide uppercase shadow-2xl transform transition hover:scale-105">
             Start Your Project
           </a>
-          <a href="#portfolio" class="border-2 border-amber-400/50 hover:border-amber-400 bg-amber-400/10 hover:bg-amber-400/20 backdrop-blur-sm px-10 py-5 rounded-lg font-bold text-lg text-amber-400 tracking-wide uppercase transition">
+          <a href="#portfolio" class="border-2 border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.4)] bg-[rgba(42,42,42,0.6)] hover:bg-[rgba(42,42,42,0.8)] backdrop-blur-sm px-10 py-5 rounded-lg font-bold text-lg text-[#e5e5e5] tracking-wide uppercase transition">
             View Our Work
           </a>
         </div>
         <div class="mt-16 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div class="text-center">
-            <div class="text-3xl font-bold text-amber-400 mb-2">500+</div>
-            <div class="text-gray-400 text-sm uppercase tracking-wide">Events Captured</div>
+            <div class="text-3xl font-bold text-[#ffffff] mb-2">500+</div>
+            <div class="text-[#999999] text-sm uppercase tracking-wide">Events Captured</div>
           </div>
           <div class="text-center">
-            <div class="text-3xl font-bold text-amber-400 mb-2">A-List</div>
-            <div class="text-gray-400 text-sm uppercase tracking-wide">Client Portfolio</div>
+            <div class="text-3xl font-bold text-[#ffffff] mb-2">A-List</div>
+            <div class="text-[#999999] text-sm uppercase tracking-wide">Client Portfolio</div>
           </div>
           <div class="text-center">
-            <div class="text-3xl font-bold text-amber-400 mb-2">4K/8K</div>
-            <div class="text-gray-400 text-sm uppercase tracking-wide">Cinematic Quality</div>
+            <div class="text-3xl font-bold text-[#ffffff] mb-2">4K/8K</div>
+            <div class="text-[#999999] text-sm uppercase tracking-wide">Cinematic Quality</div>
           </div>
         </div>
       </div>
@@ -91,51 +122,51 @@
   </section>
 
   <!-- Services -->
-  <section id="services" class="py-32 bg-gradient-to-b from-black via-gray-950 to-black">
+  <section id="services" class="py-32 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-20">
-        <span class="text-amber-400 text-sm font-semibold tracking-[0.3em] uppercase">What We Do</span>
-        <h2 class="font-display text-5xl md:text-6xl font-bold text-white mt-4 mb-6">Production Services</h2>
-        <p class="text-gray-400 text-lg max-w-2xl mx-auto">Cinematic excellence for every occasion, from intimate gatherings to grand events across the UK</p>
+        <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">What We Do</span>
+        <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-6">Production Services</h2>
+        <p class="text-[#999999] text-lg max-w-2xl mx-auto">Cinematic excellence for every occasion, from intimate gatherings to grand events across the UK</p>
       </div>
 
       <div class="grid md:grid-cols-3 gap-8">
-        <div class="group relative p-10 border border-gray-800 rounded-2xl bg-gradient-to-br from-gray-900/50 to-black hover:border-amber-400/50 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-400/20">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div class="group relative p-10 border border-[rgba(255,255,255,0.08)] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:border-[rgba(255,255,255,0.12)] transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-[#2a2a2a] rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div class="relative z-10">
             <div class="text-4xl mb-6">🎬</div>
-            <h3 class="text-2xl font-bold text-white mb-4">Event Production</h3>
-            <p class="text-gray-400 leading-relaxed">Premium coverage for high-end events, galas, award ceremonies, and exclusive gatherings. Multi-camera setups with cinematic storytelling.</p>
-            <ul class="mt-6 space-y-2 text-sm text-gray-500">
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Multi-camera coverage</li>
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Live streaming</li>
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Same-day edits</li>
+            <h3 class="text-2xl font-bold text-[#ffffff] mb-4">Event Production</h3>
+            <p class="text-[#b3b3b3] leading-relaxed">Premium coverage for high-end events, galas, award ceremonies, and exclusive gatherings. Multi-camera setups with cinematic storytelling.</p>
+            <ul class="mt-6 space-y-2 text-sm text-[#999999]">
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Multi-camera coverage</li>
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Live streaming</li>
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Same-day edits</li>
             </ul>
           </div>
         </div>
-        <div class="group relative p-10 border border-gray-800 rounded-2xl bg-gradient-to-br from-gray-900/50 to-black hover:border-amber-400/50 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-400/20">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div class="group relative p-10 border border-[rgba(255,255,255,0.08)] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:border-[rgba(255,255,255,0.12)] transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-[#2a2a2a] rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div class="relative z-10">
             <div class="text-4xl mb-6">🎥</div>
-            <h3 class="text-2xl font-bold text-white mb-4">Corporate Video</h3>
-            <p class="text-gray-400 leading-relaxed">Professional corporate productions, brand films, product launches, and executive communications. Polished, on-brand, and impactful.</p>
-            <ul class="mt-6 space-y-2 text-sm text-gray-500">
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Brand storytelling</li>
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Product showcases</li>
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Executive interviews</li>
+            <h3 class="text-2xl font-bold text-[#ffffff] mb-4">Corporate Video</h3>
+            <p class="text-[#b3b3b3] leading-relaxed">Professional corporate productions, brand films, product launches, and executive communications. Polished, on-brand, and impactful.</p>
+            <ul class="mt-6 space-y-2 text-sm text-[#999999]">
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Brand storytelling</li>
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Product showcases</li>
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Executive interviews</li>
             </ul>
           </div>
         </div>
-        <div class="group relative p-10 border border-gray-800 rounded-2xl bg-gradient-to-br from-gray-900/50 to-black hover:border-amber-400/50 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-400/20">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div class="group relative p-10 border border-[rgba(255,255,255,0.08)] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:border-[rgba(255,255,255,0.12)] transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-[#2a2a2a] rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div class="relative z-10">
             <div class="text-4xl mb-6">✨</div>
-            <h3 class="text-2xl font-bold text-white mb-4">Cinematic Content</h3>
-            <p class="text-gray-400 leading-relaxed">Artistic short films, music videos, fashion films, and narrative content. Where creativity meets technical excellence.</p>
-            <ul class="mt-6 space-y-2 text-sm text-gray-500">
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Creative direction</li>
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Color grading</li>
-              <li class="flex items-center"><span class="text-amber-400 mr-2">▸</span> Post-production</li>
+            <h3 class="text-2xl font-bold text-[#ffffff] mb-4">Cinematic Content</h3>
+            <p class="text-[#b3b3b3] leading-relaxed">Artistic short films, music videos, fashion films, and narrative content. Where creativity meets technical excellence.</p>
+            <ul class="mt-6 space-y-2 text-sm text-[#999999]">
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Creative direction</li>
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Color grading</li>
+              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Post-production</li>
             </ul>
           </div>
         </div>
@@ -144,52 +175,52 @@
   </section>
 
   <!-- Portfolio/Why Us -->
-  <section id="portfolio" class="py-32 bg-black">
+  <section id="portfolio" class="py-32 bg-[#0a0a0a]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="grid md:grid-cols-2 gap-20 items-center">
         <div>
-          <span class="text-amber-400 text-sm font-semibold tracking-[0.3em] uppercase">Why Str84wrD</span>
-          <h2 class="font-display text-5xl md:text-6xl font-bold text-white mt-4 mb-8">Professional Excellence</h2>
-          <ul class="space-y-6 text-gray-300">
+          <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">Why Str84wrD</span>
+          <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-8">Professional Excellence</h2>
+          <ul class="space-y-6 text-[#cccccc]">
             <li class="flex items-start">
-              <span class="text-amber-400 text-2xl mr-4">▸</span>
+              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
               <div>
-                <span class="font-semibold text-white">A-List Equipment</span>
-                <p class="text-gray-400 text-sm mt-1">RED, ARRI, and Sony cinema cameras. Professional lighting and audio rigs.</p>
+                <span class="font-semibold text-[#ffffff]">A-List Equipment</span>
+                <p class="text-[#999999] text-sm mt-1">RED, ARRI, and Sony cinema cameras. Professional lighting and audio rigs.</p>
               </div>
             </li>
             <li class="flex items-start">
-              <span class="text-amber-400 text-2xl mr-4">▸</span>
+              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
               <div>
-                <span class="font-semibold text-white">Industry Veterans</span>
-                <p class="text-gray-400 text-sm mt-1">Award-winning directors, DPs, and editors with decades of experience.</p>
+                <span class="font-semibold text-[#ffffff]">Industry Veterans</span>
+                <p class="text-[#999999] text-sm mt-1">Award-winning directors, DPs, and editors with decades of experience.</p>
               </div>
             </li>
             <li class="flex items-start">
-              <span class="text-amber-400 text-2xl mr-4">▸</span>
+              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
               <div>
-                <span class="font-semibold text-white">Discreet & Professional</span>
-                <p class="text-gray-400 text-sm mt-1">Seamless execution that never disrupts your event or production.</p>
+                <span class="font-semibold text-[#ffffff]">Discreet & Professional</span>
+                <p class="text-[#999999] text-sm mt-1">Seamless execution that never disrupts your event or production.</p>
               </div>
             </li>
             <li class="flex items-start">
-              <span class="text-amber-400 text-2xl mr-4">▸</span>
+              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
               <div>
-                <span class="font-semibold text-white">End-to-End Service</span>
-                <p class="text-gray-400 text-sm mt-1">From pre-production planning to final delivery, we handle everything.</p>
+                <span class="font-semibold text-[#ffffff]">End-to-End Service</span>
+                <p class="text-[#999999] text-sm mt-1">From pre-production planning to final delivery, we handle everything.</p>
               </div>
             </li>
           </ul>
         </div>
         <div class="relative">
-          <div class="bg-gradient-to-br from-gray-900 to-black p-12 rounded-3xl border border-gray-800 shadow-2xl">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl"></div>
+          <div class="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] p-12 rounded-3xl border border-[rgba(255,255,255,0.08)] shadow-2xl">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-[#2a2a2a] rounded-full blur-3xl"></div>
             <div class="relative z-10">
-              <p class="font-display text-3xl font-bold text-amber-400 mb-6 leading-relaxed">"Cinematic storytelling that elevates every moment."</p>
-              <p class="text-gray-400 text-lg">We don't just capture events—we craft visual narratives that resonate. Every frame is intentional, every edit purposeful.</p>
-              <div class="mt-8 pt-8 border-t border-gray-800">
-                <p class="text-white font-semibold">Trusted by</p>
-                <p class="text-gray-400 text-sm mt-2">Leading UK businesses, corporate clients, and premium events</p>
+              <p class="font-display text-3xl font-bold text-[#e5e5e5] mb-6 leading-relaxed">"Cinematic storytelling that elevates every moment."</p>
+              <p class="text-[#b3b3b3] text-lg">We don't just capture events—we craft visual narratives that resonate. Every frame is intentional, every edit purposeful.</p>
+              <div class="mt-8 pt-8 border-t border-[rgba(255,255,255,0.08)]">
+                <p class="text-[#ffffff] font-semibold">Trusted by</p>
+                <p class="text-[#999999] text-sm mt-2">Leading UK businesses, corporate clients, and premium events</p>
               </div>
             </div>
           </div>
@@ -199,46 +230,46 @@
   </section>
 
   <!-- About -->
-  <section id="about" class="py-32 bg-gradient-to-b from-black via-gray-950 to-black">
+  <section id="about" class="py-32 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]">
     <div class="max-w-5xl mx-auto px-6 text-center">
-      <span class="text-amber-400 text-sm font-semibold tracking-[0.3em] uppercase">Our Story</span>
-      <h2 class="font-display text-5xl md:text-6xl font-bold text-white mt-4 mb-8">About Str84wrD</h2>
-      <p class="text-gray-300 text-xl leading-relaxed mb-8">
+      <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">Our Story</span>
+      <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-8">About Str84wrD</h2>
+      <p class="text-[#cccccc] text-xl leading-relaxed mb-8">
         Str84wrD (Straight Forward) is a UK-based video production company representing the pinnacle of event video production. 
         We specialize in capturing the essence of high-end events with cinematic precision and artistic vision.
       </p>
-      <p class="text-gray-400 text-lg leading-relaxed max-w-3xl mx-auto">
+      <p class="text-[#999999] text-lg leading-relaxed max-w-3xl mx-auto">
         From exclusive galas to corporate launches, from premier events to intimate celebrations, 
         we bring professional production values to every project. Our team combines 
         technical excellence with creative storytelling, ensuring your event is immortalized in stunning 4K and 8K footage.
       </p>
       <div class="mt-12 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-        <div class="text-center p-6 border border-gray-800 rounded-xl bg-gray-900/30">
-          <div class="text-amber-400 text-4xl mb-4">🎯</div>
-          <h3 class="font-semibold text-white mb-2">Mission-Driven</h3>
-          <p class="text-gray-400 text-sm">Excellence in every frame</p>
+        <div class="text-center p-6 border border-[rgba(255,255,255,0.08)] rounded-xl bg-[#1a1a1a]/80">
+          <div class="text-[#e5e5e5] text-4xl mb-4">🎯</div>
+          <h3 class="font-semibold text-[#ffffff] mb-2">Mission-Driven</h3>
+          <p class="text-[#999999] text-sm">Excellence in every frame</p>
         </div>
-        <div class="text-center p-6 border border-gray-800 rounded-xl bg-gray-900/30">
-          <div class="text-amber-400 text-4xl mb-4">🌟</div>
-          <h3 class="font-semibold text-white mb-2">Award-Winning</h3>
-          <p class="text-gray-400 text-sm">Recognized industry leaders</p>
+        <div class="text-center p-6 border border-[rgba(255,255,255,0.08)] rounded-xl bg-[#1a1a1a]/80">
+          <div class="text-[#e5e5e5] text-4xl mb-4">🌟</div>
+          <h3 class="font-semibold text-[#ffffff] mb-2">Award-Winning</h3>
+          <p class="text-[#999999] text-sm">Recognized industry leaders</p>
         </div>
-        <div class="text-center p-6 border border-gray-800 rounded-xl bg-gray-900/30">
-          <div class="text-amber-400 text-4xl mb-4">💎</div>
-          <h3 class="font-semibold text-white mb-2">Premium Quality</h3>
-          <p class="text-gray-400 text-sm">Nothing less than perfection</p>
+        <div class="text-center p-6 border border-[rgba(255,255,255,0.08)] rounded-xl bg-[#1a1a1a]/80">
+          <div class="text-[#e5e5e5] text-4xl mb-4">💎</div>
+          <h3 class="font-semibold text-[#ffffff] mb-2">Premium Quality</h3>
+          <p class="text-[#999999] text-sm">Nothing less than perfection</p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Contact -->
-  <section id="contact" class="bg-black py-32 border-t border-gray-900">
+  <section id="contact" class="bg-[#0a0a0a] py-32 border-t border-[rgba(255,255,255,0.08)]">
     <div class="max-w-5xl mx-auto px-6">
       <div class="text-center mb-16">
-        <span class="text-amber-400 text-sm font-semibold tracking-[0.3em] uppercase">Let's Create</span>
-        <h2 class="font-display text-5xl md:text-6xl font-bold text-white mt-4 mb-6">Start Your Project</h2>
-        <p class="text-gray-400 text-lg max-w-2xl mx-auto">Tell us about your vision and we'll bring it to life with cinematic excellence.</p>
+        <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">Let's Create Something Special</span>
+        <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-6">Contact Us</h2>
+        <p class="text-[#999999] text-lg max-w-2xl mx-auto">Tell us about your vision and we'll bring it to life with cinematic excellence.</p>
       </div>
 
       <form class="grid gap-6 max-w-2xl mx-auto">
@@ -246,79 +277,79 @@
           <input 
             type="text" 
             placeholder="Full Name" 
-            class="p-5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none transition-colors" 
+            class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
           />
           <input 
             type="email" 
             placeholder="Email Address" 
-            class="p-5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none transition-colors" 
+            class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
           />
         </div>
         <input 
           type="text" 
           placeholder="Event Type / Project Type" 
-          class="p-5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none transition-colors" 
+          class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
         />
         <input 
           type="text" 
           placeholder="Event Date (if applicable)" 
-          class="p-5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none transition-colors" 
+          class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
         />
         <textarea 
           placeholder="Tell us about your project, vision, and requirements..." 
           rows="6" 
-          class="p-5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-500 focus:border-amber-400 focus:outline-none transition-colors resize-none"
+          class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors resize-none"
         ></textarea>
-        <button class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black py-5 rounded-lg font-bold text-lg tracking-wide uppercase shadow-xl transform transition hover:scale-105 mt-4">
+        <button class="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#ffffff] border border-[rgba(255,255,255,0.1)] py-5 rounded-lg font-bold text-lg tracking-wide uppercase shadow-xl transform transition hover:scale-105 mt-4">
           Request Proposal
         </button>
       </form>
       
       <div class="mt-16 text-center">
-        <p class="text-gray-500 text-sm mb-4">Or reach us directly</p>
-        <div class="flex flex-wrap justify-center gap-8 text-gray-400">
-          <a href="mailto:info@str84wrd.com" class="hover:text-amber-400 transition-colors">info@str84wrd.com</a>
-          <span class="text-gray-700">|</span>
-          <a href="tel:+442012345678" class="hover:text-amber-400 transition-colors">+44 (0) 20 1234 5678</a>
+        <p class="text-[#808080] text-sm mb-4">Or reach us directly</p>
+        <div class="flex flex-wrap justify-center gap-8 text-[#b3b3b3]">
+          <a href="mailto:info@str84wrd.com" class="hover:text-[#ffffff] transition-colors">info@str84wrd.com</a>
+          <span class="text-[#2a2a2a]">|</span>
+          <a href="tel:+442012345678" class="hover:text-[#ffffff] transition-colors">+44 (0) 20 1234 5678</a>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
-  <footer class="bg-black border-t border-gray-900 text-gray-500 py-12">
+  <footer class="bg-[#0a0a0a] border-t border-[rgba(255,255,255,0.08)] text-[#999999] py-12">
     <div class="max-w-7xl mx-auto px-6">
       <div class="grid md:grid-cols-4 gap-12 mb-12">
         <div>
           <img src="Logo_2.png" alt="Str84wrD - Straight Forward" class="h-14 mb-4 opacity-80" />
-          <p class="text-sm text-gray-600 leading-relaxed">UK's premier event video production company. Straight forward excellence, delivered.</p>
+          <p class="text-sm text-[#808080] leading-relaxed">UK's premier event video production company. Straight forward excellence, delivered.</p>
         </div>
         <div>
-          <h4 class="text-white font-semibold mb-4 uppercase text-sm tracking-wide">Services</h4>
+          <h4 class="text-[#ffffff] font-semibold mb-4 uppercase text-sm tracking-wide">Services</h4>
           <ul class="space-y-2 text-sm">
-            <li><a href="#services" class="hover:text-amber-400 transition-colors">Event Production</a></li>
-            <li><a href="#services" class="hover:text-amber-400 transition-colors">Corporate Video</a></li>
-            <li><a href="#services" class="hover:text-amber-400 transition-colors">Cinematic Content</a></li>
+            <li><a href="#services" class="hover:text-[#ffffff] transition-colors">Event Production</a></li>
+            <li><a href="#services" class="hover:text-[#ffffff] transition-colors">Corporate Video</a></li>
+            <li><a href="#services" class="hover:text-[#ffffff] transition-colors">Cinematic Content</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="text-white font-semibold mb-4 uppercase text-sm tracking-wide">Company</h4>
+          <h4 class="text-[#ffffff] font-semibold mb-4 uppercase text-sm tracking-wide">Company</h4>
           <ul class="space-y-2 text-sm">
-            <li><a href="#about" class="hover:text-amber-400 transition-colors">About Us</a></li>
-            <li><a href="#portfolio" class="hover:text-amber-400 transition-colors">Portfolio</a></li>
-            <li><a href="#contact" class="hover:text-amber-400 transition-colors">Contact</a></li>
+            <li><a href="#about" class="hover:text-[#ffffff] transition-colors">About Us</a></li>
+            <li><a href="#portfolio" class="hover:text-[#ffffff] transition-colors">Portfolio</a></li>
+            <li><a href="#contact" class="hover:text-[#ffffff] transition-colors">Contact</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="text-white font-semibold mb-4 uppercase text-sm tracking-wide">Connect</h4>
+          <h4 class="text-[#ffffff] font-semibold mb-4 uppercase text-sm tracking-wide">Connect</h4>
           <ul class="space-y-2 text-sm">
-            <li><a href="#" class="hover:text-amber-400 transition-colors">Instagram</a></li>
-            <li><a href="#" class="hover:text-amber-400 transition-colors">Vimeo</a></li>
-            <li><a href="#" class="hover:text-amber-400 transition-colors">LinkedIn</a></li>
+            <li><a href="#" class="hover:text-[#ffffff] transition-colors">Instagram</a></li>
+            <li><a href="#" class="hover:text-[#ffffff] transition-colors">Vimeo</a></li>
+            <li><a href="#" class="hover:text-[#ffffff] transition-colors">LinkedIn</a></li>
           </ul>
         </div>
       </div>
-      <div class="border-t border-gray-900 pt-8 text-center text-sm text-gray-600">
+      <div class="border-t border-[rgba(255,255,255,0.08)] pt-8 text-center text-sm text-[#808080]">
         <p>© 2026 Str84wrD (Straight Forward). All rights reserved. | United Kingdom</p>
       </div>
     </div>

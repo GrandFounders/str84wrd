@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Start Project | Str84wrD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+      background: #0a0a0a url('Html.png') no-repeat center center;
+      background-attachment: fixed;
+      background-size: cover;
+      position: relative;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.7);
+      z-index: -1;
+      pointer-events: none;
+    }
+    .font-display { font-family: 'Playfair Display', serif; }
+
+    /* ── Safe area ── */
+    main {
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ── Phase transitions ── */
+    .phase-panel {
+      display: none;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .phase-panel.active {
+      display: flex;
+      flex-direction: column;
+      /* trigger reflow then animate */
+    }
+    .phase-panel.active.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Progress dots ── */
+    .progress-dots { display: flex; gap: 6px; justify-content: center; }
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      transition: all 0.4s ease;
+    }
+    .progress-dot.active {
+      background: #ffffff;
+      width: 28px;
+      border-radius: 4px;
+    }
+    .progress-dot.done {
+      background: rgba(255,255,255,0.35);
+    }
+
+    /* ── Card stack ── */
+    .card-stack {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 3 / 4;
+      margin: 0 auto;
+    }
+    @media (min-width: 768px) {
+      .card-stack { max-width: 380px; }
+    }
+
+    .stack-card {
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow:
+        0 8px 32px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,255,255,0.04) inset;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      transition: transform 0.35s cubic-bezier(.4,.0,.2,1), opacity 0.35s ease;
+      will-change: transform, opacity;
+    }
+    .stack-card:active { cursor: grabbing; }
+
+    /* Image or video fills the card */
+    .stack-card-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+    /* Fallback when no image */
+    .stack-card.no-image {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    }
+    .stack-card.no-image .stack-card-fallback {
+      display: flex;
+    }
+    .stack-card-fallback {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.04em;
+    }
+
+    /* Label overlay at bottom */
+    .stack-card-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 2.5rem 1.5rem 1.5rem;
+      background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+      text-align: left;
+      pointer-events: none;
+    }
+    .stack-card-label h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.2;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    }
+    .stack-card-label p {
+      font-size: 0.8125rem;
+      color: rgba(255,255,255,0.6);
+      margin: 0.25rem 0 0;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+    }
+
+    /* Stack depth: behind cards */
+    .stack-card.stack-behind-1 {
+      transform: scale(0.95) translateY(12px);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .stack-card.stack-behind-2 {
+      transform: scale(0.90) translateY(24px);
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .stack-card.stack-behind-hidden {
+      opacity: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .stack-card.stack-top { z-index: 10; }
+    .stack-card.swiping-left {
+      transform: translateX(-120%) rotate(-14deg);
+      opacity: 0;
+      transition: transform 0.4s cubic-bezier(.4,.0,.2,1), opacity 0.4s ease;
+    }
+    .stack-card.swiping-right {
+      transform: translateX(120%) rotate(14deg);
+      opacity: 0;
+      transition: transform 0.4s cubic-bezier(.4,.0,.2,1), opacity 0.4s ease;
+    }
+
+    /* Swipe direction hints on card */
+    .swipe-hint {
+      position: absolute;
+      top: 1.25rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .swipe-hint-skip {
+      left: 1.25rem;
+      border: 2px solid rgba(255,255,255,0.4);
+      color: rgba(255,255,255,0.7);
+    }
+    .swipe-hint-choose {
+      right: 1.25rem;
+      border: 2px solid #ffffff;
+      color: #ffffff;
+    }
+    .stack-card.hint-left .swipe-hint-skip { opacity: 1; }
+    .stack-card.hint-right .swipe-hint-choose { opacity: 1; }
+
+    /* ── Skip / Choose action buttons ── */
+    .action-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      transition: all 0.25s ease;
+      cursor: pointer;
+      background: rgba(26,26,26,0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .action-btn:active {
+      transform: scale(0.92);
+    }
+    .action-btn-skip {
+      color: rgba(255,255,255,0.5);
+    }
+    .action-btn-skip:hover, .action-btn-skip:active {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.25);
+      color: #ffffff;
+    }
+    .action-btn-choose {
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.25);
+      background: rgba(42,42,42,0.9);
+    }
+    .action-btn-choose:hover, .action-btn-choose:active {
+      background: rgba(58,58,58,0.9);
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    /* ── Custom checkbox (service toggles) ── */
+    .service-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.125rem 1.25rem;
+      border-radius: 16px;
+      background: rgba(26,26,26,0.6);
+      border: 1.5px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .service-card:hover {
+      background: rgba(42,42,42,0.5);
+      border-color: rgba(255,255,255,0.1);
+    }
+    .service-card.checked {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .service-card input[type="checkbox"] {
+      display: none;
+    }
+    .service-check {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.25s ease;
+    }
+    .service-check svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0;
+      transform: scale(0.6);
+      transition: all 0.25s ease;
+    }
+    .service-card.checked .service-check {
+      background: #ffffff;
+      border-color: #ffffff;
+    }
+    .service-card.checked .service-check svg {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .service-label {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: 0.01em;
+    }
+    .service-desc {
+      font-size: 0.8125rem;
+      color: rgba(255,255,255,0.45);
+      margin-top: 2px;
+    }
+
+    /* ── Buttons (Back / Next) ── */
+    .btn-back, .btn-next, .btn-quote {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 0.75rem 1.5rem;
+      border-radius: 14px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-back {
+      background: transparent;
+      color: rgba(255,255,255,0.45);
+      border: 1.5px solid rgba(255,255,255,0.1);
+    }
+    .btn-back:hover, .btn-back:active {
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.7);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .btn-next, .btn-quote {
+      background: #ffffff;
+      color: #0a0a0a;
+      border: none;
+    }
+    .btn-next:hover, .btn-next:active,
+    .btn-quote:hover, .btn-quote:active {
+      background: #e5e5e5;
+    }
+    .btn-next:disabled {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.2);
+      cursor: not-allowed;
+    }
+
+    /* ── See-all grid ── */
+    .event-grid-btn {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 16px;
+      background: rgba(26,26,26,0.6);
+      border: 1.5px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .event-grid-btn:hover, .event-grid-btn:active {
+      background: rgba(42,42,42,0.6);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .event-grid-btn img,
+    .event-grid-btn video {
+      width: 100%;
+      height: 90px;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Dial carousel (macOS-style: center prominent, sides smaller + transparent) ── */
+    .dial-carousel-wrap {
+      overflow: hidden;
+      margin: 0 -0.5rem;
+    }
+    .dial-carousel-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 0.5rem;
+      padding: 0 0.5rem;
+    }
+    .dial-carousel {
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      padding: 0.75rem 0;
+      margin: 0 0.5rem;
+    }
+    .dial-carousel::-webkit-scrollbar { display: none; }
+    .dial-track {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-width: min-content;
+      box-sizing: border-box;
+    }
+    .dial-item {
+      scroll-snap-align: center;
+      flex-shrink: 0;
+      width: 100px;
+      cursor: pointer;
+      transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      background: rgba(26,26,26,0.6);
+    }
+    .dial-item.selected {
+      border-color: rgba(255,255,255,0.5);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .dial-item-img-wrap {
+      width: 100%;
+      aspect-ratio: 1;
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .dial-item-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .dial-item-label {
+      padding: 0.5rem 0.25rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-align: center;
+      color: rgba(255,255,255,0.7);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dial-item.selected .dial-item-label { color: #ffffff; }
+    .dial-row { margin-bottom: 1.25rem; }
+    .dial-row:last-child { margin-bottom: 0; }
+
+    /* ── Summary card ── */
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-key {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.4);
+    }
+    .summary-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffffff;
+      text-align: right;
+    }
+  </style>
+</head>
+<body class="bg-[#0a0a0a] text-[#e5e5e5] min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="flex-shrink-0 border-b border-[rgba(255,255,255,0.06)]" style="background: rgba(10,10,10,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+    <div class="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
+      <a href="index.html" class="text-[rgba(255,255,255,0.4)] hover:text-white text-sm font-medium tracking-wide transition-colors flex items-center gap-2">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+        Home
+      </a>
+      <span id="progressText" class="text-[rgba(255,255,255,0.35)] text-xs font-medium uppercase tracking-widest">Step 1</span>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="flex-1 flex flex-col px-5 sm:px-6 py-6 sm:py-8 max-w-lg mx-auto w-full">
+
+    <!-- Progress dots -->
+    <div class="progress-dots mb-6 sm:mb-8" id="progressDots"></div>
+
+    <!-- ── Phase 1: Event type ── -->
+    <section id="phase-event" class="phase-panel active visible w-full flex-1">
+      <div class="text-center mb-5 sm:mb-6">
+        <p class="text-[rgba(255,255,255,0.4)] text-xs font-medium uppercase tracking-[0.2em] mb-1">What type of event?</p>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold text-white">Swipe to choose</h2>
+      </div>
+
+      <div id="eventStack" class="card-stack">
+        <!-- Cards injected by JS -->
+      </div>
+
+      <div class="flex justify-center items-center gap-6 mt-5 sm:mt-6">
+        <button type="button" id="btnSkip" class="action-btn action-btn-skip" aria-label="Skip">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <button type="button" id="btnChoose" class="action-btn action-btn-choose" aria-label="Choose">
+          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+      </div>
+
+      <p class="text-center mt-4">
+        <button type="button" id="btnSeeAll" class="text-[rgba(255,255,255,0.35)] hover:text-white active:text-white text-xs font-medium uppercase tracking-widest transition-colors py-2 min-h-[44px] inline-flex items-center justify-center">See all types</button>
+      </p>
+
+      <div id="eventGrid" class="hidden mt-4 sm:mt-6 grid grid-cols-2 gap-3"></div>
+    </section>
+
+    <!-- ── Phase 2: Services ── -->
+    <section id="phase-services" class="phase-panel w-full flex-1">
+      <div class="text-center mb-6 sm:mb-8">
+        <p class="text-[rgba(255,255,255,0.4)] text-xs font-medium uppercase tracking-[0.2em] mb-1">What do you need?</p>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold text-white mb-1">Services for <span id="servicesEventName" class="text-white">—</span></h2>
+        <p class="text-[rgba(255,255,255,0.35)] text-sm">Select all that apply</p>
+      </div>
+      <div class="space-y-3" id="servicesList">
+        <label class="service-card">
+          <input type="checkbox" name="service" value="photo" />
+          <span class="service-check">
+            <svg viewBox="0 0 14 14" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 4"/></svg>
+          </span>
+          <div>
+            <div class="service-label">Photo</div>
+            <div class="service-desc">Professional photography</div>
+          </div>
+        </label>
+        <label class="service-card">
+          <input type="checkbox" name="service" value="video" />
+          <span class="service-check">
+            <svg viewBox="0 0 14 14" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 4"/></svg>
+          </span>
+          <div>
+            <div class="service-label">Video</div>
+            <div class="service-desc">Cinematic videography</div>
+          </div>
+        </label>
+        <label class="service-card">
+          <input type="checkbox" name="service" value="dj" />
+          <span class="service-check">
+            <svg viewBox="0 0 14 14" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 4"/></svg>
+          </span>
+          <div>
+            <div class="service-label">DJ</div>
+            <div class="service-desc">Music & entertainment</div>
+          </div>
+        </label>
+        <label class="service-card">
+          <input type="checkbox" name="service" value="venue" />
+          <span class="service-check">
+            <svg viewBox="0 0 14 14" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l3.5 3.5L12 4"/></svg>
+          </span>
+          <div>
+            <div class="service-label">Venue</div>
+            <div class="service-desc">Location & space</div>
+          </div>
+        </label>
+      </div>
+      <div class="flex justify-between items-center mt-8 sm:mt-10 gap-3">
+        <button type="button" id="btnBackToEvent" class="btn-back">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+        <button type="button" id="btnServicesNext" class="btn-next" disabled>
+          Next
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Phase 3+: Service detail (dial carousels) ── -->
+    <section id="phase-service-detail" class="phase-panel w-full flex-1">
+      <div class="text-center mb-4 sm:mb-6">
+        <p class="text-[rgba(255,255,255,0.4)] text-xs font-medium uppercase tracking-[0.2em] mb-1" id="serviceDetailLabel">Service</p>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold text-white" id="serviceDetailTitle">Options</h2>
+      </div>
+      <div class="rounded-2xl bg-[rgba(26,26,26,0.4)] border border-[rgba(255,255,255,0.06)] p-4 sm:p-5 mb-6" style="backdrop-filter:blur(8px);">
+        <div class="dial-row">
+          <div class="dial-carousel-label" id="dialRow1Label">Media Type</div>
+          <div class="dial-carousel-wrap">
+            <div id="dialTrack1" class="dial-carousel" data-dial="1">
+              <div class="dial-track" id="dialTrack1Inner"></div>
+            </div>
+          </div>
+        </div>
+        <div class="dial-row">
+          <div class="dial-carousel-label" id="dialRow2Label">Cover Type</div>
+          <div class="dial-carousel-wrap">
+            <div id="dialTrack2" class="dial-carousel" data-dial="2">
+              <div class="dial-track" id="dialTrack2Inner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-between items-center mt-6 sm:mt-8 gap-3">
+        <button type="button" id="btnServiceDetailBack" class="btn-back">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+        <button type="button" id="btnServiceDetailNext" class="btn-next">
+          Next
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Summary ── -->
+    <section id="phase-summary" class="phase-panel w-full flex-1">
+      <div class="text-center mb-6 sm:mb-8">
+        <p class="text-[rgba(255,255,255,0.4)] text-xs font-medium uppercase tracking-[0.2em] mb-1">Almost done</p>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold text-white">Your selection</h2>
+      </div>
+      <div id="summaryContent" class="rounded-2xl bg-[rgba(26,26,26,0.6)] border border-[rgba(255,255,255,0.06)] p-6 sm:p-8 mb-8" style="backdrop-filter:blur(8px);"></div>
+      <div class="flex justify-between items-center gap-3">
+        <button type="button" id="btnSummaryBack" class="btn-back">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+        <a href="index.html#contact" class="btn-quote text-center no-underline">
+          Request quote
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/start-project.js"></script>
+</body>
+</html>
