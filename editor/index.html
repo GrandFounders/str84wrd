@@ -541,6 +541,22 @@
     .mobile-drawer .menu-item:active {
       color: #000000;
     }
+    .mobile-drawer .drawer-logo {
+      height: 56px;
+      width: auto;
+      margin-bottom: 2rem;
+      object-fit: contain;
+    }
+    .mobile-drawer .menu-item-bottom {
+      margin-top: auto;
+      border-bottom: none;
+      color: #000000;
+      font-weight: 600;
+    }
+    .mobile-drawer .menu-item-bottom:hover,
+    .mobile-drawer .menu-item-bottom:active {
+      color: #000000;
+    }
 
     /* ========================================
        MAIN CONTENT AREA
@@ -747,15 +763,15 @@
       transform: translateY(0);
     }
 
-    /* Artboard Content */
+    /* Artboard Content - height set in JS to page size (A4); header is separate so total = header + content */
     .artboard-content {
       padding: 0;
       min-height: 200px;
       background: #ffffff;
       position: relative;
       overflow: visible;
-      flex: 1;
-      height: auto;
+      flex: none;
+      width: 100%;
     }
 
     .artboard-content iframe {
@@ -2052,7 +2068,7 @@
   <div class="mode-bar">
     <div class="mode-controls">
       <div class="mode-toggle">
-        <button class="mode-btn active" data-mode="edit" title="Back to edit">← Back</button>
+        <button class="mode-btn active" data-mode="edit" id="backBtn" title="Return to previous page">← Back</button>
         <button class="mode-btn" data-mode="preview" id="proceedBtn" title="Save quote and open customer booking form">Proceed</button>
       </div>
     </div>
@@ -2094,13 +2110,16 @@
 
   <div class="mobile-overlay" id="mobileOverlay"></div>
   <nav class="mobile-drawer" id="mobileDrawer">
+    <img src="../assets/logos/Logo_1.png" alt="Str84wrD" class="drawer-logo" />
     <button type="button" class="menu-item" id="menuOpenQuote">Open</button>
     <button type="button" class="menu-item" id="menuNewQuote">New</button>
-    <button type="button" class="menu-item" id="menuSettings">Settings</button>
-    <button type="button" class="menu-item" id="menuZoomIn">Zoom In</button>
-    <button type="button" class="menu-item" id="menuZoomOut">Zoom Out</button>
-    <button type="button" class="menu-item" id="menuResetZoom">Reset Zoom</button>
-    <button type="button" class="menu-item" id="menuCenterView">Center View</button>
+    <button type="button" class="menu-item" id="menuViewQuote">View quote</button>
+    <button type="button" class="menu-item" id="menuSave">Save</button>
+    <button type="button" class="menu-item" id="menuPrint">Print</button>
+    <button type="button" class="menu-item" id="menuBook">Book</button>
+    <button type="button" class="menu-item" id="menuChat">Chat</button>
+    <button type="button" class="menu-item" id="menuTerms">Terms</button>
+    <button type="button" class="menu-item menu-item-bottom" id="menuSettings">Settings</button>
   </nav>
 
   <!-- ========================================
@@ -2110,7 +2129,7 @@
     <canvas id="infiniteCanvas" class="infinite-canvas"></canvas>
     <div class="canvas-overlay" id="canvasOverlay">
       <div class="artboard-container" style="position: absolute; left: 50px; top: 50px;" data-artboard-id="artboard_1">
-        <div class="artboard" style="width: 794px; min-height: 1123px; height: auto;">
+        <div class="artboard" style="width: 794px; height: auto;">
           <div class="artboard-header">
             <div class="artboard-info">
               <span class="artboard-title">Page 1</span>
@@ -2122,7 +2141,7 @@
               <button type="button" class="artboard-control-btn" onclick="removeArtboard('artboard_1')" title="Delete">✕</button>
             </div>
           </div>
-          <div class="artboard-content">
+          <div class="artboard-content" style="height: 1123px;">
             <iframe id="quoteFrame" src="quote.html" frameborder="0" allowfullscreen></iframe>
           </div>
           <div class="artboard-status">794px × 1123px</div>
@@ -2926,18 +2945,20 @@
         };
         if (toggle) toggle.addEventListener('click', () => { drawer && drawer.classList.contains('open') ? closeMenu() : openMenu(); });
         if (overlay) overlay.addEventListener('click', closeMenu);
-        const menuItemIds = ['menuOpenQuote', 'menuNewQuote', 'menuSettings', 'menuZoomIn', 'menuZoomOut', 'menuResetZoom', 'menuCenterView'];
+        const menuItemIds = ['menuOpenQuote', 'menuNewQuote', 'menuViewQuote', 'menuSave', 'menuPrint', 'menuBook', 'menuChat', 'menuTerms', 'menuSettings'];
         menuItemIds.forEach(id => {
           const el = document.getElementById(id);
           if (el) {
             el.addEventListener('click', () => {
               if (id === 'menuOpenQuote') this.loadQuote();
               else if (id === 'menuNewQuote') this.createNewQuoteArtboard();
+              else if (id === 'menuViewQuote') this.centerIframeInViewport();
+              else if (id === 'menuSave') this.saveInvoiceData();
+              else if (id === 'menuPrint') window.print();
+              else if (id === 'menuBook') { this.saveInvoiceData(); this.openFormInArtboard('clientForm.html', 'Book'); }
+              else if (id === 'menuChat') this.openFormInArtboard('chatForm.html', 'Chat');
+              else if (id === 'menuTerms') window.open('clientForm.html', '_blank', 'noopener,noreferrer');
               else if (id === 'menuSettings') this.showDataManagement();
-              else if (id === 'menuZoomIn') this.zoomIn();
-              else if (id === 'menuZoomOut') this.zoomOut();
-              else if (id === 'menuResetZoom') this.resetZoom();
-              else if (id === 'menuCenterView') this.centerIframeInViewport();
               closeMenu();
             });
           }
@@ -3158,17 +3179,24 @@
       // ========================================
       
       initModeToggle() {
-        const modeButtons = document.querySelectorAll('.mode-btn');
-        modeButtons.forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            if (e.currentTarget.id === 'proceedBtn') return; // Proceed: save + open booking only
-            const mode = e.currentTarget.dataset.mode;
-            if (mode) {
-              this.switchMode(mode);
+        const backBtn = document.getElementById('backBtn');
+        if (backBtn) {
+          backBtn.addEventListener('click', () => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              window.location.href = '../index.html';
             }
           });
+        }
+        document.querySelectorAll('.mode-btn:not(#backBtn)').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            if (e.currentTarget.id === 'proceedBtn') return; // Proceed: handled in initSaveFunctionality
+            const mode = e.currentTarget.dataset.mode;
+            if (mode) this.switchMode(mode);
+          });
         });
-        
+
         // Set initial mode
         const initialMode = this.data.settings.currentMode || 'edit';
         this.switchMode(initialMode);
@@ -4194,7 +4222,6 @@
         const artboard = document.createElement('div');
         artboard.className = 'artboard';
         artboard.style.width = '794px';
-        artboard.style.minHeight = '1123px';
         artboard.style.height = 'auto';
 
         const header = document.createElement('div');
@@ -4213,10 +4240,106 @@
 
         const content = document.createElement('div');
         content.className = 'artboard-content';
+        content.style.height = '1123px';
         const iframe = document.createElement('iframe');
         iframe.id = 'quoteFrame_' + Date.now();
         const slot = state.artboards.size;
         iframe.src = slot === 0 ? 'quote.html' : 'quote.html?slot=' + slot;
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('allowfullscreen', '');
+        content.appendChild(iframe);
+
+        const status = document.createElement('div');
+        status.className = 'artboard-status';
+        status.textContent = '794px × 1123px';
+
+        artboard.appendChild(header);
+        artboard.appendChild(content);
+        artboard.appendChild(status);
+        container.appendChild(artboard);
+        canvasOverlay.appendChild(container);
+
+        const baseZIndex = 10 + state.artboards.size;
+        container.style.zIndex = baseZIndex;
+        state.artboards.set(newId, {
+          container: container,
+          artboard: artboard,
+          header: header,
+          position: { x: offsetX, y: offsetY },
+          baseZIndex: baseZIndex
+        });
+
+        artboard.addEventListener('click', (e) => { e.stopPropagation(); focusArtboard(newId); });
+        header.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('artboard-control-btn') || e.target.closest('.artboard-control-btn')) return;
+          e.stopPropagation();
+          focusArtboard(newId);
+          startDrag(newId, e);
+        });
+        header.querySelectorAll('.artboard-control-btn').forEach(btn => {
+          btn.addEventListener('mousedown', e => e.stopPropagation());
+          btn.addEventListener('click', e => e.stopPropagation());
+        });
+
+        focusArtboard(newId);
+        return iframe;
+      }
+
+      openFormInArtboard(formSrc, title) {
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        if (!canvasOverlay) return;
+        const existing = canvasOverlay.querySelector(`.artboard-container[data-form-src="${formSrc}"]`);
+        if (existing) {
+          focusArtboard(existing.getAttribute('data-artboard-id'));
+          return;
+        }
+        this.createFormArtboard(formSrc, title);
+      }
+
+      createFormArtboard(formSrc, title) {
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        if (!canvasOverlay) return null;
+        const state = window.artboardState;
+        if (!state) return null;
+        const existing = canvasOverlay.querySelectorAll('.artboard-container');
+        const offsetX = 50 + existing.length * 50;
+        const offsetY = 50 + existing.length * 50;
+        const newId = getNextArtboardId();
+        const pageNum = existing.length + 1;
+
+        const container = document.createElement('div');
+        container.className = 'artboard-container';
+        container.style.position = 'absolute';
+        container.style.left = offsetX + 'px';
+        container.style.top = offsetY + 'px';
+        container.setAttribute('data-artboard-id', newId);
+        container.setAttribute('data-form-src', formSrc);
+
+        const artboard = document.createElement('div');
+        artboard.className = 'artboard';
+        artboard.style.width = '794px';
+        artboard.style.height = 'auto';
+
+        const header = document.createElement('div');
+        header.className = 'artboard-header';
+        header.innerHTML = `
+          <div class="artboard-info">
+            <span class="artboard-title">${title}</span>
+            <span class="artboard-size-badge">Form</span>
+          </div>
+          <div class="artboard-controls">
+            <button type="button" class="artboard-control-btn" onclick="duplicateArtboard('${newId}')" title="Duplicate">⧉</button>
+            <button type="button" class="artboard-control-btn" onclick="changeArtboardSize('${newId}')" title="Resize">⤢</button>
+            <button type="button" class="artboard-control-btn" onclick="removeArtboard('${newId}')" title="Delete">✕</button>
+          </div>
+        `;
+
+        const content = document.createElement('div');
+        content.className = 'artboard-content';
+        content.style.height = '1123px';
+        const iframe = document.createElement('iframe');
+        iframe.id = 'formFrame_' + Date.now();
+        iframe.src = formSrc;
         iframe.setAttribute('frameborder', '0');
         iframe.setAttribute('allowfullscreen', '');
         content.appendChild(iframe);
@@ -5440,6 +5563,7 @@
       const artboardData = state.artboards.get(artboardId);
       if (!artboardData) return;
       const artboard = artboardData.artboard;
+      const content = artboard.querySelector('.artboard-content');
       const badge = artboardData.header.querySelector('.artboard-size-badge');
       const status = artboard.querySelector('.artboard-status');
       const sizes = [
@@ -5451,8 +5575,9 @@
       const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % sizes.length : 0;
       const next = sizes[nextIndex];
       artboard.style.width = next.width;
-      artboard.style.height = next.height;
-      artboard.style.minHeight = next.height;
+      artboard.style.height = 'auto';
+      artboard.style.minHeight = '';
+      if (content) content.style.height = next.height;
       if (badge) badge.textContent = next.name;
       if (status) status.textContent = next.width.replace('px', '') + ' × ' + next.height.replace('px', '');
     }

@@ -67,7 +67,8 @@
        ======================================== */
     .a4 {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
+      max-height: 297mm;
       min-width: 800px;
       background: rgba(26, 26, 26, 0.95);
       backdrop-filter: blur(10px);
@@ -79,6 +80,7 @@
       transition: all 0.3s ease;
       border: 1px solid rgba(255, 255, 255, 0.08);
       position: relative;
+      overflow: hidden;
     }
     
     .a4::before {
@@ -103,6 +105,7 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
+      overflow: hidden;
     }
 
     /* ========================================
@@ -166,12 +169,13 @@
 
     .chat-messages {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      min-height: 180px;
       background: rgba(15, 15, 15, 0.5);
     }
     .chat-msg {
@@ -267,13 +271,16 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: default;
+      cursor: pointer;
       flex-shrink: 0;
       font-size: 18px;
       line-height: 1;
     }
     .chat-composer-send:hover {
       background: #0b5ed7;
+    }
+    .chat-composer-input {
+      max-height: 120px;
     }
   </style>
 </head>
@@ -294,8 +301,8 @@
           </div>
         </header>
 
-        <!-- Message list (mockup messages) -->
-        <div class="chat-messages">
+        <!-- Message list (mockup messages + live sent messages) -->
+        <div class="chat-messages" id="chatMessages">
           <div class="chat-msg received">
             <div class="chat-msg-bubble">
               <div class="chat-msg-sender">Str84wrD</div>
@@ -334,15 +341,9 @@
         <!-- Composer (message input + send) -->
         <div class="chat-composer">
           <div class="chat-composer-inner">
-            <textarea class="chat-composer-input" rows="1" placeholder="Type a message…" readonly></textarea>
-            <button type="button" class="chat-composer-send" aria-label="Send">➤</button>
+            <textarea class="chat-composer-input" id="chatInput" rows="1" placeholder="Powered by Str84wrD – Professional Quote & Booking" maxlength="2000"></textarea>
+            <button type="button" class="chat-composer-send" id="chatSend" aria-label="Send">➤</button>
           </div>
-        </div>
-      </div>
-
-      <div class="footer-banner">
-        <div class="branding-footer">
-          <p>Powered by <strong>Str84wrD</strong> – Professional Quote &amp; Booking</p>
         </div>
       </div>
     </div>
@@ -350,9 +351,60 @@
 
   <script>
     (function() {
-      // Mockup only — no functionality. Placeholder for future chat logic.
+      function nowTime() {
+        var d = new Date();
+        return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+      }
+
+      function escapeHtml(s) {
+        if (s == null) return '';
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function sendMessage() {
+        var input = document.getElementById('chatInput');
+        var list = document.getElementById('chatMessages');
+        if (!input || !list) return;
+        var text = (input.value || '').trim();
+        if (!text) return;
+
+        var wrap = document.createElement('div');
+        wrap.className = 'chat-msg sent';
+        wrap.innerHTML = '<div class="chat-msg-bubble">' + escapeHtml(text) + '<div class="chat-msg-time">' + escapeHtml(nowTime()) + '</div></div>';
+        list.appendChild(wrap);
+        list.scrollTop = list.scrollHeight;
+
+        input.value = '';
+        input.style.height = 'auto';
+      }
+
+      function init() {
+        var input = document.getElementById('chatInput');
+        var sendBtn = document.getElementById('chatSend');
+        if (!input || !sendBtn) return;
+
+        sendBtn.addEventListener('click', function() { sendMessage(); });
+
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+
+        // Optional: auto-resize textarea (limit height via CSS max-height)
+        input.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+      }
+
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {});
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
       }
     })();
   </script>
