@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Chat | Str84wrD</title>
+  
+  <script src="js/global-storage.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+  </style>
+  
+  <style>
+    /* ========================================
+       BASE STYLES (match invoice.html)
+       ======================================== */
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a url('Html.png') no-repeat center center;
+      background-attachment: fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+      color: #e5e5e5;
+      position: relative;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.7);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .font-display { font-family: 'Playfair Display', serif; }
+
+    /* ========================================
+       MAIN CONTENT AREA (same as invoice.html)
+       ======================================== */
+    .main-content {
+      margin-top: 0;
+      width: 210mm;
+      min-width: 800px;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      transition: all 0.3s ease;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ========================================
+       A4 CARD (same structure as invoice .a4)
+       ======================================== */
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: rgba(26, 26, 26, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 0;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+    
+    .a4::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('Html.png') no-repeat center center;
+      background-size: cover;
+      opacity: 0.15;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    .quote-wrapper {
+      padding: 0;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ========================================
+       CHAT INTERFACE (WhatsApp/Messenger style)
+       ======================================== */
+    .chat-header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #1a1a1a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .chat-header-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #808080;
+      font-weight: 600;
+    }
+    .chat-header-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-header-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+    }
+    .chat-header-status {
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      color: #808080;
+    }
+    .chat-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .chat-header-actions button {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #b3b3b3;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 180px;
+      background: rgba(15, 15, 15, 0.5);
+    }
+    .chat-msg {
+      display: flex;
+      align-items: flex-end;
+      max-width: 78%;
+    }
+    .chat-msg.sent {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .chat-msg.received {
+      align-self: flex-start;
+    }
+    .chat-msg-bubble {
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.45;
+      word-break: break-word;
+      max-width: 100%;
+      position: relative;
+    }
+    .chat-msg.sent .chat-msg-bubble {
+      background: #0d6efd;
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    .chat-msg.received .chat-msg-bubble {
+      background: #2a2a2a;
+      color: #e5e5e5;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg-time {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 4px;
+      text-align: right;
+    }
+    .chat-msg.received .chat-msg-time {
+      color: #808080;
+    }
+    .chat-msg-sender {
+      font-size: 11px;
+      font-weight: 600;
+      color: #b3b3b3;
+      margin-bottom: 2px;
+    }
+
+    .chat-composer {
+      flex-shrink: 0;
+      padding: 12px 16px 16px;
+      background: #1a1a1a;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .chat-composer-inner {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: #252525;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 8px 8px 8px 18px;
+      min-height: 48px;
+    }
+    .chat-composer-input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      background: transparent;
+      color: #e5e5e5;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      line-height: 1.4;
+      padding: 6px 0;
+    }
+    .chat-composer-input::placeholder {
+      color: #666666;
+    }
+    .chat-composer-input:focus {
+      outline: none;
+    }
+    .chat-composer-send {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: #0d6efd;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      flex-shrink: 0;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .chat-composer-send:hover {
+      background: #0b5ed7;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="a4">
+      <div class="quote-wrapper">
+        <!-- Chat header (like WhatsApp/Messenger) -->
+        <header class="chat-header">
+          <div class="chat-header-avatar">S</div>
+          <div class="chat-header-info">
+            <h1 class="chat-header-title font-display">Str84wrD Support</h1>
+            <p class="chat-header-status">Usually replies within a few hours</p>
+          </div>
+          <div class="chat-header-actions">
+            <button type="button" aria-label="Call">📞</button>
+            <button type="button" aria-label="More">⋮</button>
+          </div>
+        </header>
+
+        <!-- Message list (mockup messages) -->
+        <div class="chat-messages">
+          <div class="chat-msg received">
+            <div class="chat-msg-bubble">
+              <div class="chat-msg-sender">Str84wrD</div>
+              Hi! Thanks for getting in touch. How can we help you today?
+              <div class="chat-msg-time">10:32</div>
+            </div>
+          </div>
+          <div class="chat-msg sent">
+            <div class="chat-msg-bubble">
+              I’d like to ask about availability for next week.
+              <div class="chat-msg-time">10:35</div>
+            </div>
+          </div>
+          <div class="chat-msg received">
+            <div class="chat-msg-bubble">
+              <div class="chat-msg-sender">Str84wrD</div>
+              Sure — we have slots on Tuesday and Thursday. Which service are you interested in?
+              <div class="chat-msg-time">10:36</div>
+            </div>
+          </div>
+          <div class="chat-msg sent">
+            <div class="chat-msg-bubble">
+              The full package from my quote, please.
+              <div class="chat-msg-time">10:38</div>
+            </div>
+          </div>
+          <div class="chat-msg received">
+            <div class="chat-msg-bubble">
+              <div class="chat-msg-sender">Str84wrD</div>
+              Perfect. I’ll check and get back to you with confirmed times shortly.
+              <div class="chat-msg-time">10:40</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Composer (message input + send) -->
+        <div class="chat-composer">
+          <div class="chat-composer-inner">
+            <textarea class="chat-composer-input" rows="1" placeholder="Type a message…" readonly></textarea>
+            <button type="button" class="chat-composer-send" aria-label="Send">➤</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-banner">
+        <div class="branding-footer">
+          <p>Powered by <strong>Str84wrD</strong> – Professional Quote &amp; Booking</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // Mockup only — no functionality. Placeholder for future chat logic.
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {});
+      }
+    })();
+  </script>
+</body>
+</html>

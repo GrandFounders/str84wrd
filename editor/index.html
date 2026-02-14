@@ -1,0 +1,5536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static Quote System</title>
+  
+  <!-- html2canvas for export functionality -->
+  <script src="js/html2canvas.min.js"></script>
+  
+  <!-- Global Storage Manager -->
+  <script src="js/global-storage.js"></script>
+  
+  <!-- Str84wrD theme: fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       BASE STYLES (Str84wrD theme)
+       ======================================== */
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #e5e5e5;
+      background: #0a0a0a url('../assets/bgs/Html.png') no-repeat center center;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+      overflow-x: hidden;
+      overflow-y: hidden;
+      min-width: 1200px;
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+      overscroll-behavior: none;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.7);
+      z-index: -1;
+      pointer-events: none;
+    }
+    .font-display { font-family: 'DM Serif Display', serif; }
+
+    /* Mobile: Remove min-width constraint */
+    @media (max-width: 768px) {
+      body {
+        min-width: 0;
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* ========================================
+       MODE TOGGLE BAR (bottom, centered, fit content, responsive)
+       ======================================== */
+    .mode-bar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: fit-content;
+      max-width: calc(100vw - 24px);
+      background: #1a1a1a;
+      color: #e5e5e5;
+      padding: 12px 24px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      z-index: 10000;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px 16px 0 0;
+    }
+    
+    .mode-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .mode-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.2);
+      border-radius: 25px;
+      padding: 3px;
+      position: relative;
+    }
+    
+    .mode-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: #000000;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .mode-btn.active {
+      background: #2a2a2a;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn-primary {
+      background: rgba(255,255,255,0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .btn-primary:hover {
+      background: rgba(255,255,255,0.18);
+      transform: translateY(-1px);
+    }
+    
+    .btn-export {
+      background: rgba(255,255,255,0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .btn-export:hover {
+      background: rgba(255,255,255,0.18);
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.9);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-1px);
+    }
+
+    .zoom-controls {
+      display: flex;
+      gap: 5px;
+      margin-left: 10px;
+    }
+
+    .zoom-controls .btn {
+      padding: 6px 10px;
+      font-size: 12px;
+      min-width: 32px;
+    }
+
+    /* ========================================
+       ZOOM BAR (INDEPENDENT & ALWAYS VISIBLE)
+       ======================================== */
+    .zoom-bar {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      padding: 15px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      z-index: 100000; /* Highest z-index - above everything including canvas */
+      box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255,255,255,0.1);
+      /* Ensure it's completely independent of canvas transforms and scrolling */
+      transform: none !important;
+      will-change: auto;
+      /* Prevent any scroll interference */
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      left: auto !important;
+      bottom: auto !important;
+    }
+
+    .zoom-bar .zoom-controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .zoom-btn {
+      padding: 16px 20px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 700;
+      transition: all 0.3s ease;
+      background: rgba(255,255,255,0.25);
+      color: white;
+      min-width: 56px;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      /* Ensure buttons are completely independent of canvas transforms */
+      transform: none !important;
+      position: relative;
+      z-index: 100001;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(255,255,255,0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .zoom-btn:active {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* ========================================
+       ZOOM CONTROLS - HAMBURGER MENU
+       ======================================== */
+    .zoom-hamburger {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      background: rgba(0,0,0,0.9);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      z-index: 100001;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+      backdrop-filter: blur(15px);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 2s ease;
+      transform: none !important;
+      contain: layout style paint;
+      isolation: isolate;
+    }
+    .zoom-hamburger.idle {
+      opacity: 0.15;
+      transition: opacity 2s ease, all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .zoom-hamburger.idle:hover,
+    .zoom-hamburger.idle:active {
+      opacity: 1;
+      transition: opacity 0.2s ease, all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .zoom-hamburger:hover {
+      background: rgba(0,0,0,0.95);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      transform: scale(1.05) !important;
+      border-color: rgba(255,255,255,0.2);
+      opacity: 1;
+    }
+    .zoom-hamburger.open {
+      background: rgba(0,0,0,0.95);
+      border-color: rgba(255,255,255,0.2);
+      opacity: 1;
+    }
+    .zoom-hamburger span {
+      display: block;
+      width: 16px;
+      height: 1.5px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 1px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .zoom-hamburger.open span:nth-child(1) {
+      transform: translateY(5.5px) rotate(45deg);
+    }
+    .zoom-hamburger.open span:nth-child(2) {
+      opacity: 0;
+    }
+    .zoom-hamburger.open span:nth-child(3) {
+      transform: translateY(-5.5px) rotate(-45deg);
+    }
+
+    .zoom-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .zoom-overlay.open {
+      pointer-events: auto;
+    }
+
+    /* Floating zoom bar: always visible, fades when idle (not controlled by hamburger) */
+    .zoom-drawer {
+      position: fixed;
+      bottom: 16px;
+      right: 70px;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      padding: 0;
+      border-radius: 12px;
+      z-index: 100000;
+      transform: none;
+      opacity: 0.35;
+      pointer-events: auto;
+      transition: opacity 0.35s ease;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      backdrop-filter: blur(15px);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      contain: layout style paint;
+      isolation: isolate;
+      width: auto;
+      height: auto;
+      min-height: 0;
+      user-select: none;
+    }
+    .zoom-drawer.dragging {
+      transition: none;
+    }
+    .zoom-drawer.idle {
+      opacity: 0.28;
+      transition: opacity 2s ease;
+    }
+    .zoom-drawer:hover,
+    .zoom-drawer.idle:hover,
+    .zoom-drawer.idle:active,
+    .zoom-drawer:focus-within {
+      opacity: 1;
+      transition: opacity 0.2s ease;
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .zoom-drawer.idle:active {
+        opacity: 1;
+        transition: opacity 0.1s ease;
+      }
+    }
+
+    .zoom-drawer-handle {
+      width: 100%;
+      height: 20px;
+      background: rgba(255,255,255,0.06);
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+      position: relative;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .zoom-drawer-handle-top {
+      border-radius: 12px 12px 0 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .zoom-drawer-handle-bottom {
+      border-radius: 0 0 12px 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .zoom-drawer-handle:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .zoom-drawer-handle::before {
+      content: '';
+      width: 32px;
+      height: 2.5px;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px),
+        radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px);
+      background-size: 6px 2.5px, 6px 2.5px;
+      background-position: 0 0, 3px 0;
+      background-repeat: repeat-x;
+      border-radius: 1.5px;
+    }
+    .zoom-drawer-handle.dragging {
+      cursor: grabbing;
+      background: rgba(255,255,255,0.15);
+    }
+    .zoom-drawer-handle.dragging::before {
+      background-image: radial-gradient(circle, rgba(255,255,255,0.8) 1.5px, transparent 1.5px);
+    }
+
+    .zoom-drawer-content {
+      padding: 2px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .zoom-drawer .zoom-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .zoom-drawer .zoom-btn {
+      padding: 10px 12px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(255,255,255,0.25);
+      color: white;
+      min-width: 40px;
+      min-height: 40px;
+      width: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transform: none !important;
+      position: relative;
+      z-index: 100001;
+      line-height: 1;
+    }
+    .zoom-drawer .zoom-btn:first-child,
+    .zoom-drawer .zoom-btn:nth-child(2) {
+      font-size: 22px;
+      font-weight: 400;
+    }
+
+    .zoom-drawer .zoom-btn:hover {
+      background: rgba(255,255,255,0.4);
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .zoom-drawer .zoom-btn:active {
+      transform: translateY(0) !important;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    /* ========================================
+       SIDE MENU (exact match to index.html reference)
+       ======================================== */
+    .mobile-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      z-index: 99998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .mobile-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .mobile-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 280px;
+      max-width: 80vw;
+      background: #ffffff;
+      border-left: 1px solid rgba(0,0,0,0.08);
+      z-index: 99999;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(.4,.0,.2,1);
+      display: flex;
+      flex-direction: column;
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+    }
+    .mobile-drawer.open {
+      transform: translateX(0);
+    }
+    .mobile-drawer a,
+    .mobile-drawer .menu-item {
+      display: block;
+      padding: 0.875rem 0;
+      font-size: 1rem;
+      font-weight: 500;
+      color: rgba(0,0,0,0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      transition: color 0.2s ease;
+      text-decoration: none;
+      border: none;
+      background: none;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+    }
+    .mobile-drawer a:last-child,
+    .mobile-drawer .menu-item:last-child {
+      border-bottom: none;
+    }
+    .mobile-drawer a:hover,
+    .mobile-drawer a:active,
+    .mobile-drawer .menu-item:hover,
+    .mobile-drawer .menu-item:active {
+      color: #000000;
+    }
+
+    /* ========================================
+       MAIN CONTENT AREA
+       ======================================== */
+    .main-content {
+      margin-top: 0;
+      padding-bottom: 80px; /* space for fixed bottom mode bar */
+      width: 100%;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: #0f0f0f;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ========================================
+       INFINITE CANVAS STYLES
+       ======================================== */
+    .infinite-canvas {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: grab;
+      background: #0f0f0f;
+      background-image: 
+        radial-gradient(circle, rgba(255,255,255,0.06) 2px, transparent 2px);
+      background-size: 40px 40px;
+      background-position: 0 0;
+      display: block;
+    }
+
+    .infinite-canvas:active {
+      cursor: grabbing;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      /* Ensure overlay stays below zoom controls */
+      isolation: isolate;
+    }
+
+    .canvas-overlay iframe {
+      position: absolute;
+      width: auto;
+      height: auto;
+      min-width: 800px;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      background: white;
+      transition: all 0.3s ease;
+      margin: 0;
+      padding: 0;
+      display: block;
+      overflow: hidden;
+      pointer-events: auto;
+    }
+
+    /* Artboard container: allow pointer events so header/content are interactive */
+    .canvas-overlay .artboard-container {
+      pointer-events: auto !important;
+    }
+
+    /* Artboard Container - positioned within infinite canvas */
+    .artboard-container {
+      position: absolute;
+      transition: transform 0.2s ease;
+      transform-origin: top left;
+      z-index: 10;
+    }
+
+    .artboard-container.focused {
+      z-index: 1000;
+    }
+
+    /* Individual Artboard */
+    .artboard {
+      background: white;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: none;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      pointer-events: auto !important;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .artboard:hover {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .artboard.focused {
+      box-shadow: 0 0 0 3px #926E4C, 0 12px 48px rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(146, 110, 76, 0.3);
+    }
+
+    .artboard:not(.focused) {
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .artboard:not(.focused):hover {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Artboard Header - draggable handle (Str84wrD theme) */
+    .artboard-header {
+      background: #1a1a1a;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #e5e5e5;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 20;
+      cursor: move;
+      border-radius: 8px 8px 0 0;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .artboard-header:active {
+      cursor: grabbing;
+    }
+
+    .artboard-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .artboard-title {
+      font-weight: 600;
+      color: #ffffff;
+      font-family: 'DM Serif Display', serif;
+      letter-spacing: 0.02em;
+    }
+
+    .artboard-size-badge {
+      background: #926E4C;
+      color: #ffffff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .artboard-controls {
+      display: flex;
+      gap: 6px;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 25;
+    }
+
+    .artboard-control-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+      cursor: pointer !important;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 30;
+      user-select: none;
+      min-width: 28px;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .artboard-control-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .artboard-control-btn:active {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(0);
+    }
+
+    /* Artboard Content */
+    .artboard-content {
+      padding: 0;
+      min-height: 200px;
+      background: #ffffff;
+      position: relative;
+      overflow: visible;
+      flex: 1;
+      height: auto;
+    }
+
+    .artboard-content iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 800px;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .artboard-status {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      color: rgba(255, 255, 255, 0.95);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    .artboard.focused .artboard-status {
+      display: block;
+    }
+
+    /* ========================================
+       QUOTE STYLES (Original + Enhancements)
+       ======================================== */
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: white;
+      padding: 0;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    .header-banner {
+      background-color: #926E4C;
+      height: 60px;
+      width: 100%;
+    }
+
+    .quote-wrapper {
+      padding: 1mm 10mm 0 10mm;
+      position: relative;
+    }
+
+    .top-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 30px;
+    }
+
+    .branding {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .branding img {
+      width: 100px;
+      height: auto;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .company-info {
+      margin-bottom: 15px;
+    }
+
+    .company-info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .quote-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #926E4C;
+    }
+
+    .quote-details {
+      text-align: right;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .quote-details p {
+      margin: 5px 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .customer-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .bill-to, .ship-to {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .bill-to h3, .ship-to h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .bill-to p, .ship-to p {
+      margin: 3px 0;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ========================================
+       TABLE STYLES
+       ======================================== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    th, td {
+      padding: 12px 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    th {
+      background-color: #2f3f46;
+      color: white;
+      font-weight: bold;
+    }
+
+    .items-table th:nth-child(1) { width: 5%; }  /* SL */
+    .items-table th:nth-child(2) { width: 35%; } /* Description */
+    .items-table th:nth-child(3) { width: 10%; } /* Qty */
+    .items-table th:nth-child(4) { width: 15%; } /* Unit Price */
+    .items-table th:nth-child(5) { width: 15%; } /* Amount */
+    .items-table th:nth-child(6) { width: 10%; } /* Date */
+    .items-table th:nth-child(7) { width: 10%; } /* Actions */
+
+    .items-table td:nth-child(3),
+    .items-table td:nth-child(4),
+    .items-table td:nth-child(5) {
+      text-align: right;
+    }
+
+    /* ========================================
+       TABLE ACTION BUTTONS
+       ======================================== */
+    .actions-cell {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .table-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 0 2px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .table-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .table-btn-up {
+      background: #2a2a2a;
+      color: #e5e5e5;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .table-btn-up:hover {
+      background: #3a3a3a;
+    }
+
+    .table-btn-down {
+      background: #2a2a2a;
+      color: #e5e5e5;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .table-btn-down:hover {
+      background: #3a3a3a;
+    }
+
+    .table-btn-delete {
+      background: rgba(220, 53, 69, 0.25);
+      color: #e57373;
+      opacity: 0.9;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    .table-btn-delete:hover {
+      background: rgba(220, 53, 69, 0.4);
+      opacity: 1;
+    }
+
+    .items-table tbody tr:hover .table-btn-delete {
+      opacity: 1;
+    }
+
+    .add-row-btn {
+      position: absolute;
+      bottom: 246px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      background: #2a2a2a;
+      color: #e5e5e5;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .add-row-btn:hover {
+      background: #3a3a3a;
+    }
+
+    /* Table styling */
+    .items-table {
+      position: relative;
+      margin-bottom: 0;
+    }
+    
+    /* Table container for horizontal scrolling */
+    .table-container {
+      position: relative;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: none;
+      border-radius: 0;
+    }
+    
+    .table-container::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb {
+      background: #c0392b;
+      border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #a93226;
+    }
+
+    /* ========================================
+       PRODUCT DISPLAY STYLES
+       ======================================== */
+    .item-with-image {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+    }
+    
+    .item-image {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 3px;
+    }
+    
+    .item-image:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      border-color: #007bff;
+    }
+    
+    .item-image.placeholder {
+      background: linear-gradient(135deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(225deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(315deg, #e9ecef 25%, transparent 25%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .item-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ========================================
+       FORM CONTROLS
+       ======================================== */
+    .description-select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: white;
+      cursor: pointer;
+      box-sizing: border-box;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .description-select:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+    
+    .description-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: white;
+      box-sizing: border-box;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .items-table td:nth-child(2) {
+      padding: 0;
+    }
+
+    /* ========================================
+       CLIENT SEARCH STYLES
+       ======================================== */
+    .client-search-container {
+      position: relative;
+      display: inline-block;
+      flex: 1;
+      margin-left: 5px;
+    }
+    
+    .client-search-input {
+      width: 100%;
+      padding: 2px 4px;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+      color: inherit;
+      min-width: 200px;
+    }
+    
+    .client-autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      display: none;
+      min-width: 250px;
+    }
+    
+    .client-autocomplete-dropdown.show {
+      display: block;
+    }
+    
+    .client-autocomplete-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      transition: background-color 0.2s;
+      color: rgba(0,0,0,0.85);
+    }
+    
+    .client-autocomplete-item:hover {
+      background-color: rgba(0,0,0,0.04);
+    }
+    
+    .client-autocomplete-item.add-new-client-item:hover {
+      background-color: rgba(0,0,0,0.06);
+    }
+    
+    .client-autocomplete-item.selected {
+      background-color: rgba(0,0,0,0.08);
+      color: #000000;
+    }
+
+    /* ========================================
+       SUMMARY SECTION
+       ======================================== */
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .summary-table {
+      width: 300px;
+      border-collapse: collapse;
+    }
+
+    .summary-table td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+    }
+
+    .summary-table td:first-child {
+      font-weight: bold;
+      background-color: #f8f9fa;
+      width: 60%;
+    }
+
+    .summary-table td:last-child {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .total-row td {
+      background-color: #926E4C !important;
+      color: white !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
+    }
+
+    .outstanding-row td {
+      background-color: #726e6e !important;
+      color: white !important;
+      font-weight: bold !important;
+    }
+    
+    .amount-paid-row td {
+      background-color: #ffeaa7 !important;
+      color: #856404 !important;
+      font-weight: bold !important;
+    }
+
+    .terms-section {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .payment-info, .terms-info {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .payment-info h3, .terms-info h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .payment-info p, .terms-info p {
+      margin: 3px 0;
+      font-size: 14px;
+    }
+
+    .footer-banner {
+      background-color: #926E4C;
+      height: 30px;
+      width: 100%;
+      margin-top: auto;
+    }
+
+    [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      padding: 2px;
+      min-width: 50px;
+    }
+
+    /* ========================================
+       DATA MANAGEMENT MODAL (replicated from invoice.html)
+       ======================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20000;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #1a1a1a;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+      animation: modalSlideIn 0.3s ease-out;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      background: #0f0f0f;
+      color: #ffffff;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #999999;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+      font-weight: 300;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      transform: rotate(90deg);
+    }
+
+    .modal-body {
+      padding: 0;
+      overflow-y: auto;
+      max-height: calc(80vh - 80px);
+    }
+
+    /* ========================================
+       TABS SYSTEM
+       ======================================== */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0f0f0f;
+    }
+
+    .tab-button {
+      padding: 15px 25px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666666;
+      transition: all 0.3s ease;
+      position: relative;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tab-button:hover {
+      color: #cccccc;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .tab-button.active {
+      color: #ffffff;
+      background: #0f0f0f;
+      font-weight: 600;
+    }
+
+    .tab-button.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .tab-content {
+      padding: 30px;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ========================================
+       DATA MANAGEMENT STYLES
+       ======================================== */
+    .data-section {
+      margin-bottom: 30px;
+    }
+
+    .data-section h3 {
+      margin: 0 0 15px 0;
+      color: #ffffff;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .data-list {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      overflow: hidden;
+      background: #0f0f0f;
+    }
+
+    .data-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+    }
+
+    .data-item:last-child {
+      border-bottom: none;
+    }
+
+    .data-item:hover {
+      background: #f8f9fa;
+    }
+
+    .data-item-info {
+      flex: 1;
+      margin-right: 15px;
+    }
+
+    .data-item-name {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .data-item-details {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .data-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-edit {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #45a049;
+    }
+
+    .btn-delete {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #da190b;
+    }
+
+    .add-new-section {
+      text-align: center;
+      padding: 20px;
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      margin-bottom: 20px;
+      background: #0f0f0f;
+    }
+
+    .add-new-section:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: #1a1a1a;
+    }
+
+    .add-new-btn {
+      background: #2a2a2a;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .add-new-btn:hover {
+      background: #3a3a3a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ========================================
+       FORM STYLES
+       ======================================== */
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      flex: 1;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #b3b3b3;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.2s;
+      box-sizing: border-box;
+      background: #0f0f0f;
+      color: #cccccc;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+      background: #1a1a1a;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .image-upload {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .image-upload:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .image-upload input {
+      display: none;
+    }
+
+    .image-preview {
+      margin-top: 15px;
+    }
+
+    .image-preview img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .counter-control-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .counter-stepper { display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; background: #0f0f0f; }
+    .counter-stepper button { width: 36px; height: 36px; border: none; background: #2a2a2a; color: #fff; cursor: pointer; font-size: 18px; }
+    .counter-stepper button:hover { background: #3a3a3a; }
+    .counter-stepper input { width: 80px; padding: 8px 12px; border: none; background: #0f0f0f; color: #ccc; font-size: 14px; text-align: center; }
+    .counter-reset-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #999; cursor: pointer; font-size: 13px; }
+    .counter-reset-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .import-btn { background: #0f0f0f !important; color: #ccc !important; border: 1px solid rgba(255,255,255,0.15) !important; }
+    .import-btn:hover { background: #1a1a1a !important; color: #fff !important; }
+    .text-center.mt-20 { text-align: center; margin-top: 20px; }
+
+    /* ========================================
+       MODE SPECIFIC STYLES
+       ======================================== */
+    /* Edit Mode - Show all controls */
+    body.edit-mode .actions-cell,
+    body.edit-mode .add-row-btn,
+    body.edit-mode .items-table th:last-child {
+      display: table-cell;
+    }
+
+    body.edit-mode [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      pointer-events: auto;
+    }
+
+    body.edit-mode .description-select,
+    body.edit-mode .description-input,
+    body.edit-mode .client-search-input {
+      pointer-events: auto;
+    }
+
+    /* Preview Mode - Hide all edit controls and disable editing */
+    body.preview-mode .actions-cell,
+    body.preview-mode .add-row-btn,
+    body.preview-mode .items-table th:last-child,
+    body.preview-mode .items-table td:last-child {
+      display: none !important;
+    }
+
+    body.preview-mode [contenteditable] {
+      border-bottom: none !important;
+      outline: none !important;
+      pointer-events: none !important;
+      user-select: text;
+      cursor: default !important;
+    }
+
+    body.preview-mode .description-select,
+    body.preview-mode .description-input {
+      pointer-events: none !important;
+      border: none !important;
+      background: transparent !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      cursor: default !important;
+      color: inherit !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+    }
+
+    body.preview-mode .client-search-input {
+      pointer-events: none !important;
+      border: none !important;
+      background: transparent !important;
+      cursor: default !important;
+    }
+
+    body.preview-mode .client-autocomplete-dropdown {
+      display: none !important;
+      pointer-events: none !important;
+    }
+
+    /* Disable all interactive elements in preview mode except essential buttons */
+    body.preview-mode select,
+    body.preview-mode input,
+    body.preview-mode textarea,
+    body.preview-mode button:not(.mode-btn):not(.preview-mode-only):not(.always-enabled) {
+      pointer-events: none !important;
+      cursor: default !important;
+    }
+    
+    /* Ensure essential buttons remain clickable */
+    body.preview-mode .mode-btn,
+    body.preview-mode .preview-mode-only,
+    body.preview-mode .always-enabled {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* Prevent text selection while maintaining readability */
+    body.preview-mode * {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+
+    /* Remove any hover or focus effects */
+    body.preview-mode *:hover,
+    body.preview-mode *:focus {
+      outline: none !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+    }
+
+    body.preview-mode .a4 {
+      box-shadow: none;
+    }
+
+    /* Ensure table borders are visible in preview mode */
+    body.preview-mode .items-table,
+    body.preview-mode .items-table th,
+    body.preview-mode .items-table td {
+      border: 1px solid #ddd !important;
+      border-collapse: collapse !important;
+    }
+
+    body.preview-mode .items-table tbody tr:last-child td {
+      border-bottom: 1px solid #ddd !important;
+    }
+
+    /* Disable editing of payment info and tax in preview mode */
+    body.preview-mode .payment-info span[contenteditable],
+    body.preview-mode #tax[contenteditable] {
+      pointer-events: none !important;
+      border-bottom: none !important;
+      outline: none !important;
+      user-select: text;
+    }
+
+  
+    /* ========================================
+       PRINT & EXPORT OPTIMIZATIONS
+       ======================================== */
+    @media print {
+      .mode-bar {
+        display: none !important;
+      }
+      
+      .main-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+      }
+      
+      .a4 {
+        box-shadow: none !important;
+        margin: 0 !important;
+      }
+      
+      body {
+        background: white !important;
+      }
+      
+      .actions-cell,
+      .add-row-btn,
+      .items-table th:last-child,
+      .items-table td:last-child {
+        display: none !important;
+      }
+      
+      .description-select,
+      .description-input {
+        border: none !important;
+        background: transparent !important;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+      
+      [contenteditable] {
+        border-bottom: none !important;
+      }
+    }
+
+    /* ========================================
+       MOBILE RESPONSIVE ADJUSTMENTS
+       ======================================== */
+    @media (max-width: 768px) {
+      /* Mode bar: fit, centered at bottom, responsive */
+      .mode-bar {
+        padding: 8px 12px;
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+        gap: 8px;
+        font-size: 14px;
+        max-width: calc(100vw - 16px);
+        border-radius: 12px 12px 0 0;
+      }
+      .mode-controls {
+        gap: 8px;
+      }
+      .mode-toggle {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      .mode-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      .action-buttons {
+        gap: 6px;
+      }
+      .action-buttons .btn {
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+      .main-content {
+        padding-bottom: 72px;
+      }
+
+      /* Adjust canvas overlay for mobile */
+      .canvas-overlay iframe {
+        width: 600px;
+        height: 750px;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      /* Mobile: hide top zoom bar, use hamburger + drawer */
+      .zoom-bar {
+        display: none !important;
+      }
+
+      .zoom-hamburger {
+        bottom: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        gap: 3px;
+      }
+      .zoom-hamburger span {
+        width: 14px;
+        height: 1.5px;
+      }
+      .zoom-hamburger.open span:nth-child(1) {
+        transform: translateY(4.5px) rotate(45deg);
+      }
+      .zoom-hamburger.open span:nth-child(3) {
+        transform: translateY(-4.5px) rotate(-45deg);
+      }
+
+      .zoom-drawer {
+        bottom: 12px;
+        right: 56px;
+        padding: 0;
+        transform: none;
+        border-radius: 10px;
+      }
+
+      .zoom-drawer-handle {
+        height: 18px;
+        padding: 3px 0;
+      }
+      .zoom-drawer-handle-top {
+        border-radius: 10px 10px 0 0;
+      }
+      .zoom-drawer-handle-bottom {
+        border-radius: 0 0 10px 10px;
+      }
+      .zoom-drawer-handle::before {
+        width: 24px;
+        height: 2px;
+        background-size: 5px 2px, 5px 2px;
+      }
+
+      .zoom-drawer-content {
+        padding: 0px;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .zoom-drawer .zoom-controls {
+        gap: 5px;
+        align-items: center;
+        width: 100%;
+      }
+
+      .zoom-drawer .zoom-btn {
+        padding: 8px 10px;
+        font-size: 14px;
+        min-width: 36px;
+        min-height: 36px;
+        width: 36px;
+        border-radius: 8px;
+      }
+      .zoom-drawer .zoom-btn:first-child,
+      .zoom-drawer .zoom-btn:nth-child(2) {
+        font-size: 18px;
+        font-weight: 400;
+      }
+    }
+
+    /* Extra large for very small screens */
+    @media (max-width: 480px) {
+      .canvas-overlay iframe {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        min-height: 750px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .zoom-hamburger {
+        bottom: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        gap: 3px;
+      }
+      .zoom-hamburger span {
+        width: 14px;
+        height: 1.5px;
+      }
+      .zoom-hamburger.open span:nth-child(1) {
+        transform: translateY(4.5px) rotate(45deg);
+      }
+      .zoom-hamburger.open span:nth-child(3) {
+        transform: translateY(-4.5px) rotate(-45deg);
+      }
+
+      .zoom-drawer {
+        bottom: 10px;
+        right: 48px;
+        border-radius: 10px;
+      }
+
+      .zoom-drawer-handle::before {
+        width: 24px;
+        height: 2px;
+        background-size: 5px 2px, 5px 2px;
+      }
+
+      .zoom-drawer .zoom-btn {
+        padding: 6px 8px;
+        font-size: 14px;
+        min-width: 32px;
+        min-height: 32px;
+        width: 32px;
+        border-radius: 8px;
+      }
+    }
+
+    /* ========================================
+       UTILITY CLASSES
+       ======================================== */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-20 {
+      margin-top: 20px;
+    }
+
+    .mb-20 {
+      margin-bottom: 20px;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Hide Ship To section */
+    .ship-to {
+      display: none !important;
+    }
+    
+    /* Additional professional styling */
+    .currency {
+      font-weight: bold;
+    }
+    
+    .contact-info {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .payment-logo {
+      width: 100px;
+      height: auto;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body class="edit-mode">
+
+  <!-- ========================================
+       MODE TOGGLE BAR (replicated from invoice.html)
+       ======================================== -->
+  <div class="mode-bar">
+    <div class="mode-controls">
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="edit" title="Back to edit">← Back</button>
+        <button class="mode-btn" data-mode="preview" id="proceedBtn" title="Save quote and open customer booking form">Proceed</button>
+      </div>
+    </div>
+    
+    <div class="action-buttons">
+      <!-- Preview Mode Buttons (shown when in preview mode) -->
+      <button class="btn btn-primary preview-mode-only hidden" id="saveBtn">
+        💾 Save
+      </button>
+      <button class="btn btn-export preview-mode-only hidden" id="exportPngBtn">
+        📤 SEND
+      </button>
+      <button class="btn btn-secondary preview-mode-only hidden" onclick="window.print()">
+        🖨️ Print
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating zoom bar: always visible, fades when idle (operates on its own) -->
+  <div class="zoom-drawer" id="zoomDrawer">
+    <div class="zoom-drawer-handle zoom-drawer-handle-top" id="zoomDrawerHandleTop"></div>
+    <div class="zoom-drawer-content">
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="app.zoomIn()" title="Zoom In">+</button>
+        <button class="zoom-btn" onclick="app.zoomOut()" title="Zoom Out">−</button>
+        <button class="zoom-btn" onclick="app.resetZoom()" title="Reset Zoom">🔍</button>
+        <button class="zoom-btn" onclick="app.centerIframeInViewport()" title="Center View">🎯</button>
+      </div>
+    </div>
+    <div class="zoom-drawer-handle zoom-drawer-handle-bottom" id="zoomDrawerHandleBottom"></div>
+  </div>
+
+  <!-- Hamburger: opens side menu only -->
+  <button class="zoom-hamburger" id="menuToggle" aria-label="Menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <nav class="mobile-drawer" id="mobileDrawer">
+    <button type="button" class="menu-item" id="menuOpenQuote">Open</button>
+    <button type="button" class="menu-item" id="menuNewQuote">New</button>
+    <button type="button" class="menu-item" id="menuSettings">Settings</button>
+    <button type="button" class="menu-item" id="menuZoomIn">Zoom In</button>
+    <button type="button" class="menu-item" id="menuZoomOut">Zoom Out</button>
+    <button type="button" class="menu-item" id="menuResetZoom">Reset Zoom</button>
+    <button type="button" class="menu-item" id="menuCenterView">Center View</button>
+  </nav>
+
+  <!-- ========================================
+       INFINITE CANVAS CONTAINER
+       ======================================== -->
+  <div class="main-content">
+    <canvas id="infiniteCanvas" class="infinite-canvas"></canvas>
+    <div class="canvas-overlay" id="canvasOverlay">
+      <div class="artboard-container" style="position: absolute; left: 50px; top: 50px;" data-artboard-id="artboard_1">
+        <div class="artboard" style="width: 794px; min-height: 1123px; height: auto;">
+          <div class="artboard-header">
+            <div class="artboard-info">
+              <span class="artboard-title">Page 1</span>
+              <span class="artboard-size-badge">A4 Portrait</span>
+            </div>
+            <div class="artboard-controls">
+              <button type="button" class="artboard-control-btn" onclick="duplicateArtboard('artboard_1')" title="Duplicate">⧉</button>
+              <button type="button" class="artboard-control-btn" onclick="changeArtboardSize('artboard_1')" title="Resize">⤢</button>
+              <button type="button" class="artboard-control-btn" onclick="removeArtboard('artboard_1')" title="Delete">✕</button>
+            </div>
+          </div>
+          <div class="artboard-content">
+            <iframe id="quoteFrame" src="quote.html" frameborder="0" allowfullscreen></iframe>
+          </div>
+          <div class="artboard-status">794px × 1123px</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       HIDDEN QUOTE CONTENT (for reference)
+       ======================================== -->
+  <div class="a4" id="invoice" style="display: none;">
+      <div class="header-banner"></div>
+      <div class="quote-wrapper">
+        <!-- Top Section -->
+        <div class="top-section">
+          <div class="branding">
+            <img id="companyLogo" alt="Company Logo" src="./logos\invoLOGO.png">
+            <div class="company-info" id="companyInfo">
+              <p><strong>Your Company Name</strong></p>
+              <p>Your Company Address</p>
+              <p>Your City, Postcode</p>
+              <p>Phone: Your Phone Number</p>
+              <p>Email: your.email@company.com</p>
+              <p>Company Number: Your Company Number</p>
+              <p>VAT NO.: Your VAT Number</p>
+            </div>
+          </div>
+          <div class="quote-details">
+            <div class="quote-title" contenteditable="true">QUOTE</div>
+            <p><span class="label">Quote No:</span> <span id="invoiceNo" contenteditable="true">00001</span></p>
+            <p><span class="label">Date:</span> <span id="invoiceDate" contenteditable="true"></span></p>
+            <p><span class="label">Due Date:</span> <span id="dueDate" contenteditable="true"></span></p>
+            <p><span class="label">Terms:</span> <span id="terms" contenteditable="true">Net 30</span></p>
+          </div>
+        </div>
+
+        <!-- Customer Section -->
+        <div class="customer-section">
+          <div class="bill-to">
+            <h3>Bill To:</h3>
+            <p><span class="label">Name:</span> <span id="customerName" contenteditable="true">Your Customer Name</span></p>
+            <p><span class="label">Address:</span> <span id="customerAddress" contenteditable="true">Your Customer Address</span></p>
+            <p><span class="label">City:</span> <span id="customerCity" contenteditable="true">Your Customer City</span></p>
+            <p><span class="label">Phone:</span> <span id="customerPhone" contenteditable="true">Your Customer Phone</span></p>
+            <p><span class="label">Email:</span> <span id="customerEmail" contenteditable="true">Your Customer Email</span></p>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="table-container">
+          <table class="items-table">
+          <thead>
+            <tr>
+              <th>SL.</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="row1">
+              <td>1</td>
+              <td id="desc1">
+                <div class="item-with-image" id="itemDisplay1">
+                  <div class="item-image placeholder" id="itemImage1">📦</div>
+                  <div class="item-text">
+                    <select id="descSelect1" class="description-select">
+                      <option value="Example Product">Example Product</option>
+                      <option value="Service Example">Service Example</option>
+                      <option value="Enter New">Enter New</option>
+                    </select>
+                    <input type="text" id="descInput1" class="description-input" value="Example Product" style="display: none;" contenteditable="true">
+                  </div>
+                </div>
+              </td>
+              <td id="qty1" class="qty" contenteditable="true">1</td>
+              <td id="unitPrice1" class="unit-price" contenteditable="true">£0.00</td>
+              <td id="amount1" class="amount">£0.00</td>
+              <td id="date1" contenteditable="true"></td>
+              <td class="actions-cell">
+                <button class="table-btn table-btn-up" onclick="app.moveRowUp(1)" title="Move Up">↑</button>
+                <button class="table-btn table-btn-down" onclick="app.moveRowDown(1)" title="Move Down">↓</button>
+                <button class="table-btn table-btn-delete" onclick="app.deleteRow(1)" title="Delete Row">×</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        
+        <!-- Add Row Button -->
+          <button class="add-row-btn" onclick="app.addNewRow()">+ Add New Row</button>
+
+        <!-- Summary and Payment Section -->
+        <div class="summary-section">
+          <div class="payment-info">
+            <h3>Payment Information</h3>
+            <p><span class="label">Reference:</span> <span id="reference" contenteditable="true">Your Reference</span></p>
+            <p><span class="label">Bank:</span> <span id="bankName" contenteditable="true">Your Bank Name</span></p>
+            <p><span class="label">Account Name:</span> <span id="accountName" contenteditable="true">Your Account Name</span></p>
+            <p><span class="label">Sort Code:</span> <span id="sortCode" contenteditable="true">Your Sort Code</span></p>
+            <p><span class="label">Account No:</span> <span id="account" contenteditable="true">Your Account Number</span></p>
+          </div>
+          <table class="summary-table">
+            <tbody>
+              <tr>
+                <td>Subtotal:</td>
+                <td id="subtotal">£0.00</td>
+              </tr>
+              <tr>
+                <td>Discount:</td>
+                <td id="discount" contenteditable="true">£0.00</td>
+              </tr>
+              <tr>
+                <td>Delivery:</td>
+                <td id="delivery" contenteditable="true">£0.00</td>
+              </tr>
+              <tr>
+                <td>Tax (VAT):</td>
+                <td id="tax" contenteditable="true">£0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total:</td>
+                <td id="total">£0.00</td>
+              </tr>
+              <tr class="amount-paid-row">
+                <td>Amount Paid:</td>
+                <td id="amountPaid" contenteditable="true">£0.00</td>
+              </tr>
+              <tr class="outstanding-row">
+                <td>Outstanding:</td>
+                <td id="outstanding">£0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="footer-banner">
+      <div class="branding-footer">
+        <p style="text-align: center; margin: 10px 0; font-size: 12px; color: #ffffff;">
+          Powered by <strong>Str84wrD</strong> - Professional Quote Management System
+        </p>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  
+  <!-- ========================================
+       DATA MANAGEMENT MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="dataModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Settings</h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="products">📦 Quote Details</button>
+          <button class="tab-button" data-tab="clients">👥 Clients</button>
+          <button class="tab-button" data-tab="company">🏢 Company</button>
+          <button class="tab-button" data-tab="export">📤 Export</button>
+        </div>
+        
+        <!-- Products Tab -->
+        <div class="tab-content active" id="products-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addProductBtn">
+              ➕ Add Product / Service
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Products or Services</h3>
+            <div class="data-list" id="productsList">
+              <!-- Products will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Clients Tab -->
+        <div class="tab-content" id="clients-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addClientBtn">
+              ➕ Add New Client
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Current Clients</h3>
+            <div class="data-list" id="clientsList">
+              <!-- Clients will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Company Tab -->
+        <div class="tab-content" id="company-tab">
+          <div class="data-section">
+            <h3>Company Information</h3>
+            <form id="companyForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Company Name</label>
+                  <input type="text" id="companyName" required>
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="text" id="companyPhone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Address</label>
+                  <input type="text" id="companyAddress">
+                </div>
+                <div class="form-group">
+                  <label>City & Postcode</label>
+                  <input type="text" id="companyCity">
+                </div>
+              </div>
+              <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="companyEmail">
+                </div>
+                <div class="form-group">
+                  <label>Company Number</label>
+                  <input type="text" id="companyNumber">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>VAT Number</label>
+                <input type="text" id="vatNumber">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Bank Name</label>
+                  <input type="text" id="companyBankName">
+                </div>
+                <div class="form-group">
+                  <label>Account Name</label>
+                  <input type="text" id="companyAccountName">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Sort Code</label>
+                  <input type="text" id="companySortCode">
+                </div>
+                <div class="form-group">
+                  <label>Account No</label>
+                  <input type="text" id="companyAccountNo">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Company Logo</label>
+                <div class="image-upload" id="logoUpload">
+                  <input type="file" id="logoFile" accept="image/*">
+                  <p>📁 Click to upload company logo</p>
+                  <div class="image-preview" id="logoPreview"></div>
+                </div>
+              </div>
+              <div class="text-center mt-20">
+                <button type="submit" class="btn btn-primary">💾 Save Company Info</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Export Tab -->
+        <div class="tab-content" id="export-tab">
+          <div class="data-section">
+            <h3>Export data</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button type="button" class="btn btn-primary" onclick="if(window.app) window.app.exportAllData()">💾 Export All Data</button>
+              <button type="button" class="btn btn-primary" onclick="if(window.app) window.app.exportProducts()">📦 Export Products</button>
+              <button type="button" class="btn btn-primary" onclick="if(window.app) window.app.exportClients()">👥 Export Clients</button>
+              <button type="button" class="btn import-btn" onclick="document.getElementById('settingsImportFileInput').click()">📥 Import Data</button>
+              <input type="file" id="settingsImportFileInput" accept=".json,application/json" style="display: none" onchange="if(this.files[0]&&window.app) window.app.importFromFile(this.files[0]); this.value='';">
+              <button type="button" class="btn btn-export" onclick="if(window.app) window.app.printCurrentQuote()">🖨️ Print Quote</button>
+            </div>
+          </div>
+          <div class="data-section" style="margin-top: 20px; border-color: #dc3545; background: #fff5f5;">
+            <h3 style="color: #721c24;">Clear all data</h3>
+            <p style="color: #666; margin-bottom: 16px;">Remove all products, clients, company info and current quote. This cannot be undone.</p>
+            <button type="button" class="btn" style="background: #dc3545; color: white;" onclick="if(window.app) window.app.clearAllData()">🗑️ Clear All Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       JAVASCRIPT IMPLEMENTATION
+       ======================================== -->
+  <script>
+    // ========================================
+    // ARTBOARD STATE (for draggable artboards like guapXL)
+    // ========================================
+    window.artboardState = {
+      focusedArtboard: null,
+      draggedArtboard: null,
+      artboards: new Map()
+    };
+
+    // ========================================
+    // STATIC DATA MANAGEMENT SYSTEM
+    // ========================================
+    
+    class StaticQuoteApp {
+      constructor() {
+        this.currentMode = 'edit';
+        this.data = {
+          products: [],
+          clients: [],
+          company: {},
+          settings: { currentMode: 'edit', autoSave: true, defaultCurrency: '£' }
+        };
+        
+        // Global items list for shared dropdown management
+        this.globalItemsList = [];
+        
+        // Initialize the application
+        this.init();
+      }
+      
+      init() {
+        console.log('🚀 Initializing Static Quote System...');
+        
+        // Load data from localStorage or set defaults
+        this.loadData();
+        
+        // Initialize UI components
+        this.initModeToggle();
+        this.initDataManagement();
+        this.initSaveFunctionality();
+        this.initQuoteControls();
+      this.initOpenQuoteButton();
+      this.initNewQuoteButton();
+      this.initExportFunctionality();
+        
+        // Initialize infinite canvas
+        this.initInfiniteCanvas();
+        
+        // Update all dropdowns with global items list
+        this.updateAllDropdowns();
+        
+        // Update UI with loaded data
+        this.updateUI();
+        
+        // Load saved quote data if it exists
+        this.loadSavedQuote();
+        
+        console.log('✅ Static Quote System initialized successfully!');
+      }
+      
+      // ========================================
+      // INFINITE CANVAS FUNCTIONALITY
+      // ========================================
+      
+      initInfiniteCanvas() {
+        // Camera system properties
+        this.camera = {
+          x: 0,           // Camera position in world coordinates
+          y: 0,           // Camera position in world coordinates
+          zoom: 1,        // Camera zoom level
+          width: 0,       // Viewport width
+          height: 0       // Viewport height
+        };
+        
+        this.isPanning = false;
+        this.lastPanX = 0;
+        this.lastPanY = 0;
+
+        const canvas = document.getElementById('infiniteCanvas');
+        const overlay = document.getElementById('canvasOverlay');
+        
+        if (canvas && overlay) {
+          // Set canvas size to match viewport
+          this.resizeCanvas();
+          
+          // Initialize 2D context
+          this.ctx = canvas.getContext('2d');
+          
+          this.addCanvasPanning(canvas);
+          this.addCanvasWheelZoom(canvas);
+          this.updateCanvasTransform();
+          this.initIframeResizing();
+          this.initZoomBar();
+          this.initHamburgerMenu();
+          
+          // Center iframe after initialization
+          // On mobile, wait a bit longer for iframe to load and size properly
+          const initDelay = this.isMobileDevice() ? 800 : 200;
+          setTimeout(() => {
+            this.centerIframeInViewport();
+          }, initDelay);
+          
+          // Handle window resize
+          window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            // On mobile, recalculate zoom if needed
+            if (this.isMobileDevice()) {
+              setTimeout(() => {
+                const mobileZoom = this.calculateInitialMobileZoom();
+                if (mobileZoom && mobileZoom < this.camera.zoom) {
+                  // Only zoom out if needed, don't zoom in automatically
+                  this.camera.zoom = mobileZoom;
+                }
+                this.centerIframeInViewport();
+              }, 100);
+            }
+            this.updateCanvasTransform();
+          });
+          
+          console.log('🎨 2D Camera system initialized');
+        }
+      }
+
+      resizeCanvas() {
+        const canvas = document.getElementById('infiniteCanvas');
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          canvas.width = rect.width;
+          canvas.height = rect.height;
+          
+          // Update camera viewport dimensions
+          this.camera.width = rect.width;
+          this.camera.height = rect.height;
+        }
+      }
+
+      initIframeResizing() {
+        const iframe = document.getElementById('quoteFrame');
+        if (iframe) {
+          // Listen for messages from the iframe
+          window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'iframe-resize') {
+              this.resizeIframeFromMessage(event.data);
+            } else if (event.data && event.data.type === 'load-quote-html') {
+              // Load HTML content into iframe (matches case.html behavior)
+              if (iframe && event.data.html) {
+                iframe.srcdoc = event.data.html;
+                console.log('📂 Loaded HTML into quote iframe:', event.data.filename || 'quote.html');
+              }
+            }
+          });
+          
+          iframe.onload = () => {
+            // Request size information from iframe
+            this.requestIframeSize();
+            
+            // Fallback: try old method with timeout
+            setTimeout(() => {
+              this.resizeIframeToContent();
+            }, 500);
+          };
+          
+          // Also resize on window resize
+          window.addEventListener('resize', () => {
+            this.requestIframeSize();
+          });
+        }
+      }
+
+      requestIframeSize() {
+        const iframe = document.getElementById('quoteFrame');
+        if (iframe && iframe.contentWindow) {
+          try {
+            // Request size information from iframe
+            iframe.contentWindow.postMessage({ type: 'request-size' }, '*');
+          } catch (error) {
+            console.log('⚠️ Could not request iframe size');
+            this.resizeIframeToContent();
+          }
+        }
+      }
+
+      resizeIframeFromMessage(data) {
+        const iframe = document.getElementById('quoteFrame');
+        if (iframe && data.width && data.height) {
+          // Set iframe dimensions to exact content size
+          iframe.style.width = Math.max(data.width, 800) + 'px';
+          iframe.style.height = Math.max(data.height, 1000) + 'px';
+          
+          console.log(`📏 Iframe resized from message to: ${iframe.style.width} x ${iframe.style.height}`);
+          
+          // On mobile, recalculate zoom and center after resize
+          if (this.isMobileDevice()) {
+            setTimeout(() => {
+              const mobileZoom = this.calculateInitialMobileZoom();
+              if (mobileZoom && mobileZoom < 1) {
+                this.camera.zoom = mobileZoom;
+              }
+              this.centerIframeInViewport();
+            }, 100);
+          }
+        }
+      }
+
+      resizeIframeToContent() {
+        const iframe = document.getElementById('quoteFrame');
+        if (iframe && iframe.contentDocument) {
+          try {
+            const iframeDoc = iframe.contentDocument;
+            const iframeBody = iframeDoc.body;
+            
+            if (iframeBody) {
+              // Get the actual content dimensions
+              const contentWidth = Math.max(
+                iframeBody.scrollWidth,
+                iframeBody.offsetWidth,
+                iframeDoc.documentElement.scrollWidth,
+                iframeDoc.documentElement.offsetWidth
+              );
+              
+              const contentHeight = Math.max(
+                iframeBody.scrollHeight,
+                iframeBody.offsetHeight,
+                iframeDoc.documentElement.scrollHeight,
+                iframeDoc.documentElement.offsetHeight
+              );
+              
+              // Set iframe dimensions to exact content size
+              iframe.style.width = Math.max(contentWidth, 800) + 'px';
+              iframe.style.height = Math.max(contentHeight, 1000) + 'px';
+              
+              console.log(`📏 Iframe resized to: ${iframe.style.width} x ${iframe.style.height}`);
+              
+              // On mobile, recalculate zoom and center after resize
+              if (this.isMobileDevice()) {
+                setTimeout(() => {
+                  const mobileZoom = this.calculateInitialMobileZoom();
+                  if (mobileZoom && mobileZoom < 1) {
+                    this.camera.zoom = mobileZoom;
+                  }
+                  this.centerIframeInViewport();
+                }, 100);
+              }
+            }
+          } catch (error) {
+            console.log('⚠️ Could not resize iframe (cross-origin restriction)');
+            // Fallback to default size
+            iframe.style.width = '800px';
+            iframe.style.height = '1000px';
+            
+            // Don't auto-center during resize - let user control positioning
+          }
+        } else {
+          // If contentDocument is not available, use fallback size
+          iframe.style.width = '800px';
+          iframe.style.height = '1000px';
+          
+          // Don't auto-center during resize - let user control positioning
+        }
+      }
+
+      isMobileDevice() {
+        return window.innerWidth <= 768;
+      }
+
+      calculateInitialMobileZoom() {
+        const iframe = document.getElementById('quoteFrame');
+        if (!iframe || !this.isMobileDevice()) {
+          return null;
+        }
+
+        // Get viewport dimensions
+        const viewportWidth = this.camera.width || window.innerWidth;
+        const viewportHeight = this.camera.height || window.innerHeight;
+        
+        // Get iframe dimensions
+        const iframeWidth = iframe.offsetWidth || 600;
+        const iframeHeight = iframe.offsetHeight || 750;
+        
+        // Calculate zoom needed to fit iframe in viewport with some margin (10px padding)
+        const margin = 20;
+        const zoomX = (viewportWidth - margin) / iframeWidth;
+        const zoomY = (viewportHeight - margin) / iframeHeight;
+        
+        // Use the smaller zoom to ensure both width and height fit
+        const initialZoom = Math.min(zoomX, zoomY, 1); // Don't zoom in beyond 1x
+        
+        return Math.max(0.3, initialZoom); // Minimum zoom of 0.3x
+      }
+
+      centerIframeInViewport() {
+        const canvas = document.getElementById('infiniteCanvas');
+        const iframe = document.getElementById('quoteFrame');
+        
+        if (canvas && iframe) {
+          // On mobile, calculate and apply initial zoom if needed
+          if (this.isMobileDevice() && this.camera.zoom === 1) {
+            const mobileZoom = this.calculateInitialMobileZoom();
+            if (mobileZoom && mobileZoom < 1) {
+              this.camera.zoom = mobileZoom;
+              console.log(`📱 Mobile initial zoom set to: ${mobileZoom.toFixed(2)}x`);
+            }
+          }
+
+          // Get iframe dimensions
+          const iframeWidth = iframe.offsetWidth;
+          const iframeHeight = iframe.offsetHeight;
+          
+          // Calculate world position to center iframe in viewport
+          // Account for zoom when centering
+          const scaledWidth = iframeWidth * this.camera.zoom;
+          const scaledHeight = iframeHeight * this.camera.zoom;
+          const centerX = (this.camera.width - scaledWidth) / 2;
+          const centerY = (this.camera.height - scaledHeight) / 2;
+          
+          // Set camera position to center the iframe
+          this.camera.x = centerX;
+          this.camera.y = centerY;
+          
+          // Apply the transform
+          this.updateCanvasTransform();
+          
+          console.log(`🎯 Camera centered on iframe: ${centerX}, ${centerY} (zoom: ${this.camera.zoom.toFixed(2)}x)`);
+        }
+      }
+
+      addCanvasPanning(canvas) {
+        let isPanning = false;
+        let startX = 0;
+        let startY = 0;
+        let startCameraX = 0;
+        let startCameraY = 0;
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+          isPanning = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          startCameraX = this.camera.x;
+          startCameraY = this.camera.y;
+          canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+          if (isPanning) {
+            e.preventDefault();
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            // Move camera in same direction as mouse movement
+            this.camera.x = startCameraX + deltaX;
+            this.camera.y = startCameraY + deltaY;
+            
+            // Update overlay transform immediately for smooth panning
+            this.updateOverlayTransform();
+          }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+          isPanning = false;
+          canvas.style.cursor = 'grab';
+          // Redraw canvas after panning is complete
+          this.drawCanvas();
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+          isPanning = false;
+          canvas.style.cursor = 'grab';
+        });
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            isPanning = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startCameraX = this.camera.x;
+            startCameraY = this.camera.y;
+          }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+          if (isPanning && e.touches.length === 1) {
+            e.preventDefault();
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - startY;
+            
+            // Move camera in same direction as touch movement
+            this.camera.x = startCameraX + deltaX;
+            this.camera.y = startCameraY + deltaY;
+            
+            // Update overlay transform immediately for smooth panning
+            this.updateOverlayTransform();
+          }
+        });
+
+        canvas.addEventListener('touchend', () => {
+          isPanning = false;
+          // Redraw canvas after touch panning is complete
+          this.drawCanvas();
+        });
+      }
+
+      addCanvasWheelZoom(canvas) {
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          
+          const delta = e.deltaY > 0 ? -0.1 : 0.1;
+          this.camera.zoom = Math.max(0.1, Math.min(5, this.camera.zoom + delta));
+          
+          this.updateCanvasTransform();
+        });
+      }
+
+      updateOverlayTransform() {
+        const overlay = document.getElementById('canvasOverlay');
+        if (overlay) {
+          // Apply camera transform: translate by camera position, then scale by zoom
+          overlay.style.transform = `translate(${this.camera.x}px, ${this.camera.y}px) scale(${this.camera.zoom})`;
+        }
+      }
+
+      updateCanvasTransform() {
+        this.updateOverlayTransform();
+        // Redraw canvas with updated grid
+        this.drawCanvas();
+      }
+
+      drawCanvas() {
+        // Canvas drawing is now handled by CSS dotted background pattern
+        // No need for manual grid drawing - the CSS background provides the dots
+      }
+
+      // Zoom controls for the infinite canvas
+      zoomIn() {
+        this.camera.zoom = Math.min(5, this.camera.zoom + 0.2);
+        this.updateCanvasTransform();
+        console.log(`🔍 Camera zoom in: ${this.camera.zoom.toFixed(1)}x`);
+      }
+
+      zoomOut() {
+        this.camera.zoom = Math.max(0.1, this.camera.zoom - 0.2);
+        this.updateCanvasTransform();
+        console.log(`🔍 Camera zoom out: ${this.camera.zoom.toFixed(1)}x`);
+      }
+
+      resetZoom() {
+        this.camera.zoom = 1;
+        this.camera.x = 0;
+        this.camera.y = 0;
+        this.updateCanvasTransform();
+        console.log('🔍 Camera reset');
+      }
+
+      initZoomBar() {
+        const drawer = document.getElementById('zoomDrawer');
+        const handleTop = document.getElementById('zoomDrawerHandleTop');
+        const handleBottom = document.getElementById('zoomDrawerHandleBottom');
+        this.loadDrawerPosition();
+        if (drawer) {
+          if (handleTop) this.initDrawerDragging(drawer, handleTop);
+          if (handleBottom) this.initDrawerDragging(drawer, handleBottom);
+        }
+        this.initZoomBarIdleFade();
+      }
+
+      initZoomBarIdleFade() {
+        const drawer = document.getElementById('zoomDrawer');
+        if (!drawer) return;
+        let idleTimer = null;
+        const IDLE_DELAY = 3000;
+        const resetIdleTimer = () => {
+          if (idleTimer) clearTimeout(idleTimer);
+          drawer.classList.remove('idle');
+          idleTimer = setTimeout(() => drawer.classList.add('idle'), IDLE_DELAY);
+        };
+        ['mousemove', 'touchstart', 'touchmove', 'click', 'wheel'].forEach(ev => {
+          document.addEventListener(ev, resetIdleTimer, { passive: true });
+        });
+        drawer.addEventListener('mouseenter', () => { drawer.classList.remove('idle'); if (idleTimer) clearTimeout(idleTimer); });
+        drawer.addEventListener('mouseleave', resetIdleTimer);
+        drawer.addEventListener('touchstart', () => { drawer.classList.remove('idle'); if (idleTimer) clearTimeout(idleTimer); });
+        resetIdleTimer();
+      }
+
+      initHamburgerMenu() {
+        const toggle = document.getElementById('menuToggle');
+        const drawer = document.getElementById('mobileDrawer');
+        const overlay = document.getElementById('mobileOverlay');
+        const openMenu = () => {
+          if (toggle) toggle.classList.add('open');
+          if (drawer) drawer.classList.add('open');
+          if (overlay) overlay.classList.add('open');
+          document.body.style.overflow = 'hidden';
+        };
+        const closeMenu = () => {
+          if (toggle) toggle.classList.remove('open');
+          if (drawer) drawer.classList.remove('open');
+          if (overlay) overlay.classList.remove('open');
+          document.body.style.overflow = '';
+        };
+        if (toggle) toggle.addEventListener('click', () => { drawer && drawer.classList.contains('open') ? closeMenu() : openMenu(); });
+        if (overlay) overlay.addEventListener('click', closeMenu);
+        const menuItemIds = ['menuOpenQuote', 'menuNewQuote', 'menuSettings', 'menuZoomIn', 'menuZoomOut', 'menuResetZoom', 'menuCenterView'];
+        menuItemIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.addEventListener('click', () => {
+              if (id === 'menuOpenQuote') this.loadQuote();
+              else if (id === 'menuNewQuote') this.createNewQuoteArtboard();
+              else if (id === 'menuSettings') this.showDataManagement();
+              else if (id === 'menuZoomIn') this.zoomIn();
+              else if (id === 'menuZoomOut') this.zoomOut();
+              else if (id === 'menuResetZoom') this.resetZoom();
+              else if (id === 'menuCenterView') this.centerIframeInViewport();
+              closeMenu();
+            });
+          }
+        });
+      }
+
+      loadDrawerPosition() {
+        const drawer = document.getElementById('zoomDrawer');
+        if (!drawer) return;
+        const saved = localStorage.getItem('zoomDrawerPosition');
+        if (saved) {
+          try {
+            const pos = JSON.parse(saved);
+            drawer.style.bottom = pos.bottom || '16px';
+            drawer.style.right = pos.right || '70px';
+            drawer.style.top = pos.top || 'auto';
+            drawer.style.left = pos.left || 'auto';
+          } catch (e) { console.warn('Failed to load drawer position:', e); }
+        }
+      }
+
+      saveDrawerPosition() {
+        const drawer = document.getElementById('zoomDrawer');
+        if (!drawer) return;
+        localStorage.setItem('zoomDrawerPosition', JSON.stringify({
+          bottom: drawer.style.bottom || '16px',
+          right: drawer.style.right || '70px',
+          top: drawer.style.top || 'auto',
+          left: drawer.style.left || 'auto'
+        }));
+      }
+
+      initDrawerDragging(drawer, handle) {
+        let isDragging = false, startX = 0, startY = 0, startBottom = 0, startRight = 0, startTop = 0, startLeft = 0;
+        const getComputedPosition = (el) => {
+          const s = window.getComputedStyle(el);
+          return { bottom: s.bottom === 'auto' ? null : parseFloat(s.bottom), right: s.right === 'auto' ? null : parseFloat(s.right), top: s.top === 'auto' ? null : parseFloat(s.top), left: s.left === 'auto' ? null : parseFloat(s.left) };
+        };
+        const startDrag = (e) => {
+          isDragging = true;
+          drawer.classList.add('dragging');
+          handle.classList.add('dragging');
+          const pos = getComputedPosition(drawer);
+          startX = e.clientX || e.touches[0].clientX;
+          startY = e.clientY || e.touches[0].clientY;
+          startBottom = pos.bottom;
+          startRight = pos.right;
+          startTop = pos.top;
+          startLeft = pos.left;
+          e.preventDefault();
+        };
+        const drag = (e) => {
+          if (!isDragging) return;
+          const dx = (e.clientX || e.touches[0].clientX) - startX;
+          const dy = (e.clientY || e.touches[0].clientY) - startY;
+          const rect = drawer.getBoundingClientRect();
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const hTop = document.getElementById('zoomDrawerHandleTop');
+          const hBot = document.getElementById('zoomDrawerHandleBottom');
+          const hTopH = hTop ? hTop.offsetHeight : 20;
+          const hBotH = hBot ? hBot.offsetHeight : 20;
+          if (startRight !== null && startBottom !== null) {
+            drawer.style.bottom = Math.max(-(rect.height - hTopH), Math.min(vh - hBotH, startBottom - dy)) + 'px';
+            drawer.style.right = Math.max(0, Math.min(vw - rect.width, startRight - dx)) + 'px';
+            drawer.style.top = 'auto';
+            drawer.style.left = 'auto';
+          } else if (startTop !== null && startLeft !== null) {
+            drawer.style.top = Math.max(-(rect.height - hBotH), Math.min(vh - hTopH, startTop + dy)) + 'px';
+            drawer.style.left = Math.max(0, Math.min(vw - rect.width, startLeft + dx)) + 'px';
+            drawer.style.bottom = 'auto';
+            drawer.style.right = 'auto';
+          }
+          e.preventDefault();
+        };
+        const endDrag = () => {
+          if (isDragging) {
+            isDragging = false;
+            drawer.classList.remove('dragging');
+            handle.classList.remove('dragging');
+            this.saveDrawerPosition();
+          }
+        };
+        handle.addEventListener('mousedown', startDrag);
+        handle.addEventListener('touchstart', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+      }
+
+      // ========================================
+      // DATA PERSISTENCE
+      // ========================================
+      
+      loadData() {
+        try {
+          // Load products
+          const savedProducts = localStorage.getItem('invoiceApp_products');
+          this.data.products = savedProducts ? JSON.parse(savedProducts) : this.getDefaultProducts();
+          
+          // Initialize global items list from products
+          this.globalItemsList = this.data.products.map(product => product.name);
+          
+          // Load clients
+          const savedClients = localStorage.getItem('invoiceApp_clients');
+          this.data.clients = savedClients ? JSON.parse(savedClients) : this.getDefaultClients();
+          
+          // Load company info
+          const savedCompany = localStorage.getItem('invoiceApp_company');
+          this.data.company = savedCompany ? JSON.parse(savedCompany) : this.getDefaultCompany();
+          
+          // Load settings
+          const savedSettings = localStorage.getItem('invoiceApp_settings');
+          this.data.settings = savedSettings ? JSON.parse(savedSettings) : { currentMode: 'edit', autoSave: true, defaultCurrency: '£' };
+          
+          console.log('📁 Data loaded from localStorage');
+        } catch (error) {
+          console.error('Error loading data:', error);
+          this.data = {
+            products: this.getDefaultProducts(),
+            clients: this.getDefaultClients(),
+            company: this.getDefaultCompany(),
+            settings: { currentMode: 'edit', autoSave: true, defaultCurrency: '£' }
+          };
+        }
+      }
+      
+      saveData() {
+        try {
+          localStorage.setItem('invoiceApp_products', JSON.stringify(this.data.products));
+          localStorage.setItem('invoiceApp_clients', JSON.stringify(this.data.clients));
+          localStorage.setItem('invoiceApp_company', JSON.stringify(this.data.company));
+          localStorage.setItem('invoiceApp_settings', JSON.stringify(this.data.settings));
+          console.log('💾 Data saved to localStorage');
+        } catch (error) {
+          console.error('Error saving data:', error);
+        }
+      }
+      
+      // ========================================
+      // DEFAULT DATA
+      // ========================================
+      
+      getDefaultProducts() {
+        return [
+          {
+            id: 1,
+            name: 'Example Product',
+            category: 'product',
+            icon: '📦',
+            image: null,
+            description: 'Sample product for demonstration',
+            price: 0.00
+          },
+          {
+            id: 2,
+            name: 'Service Example',
+            category: 'service',
+            icon: '🔧',
+            image: null,
+            description: 'Sample service for demonstration',
+            price: 0.00
+          }
+        ];
+      }
+      
+      getDefaultClients() {
+        return [
+          {
+            clientId: 1,
+            client: {
+              name: 'John Smith',
+              address: '123 Main Street',
+              city: 'London, E1 1AA',
+              phone: '+44 20 1234 5678',
+              email: 'john.smith@email.com',
+              type: 'Individual',
+              status: 'active',
+              notes: 'Regular customer, prefers morning deliveries'
+            }
+          },
+          {
+            clientId: 2,
+            client: {
+              name: 'Sarah Johnson',
+              address: '456 High Road',
+              city: 'Manchester, M1 1AA',
+              phone: '+44 161 123 4567',
+              email: 'sarah.j@email.com',
+              type: 'Company',
+              status: 'active',
+              notes: 'Business client, office hours only'
+            }
+          }
+        ];
+      }
+      
+      getDefaultCompany() {
+        return {
+          name: 'Your Company Name',
+          address: 'Your Company Address',
+          city: 'Your City, Postcode',
+          phone: 'Your Phone Number',
+          email: 'your.email@company.com',
+          companyNumber: 'Your Company Number',
+          vatNumber: 'Your VAT Number',
+          bankName: '',
+          accountName: '',
+          sortCode: '',
+          account: '',
+          logo: null
+        };
+      }
+      
+      // ========================================
+      // MODE MANAGEMENT
+      // ========================================
+      
+      initModeToggle() {
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        modeButtons.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            if (e.currentTarget.id === 'proceedBtn') return; // Proceed: save + open booking only
+            const mode = e.currentTarget.dataset.mode;
+            if (mode) {
+              this.switchMode(mode);
+            }
+          });
+        });
+        
+        // Set initial mode
+        const initialMode = this.data.settings.currentMode || 'edit';
+        this.switchMode(initialMode);
+      }
+      
+      switchMode(mode) {
+        if (!mode || (mode !== 'edit' && mode !== 'preview')) {
+          console.warn('⚠️ Invalid mode:', mode, '- defaulting to edit');
+          mode = 'edit';
+        }
+        
+        this.currentMode = mode;
+        this.data.settings.currentMode = mode;
+        
+        // Update body class
+        document.body.className = `${mode}-mode`;
+        
+        // Update mode buttons
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+        
+        // Show/hide mode-specific buttons
+        document.querySelectorAll('.edit-mode-only').forEach(el => {
+          el.classList.toggle('hidden', mode !== 'edit');
+        });
+        
+        document.querySelectorAll('.preview-mode-only').forEach(el => {
+          el.classList.toggle('hidden', mode !== 'preview');
+        });
+        
+        // Send mode switch to iframe (quote/invoice) like guapXL
+        this.sendMessageToFocusedIframe({ type: 'switch-mode', mode: mode });
+        
+        this.saveData();
+        console.log(`🔄 Switched to ${mode} mode`);
+      }
+      
+      sendMessageToFocusedIframe(message) {
+        const allIframes = document.querySelectorAll('.canvas-overlay iframe, #quoteFrame, [id$="Frame"]');
+        const iframes = allIframes.length ? allIframes : document.querySelectorAll('iframe');
+        if (iframes.length > 0) {
+          iframes.forEach((iframe) => {
+            this.sendMessageToIframe(iframe, message);
+          });
+        }
+      }
+      
+      sendMessageToIframe(iframe, message) {
+        const sendMessage = () => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.postMessage(message, '*');
+              return true;
+            }
+            return false;
+          } catch (e) {
+            return false;
+          }
+        };
+        if (sendMessage()) return;
+        let retries = 0;
+        const id = setInterval(() => {
+          retries++;
+          if (sendMessage() || retries >= 5) clearInterval(id);
+        }, 100);
+      }
+      
+      // ========================================
+      // EDITING CONTROL METHODS
+      // ========================================
+      
+      disableEditing() {
+        // Disable all contenteditable elements
+        document.querySelectorAll('[contenteditable]').forEach(el => {
+          el.setAttribute('data-original-contenteditable', 'true');
+          el.contentEditable = false;
+        });
+        
+        // Disable all input fields
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+          el.setAttribute('data-original-disabled', el.disabled);
+          el.disabled = true;
+          el.readOnly = true;
+        });
+        
+        // Disable all buttons except mode buttons and preview mode buttons
+        document.querySelectorAll('button:not(.mode-btn):not(.preview-mode-only)').forEach(el => {
+          el.setAttribute('data-original-disabled', el.disabled);
+          el.disabled = true;
+        });
+        
+        console.log('🔒 Editing disabled in preview mode');
+      }
+      
+      enableEditing() {
+        // Restore contenteditable elements
+        document.querySelectorAll('[data-original-contenteditable]').forEach(el => {
+          el.contentEditable = true;
+          el.removeAttribute('data-original-contenteditable');
+        });
+        
+        // Restore input fields
+        document.querySelectorAll('input[data-original-disabled], textarea[data-original-disabled], select[data-original-disabled]').forEach(el => {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          el.readOnly = false;
+          el.removeAttribute('data-original-disabled');
+        });
+        
+        // Restore buttons (excluding mode buttons which should always be enabled)
+        document.querySelectorAll('button[data-original-disabled]:not(.mode-btn):not(.preview-mode-only)').forEach(el => {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          el.removeAttribute('data-original-disabled');
+        });
+        
+        console.log('🔓 Editing enabled in edit mode');
+      }
+      
+      // Event prevention methods removed - using CSS-based approach instead
+      
+      // ========================================
+      // DATA MANAGEMENT MODAL
+      // ========================================
+      
+      showDataManagement() {
+        const modal = document.getElementById('dataModal');
+        modal.classList.add('show');
+        this.populateDataModal();
+      }
+      
+      initDataManagement() {
+        const dataBtn = document.getElementById('dataManagementBtn');
+        const modal = document.getElementById('dataModal');
+        const closeBtn = document.getElementById('closeModal');
+        
+        // Open modal (Settings button removed from mode bar; sidebar menu and programmatic open still work)
+        if (dataBtn) {
+          dataBtn.addEventListener('click', () => {
+            this.showDataManagement();
+          });
+        }
+        
+        // Close modal
+        closeBtn.addEventListener('click', () => {
+          modal.classList.remove('show');
+          // Refresh quote table when Settings modal is closed
+          this.updateAllItemPrices();
+          this.updateAllItemImages();
+        });
+        
+        // Close on overlay click
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.remove('show');
+            // Refresh quote table when Settings modal is closed
+            this.updateAllItemPrices();
+            this.updateAllItemImages();
+          }
+        });
+        
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const tabId = e.target.dataset.tab;
+            this.switchTab(tabId);
+          });
+        });
+        
+        // Initialize forms
+        this.initProductForm();
+        this.initClientForm();
+        this.initCompanyForm();
+      }
+      
+      switchTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.toggle('active', content.id === `${tabId}-tab`);
+        });
+        
+        // Refresh tab-specific content
+        if (tabId === 'products') {
+          this.populateProductsList();
+        } else if (tabId === 'clients') {
+          this.populateClientsList();
+        } else if (tabId === 'company') {
+          this.populateCompanyForm();
+        }
+      }
+      
+      populateDataModal() {
+        this.populateProductsList();
+        this.populateClientsList();
+        this.populateCompanyForm();
+      }
+      
+      // ========================================
+      // PRODUCTS MANAGEMENT
+      // ========================================
+      
+      initProductForm() {
+        document.getElementById('addProductBtn').addEventListener('click', () => {
+          this.showProductForm();
+        });
+      }
+      
+      showProductForm(product = null) {
+        const isEdit = !!product;
+        const formHtml = `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Name *</label>
+              <input type="text" id="productName" value="${product?.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="productCategory">
+                <option value="product" ${product?.category === 'product' ? 'selected' : ''}>Product</option>
+                <option value="service" ${product?.category === 'service' ? 'selected' : ''}>Service</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Price (£)</label>
+              <input type="number" id="productPrice" step="0.01" value="${product?.price || '0.00'}" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Icon</label>
+              <input type="text" id="productIcon" value="${product?.icon || '📦'}" placeholder="📦">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="productDescription" placeholder="Item description...">${product?.description || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Item Image</label>
+            <div class="image-upload" onclick="document.getElementById('productImageFile').click()">
+              <input type="file" id="productImageFile" accept="image/*" style="display: none;">
+              <p>📁 Click to upload item image</p>
+              <div class="image-preview" id="productImagePreview">
+                ${product?.image ? `<img src="${product.image}" alt="Item">` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="text-center mt-20">
+            <button type="button" class="btn btn-primary" onclick="app.saveProduct(${isEdit ? product.id : 'null'})">
+              💾 ${isEdit ? 'Update' : 'Add'} Item
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="app.populateProductsList()">
+              ❌ Cancel
+            </button>
+          </div>
+        `;
+        
+        document.getElementById('productsList').innerHTML = formHtml;
+        
+        // Handle image upload
+        document.getElementById('productImageFile').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById('productImagePreview').innerHTML = 
+                `<img src="${e.target.result}" alt="Product">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      saveProduct(editId = null) {
+        const name = document.getElementById('productName').value.trim();
+        const category = document.getElementById('productCategory').value;
+        const price = parseFloat(document.getElementById('productPrice').value) || 0.00;
+        const icon = document.getElementById('productIcon').value.trim() || '📦';
+        const description = document.getElementById('productDescription').value.trim();
+        const imagePreview = document.querySelector('#productImagePreview img');
+        const image = imagePreview ? imagePreview.src : null;
+        
+        if (!name) {
+          alert('Name is required!');
+          return;
+        }
+        
+        const productData = { name, category, price, icon, description, image };
+        
+        if (editId) {
+          // Update existing product
+          const index = this.data.products.findIndex(p => p.id === editId);
+          if (index !== -1) {
+            this.data.products[index] = { ...this.data.products[index], ...productData };
+          }
+        } else {
+          // Add new product
+          const newId = Math.max(...this.data.products.map(p => p.id), 0) + 1;
+          this.data.products.push({ id: newId, ...productData });
+        }
+        
+        this.saveData();
+        this.populateProductsList();
+        this.updateProductDropdowns();
+        
+        // Update global items list and refresh all dropdowns
+        this.globalItemsList = this.data.products.map(product => product.name);
+        this.updateAllDropdowns();
+        
+        this.updateAllItemPrices();
+        this.updateAllItemImages();
+        
+        console.log(`✅ Product ${editId ? 'updated' : 'added'}: ${name}`);
+      }
+      
+      deleteProduct(id) {
+        if (confirm('Are you sure you want to delete this product?')) {
+          this.data.products = this.data.products.filter(p => p.id !== id);
+          this.saveData();
+          this.populateProductsList();
+          this.updateProductDropdowns();
+        
+        // Update global items list and refresh all dropdowns
+        this.globalItemsList = this.data.products.map(product => product.name);
+        this.updateAllDropdowns();
+        
+        this.updateAllItemPrices();
+        this.updateAllItemImages();
+          console.log(`🗑️ Product deleted: ID ${id}`);
+        }
+      }
+      
+      populateProductsList() {
+        const container = document.getElementById('productsList');
+        if (this.data.products.length === 0) {
+          container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">No products added yet.</div>';
+          return;
+        }
+        
+        const html = this.data.products.map(product => `
+          <div class="data-item">
+            <div class="data-item-info">
+              <div class="data-item-name">${product.icon} ${product.name}</div>
+              <div class="data-item-details">
+                ${product.category} • £${product.price.toFixed(2)} • ${product.description}
+              </div>
+            </div>
+            <div class="data-item-actions">
+              <button class="btn-sm btn-edit" onclick="app.showProductForm(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                ✏️ Edit
+              </button>
+              <button class="btn-sm btn-delete" onclick="app.deleteProduct(${product.id})">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `).join('');
+        
+        container.innerHTML = html;
+      }
+      
+      // ========================================
+      // CLIENTS MANAGEMENT  
+      // ========================================
+      
+      initClientForm() {
+        document.getElementById('addClientBtn').addEventListener('click', () => {
+          this.showClientForm();
+        });
+      }
+      
+      showClientForm(clientData = null) {
+        const isEdit = !!clientData;
+        const client = clientData?.client || {};
+        
+        const formHtml = `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Client Name *</label>
+              <input type="text" id="clientName" value="${client.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="clientType">
+                <option value="Individual" ${client.type === 'Individual' ? 'selected' : ''}>Individual</option>
+                <option value="Company" ${client.type === 'Company' ? 'selected' : ''}>Company</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" id="clientAddress" value="${client.address || ''}">
+            </div>
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" id="clientCity" value="${client.city || ''}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" id="clientPhone" value="${client.phone || ''}">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="clientEmail" value="${client.email || ''}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="clientNotes" placeholder="Additional notes...">${client.notes || ''}</textarea>
+          </div>
+          <div class="text-center mt-20">
+            <button type="button" class="btn btn-primary" onclick="app.saveClient(${isEdit ? clientData.clientId : 'null'})">
+              💾 ${isEdit ? 'Update' : 'Add'} Client
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="app.populateClientsList()">
+              ❌ Cancel
+            </button>
+          </div>
+        `;
+        
+        document.getElementById('clientsList').innerHTML = formHtml;
+      }
+      
+      saveClient(editId = null) {
+        const name = document.getElementById('clientName').value.trim();
+        const type = document.getElementById('clientType').value;
+        const address = document.getElementById('clientAddress').value.trim();
+        const city = document.getElementById('clientCity').value.trim();
+        const phone = document.getElementById('clientPhone').value.trim();
+        const email = document.getElementById('clientEmail').value.trim();
+        const notes = document.getElementById('clientNotes').value.trim();
+        
+        if (!name) {
+          alert('Client name is required!');
+          return;
+        }
+        
+        const clientData = {
+          client: { name, type, address, city, phone, email, notes, status: 'active' }
+        };
+        
+        if (editId) {
+          // Update existing client
+          const index = this.data.clients.findIndex(c => c.clientId === editId);
+          if (index !== -1) {
+            this.data.clients[index] = { clientId: editId, ...clientData };
+          }
+        } else {
+          // Add new client
+          const newId = Math.max(...this.data.clients.map(c => c.clientId), 0) + 1;
+          this.data.clients.push({ clientId: newId, ...clientData });
+        }
+        
+        this.saveData();
+        this.populateClientsList();
+        this.updateClientSearch();
+        
+        console.log(`✅ Client ${editId ? 'updated' : 'added'}: ${name}`);
+      }
+      
+      deleteClient(id) {
+        if (confirm('Are you sure you want to delete this client?')) {
+          this.data.clients = this.data.clients.filter(c => c.clientId !== id);
+          this.saveData();
+          this.populateClientsList();
+          this.updateClientSearch();
+          console.log(`🗑️ Client deleted: ID ${id}`);
+        }
+      }
+      
+      populateClientsList() {
+        const container = document.getElementById('clientsList');
+        if (this.data.clients.length === 0) {
+          container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">No clients added yet.</div>';
+          return;
+        }
+        
+        const html = this.data.clients.map(clientData => {
+          const client = clientData.client;
+          return `
+            <div class="data-item">
+              <div class="data-item-info">
+                <div class="data-item-name">👤 ${client.name}</div>
+                <div class="data-item-details">
+                  ${client.type} • ${client.address}, ${client.city} • ${client.phone} • ${client.email}
+                </div>
+              </div>
+              <div class="data-item-actions">
+                <button class="btn-sm btn-edit" onclick="app.showClientForm(${JSON.stringify(clientData).replace(/"/g, '&quot;')})">
+                  ✏️ Edit
+                </button>
+                <button class="btn-sm btn-delete" onclick="app.deleteClient(${clientData.clientId})">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        container.innerHTML = html;
+      }
+      
+      // ========================================
+      // COMPANY MANAGEMENT
+      // ========================================
+      
+      initCompanyForm() {
+        const form = document.getElementById('companyForm');
+        const logoUpload = document.getElementById('logoUpload');
+        const logoFile = document.getElementById('logoFile');
+        
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          this.saveCompanyInfo();
+        });
+        
+        logoUpload.addEventListener('click', () => {
+          logoFile.click();
+        });
+        
+        logoFile.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById('logoPreview').innerHTML = 
+                `<img src="${e.target.result}" alt="Company Logo">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      populateCompanyForm() {
+        document.getElementById('companyName').value = this.data.company.name || '';
+        document.getElementById('companyPhone').value = this.data.company.phone || '';
+        document.getElementById('companyAddress').value = this.data.company.address || '';
+        document.getElementById('companyCity').value = this.data.company.city || '';
+        document.getElementById('companyEmail').value = this.data.company.email || '';
+        document.getElementById('companyNumber').value = this.data.company.companyNumber || '';
+        document.getElementById('vatNumber').value = this.data.company.vatNumber || '';
+        const bankNameEl = document.getElementById('companyBankName');
+        const accountNameEl = document.getElementById('companyAccountName');
+        const sortCodeEl = document.getElementById('companySortCode');
+        const accountNoEl = document.getElementById('companyAccountNo');
+        if (bankNameEl) bankNameEl.value = this.data.company.bankName || '';
+        if (accountNameEl) accountNameEl.value = this.data.company.accountName || '';
+        if (sortCodeEl) sortCodeEl.value = this.data.company.sortCode || '';
+        if (accountNoEl) accountNoEl.value = this.data.company.account || '';
+        
+        const logoPreview = document.getElementById('logoPreview');
+        if (this.data.company.logo) {
+          logoPreview.innerHTML = `<img src="${this.data.company.logo}" alt="Company Logo">`;
+        } else {
+          logoPreview.innerHTML = '';
+        }
+      }
+      
+      saveCompanyInfo() {
+        const logoPreview = document.querySelector('#logoPreview img');
+        
+        this.data.company = {
+          name: document.getElementById('companyName').value.trim(),
+          phone: document.getElementById('companyPhone').value.trim(),
+          address: document.getElementById('companyAddress').value.trim(),
+          city: document.getElementById('companyCity').value.trim(),
+          email: document.getElementById('companyEmail').value.trim(),
+          companyNumber: document.getElementById('companyNumber').value.trim(),
+          vatNumber: document.getElementById('vatNumber').value.trim(),
+          bankName: document.getElementById('companyBankName') ? document.getElementById('companyBankName').value.trim() : '',
+          accountName: document.getElementById('companyAccountName') ? document.getElementById('companyAccountName').value.trim() : '',
+          sortCode: document.getElementById('companySortCode') ? document.getElementById('companySortCode').value.trim() : '',
+          account: document.getElementById('companyAccountNo') ? document.getElementById('companyAccountNo').value.trim() : '',
+          logo: logoPreview ? logoPreview.src : this.data.company.logo
+        };
+        
+        this.saveData();
+        this.updateCompanyDisplay();
+        
+        alert('✅ Company information saved successfully!');
+        console.log('✅ Company information updated');
+      }
+      
+      // ========================================
+      // EXPORT & CLEAR (Settings > Export tab, from invoice.html)
+      // ========================================
+      
+      downloadJSON(data, filename) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      exportAllData() {
+        const data = {
+          products: this.data.products,
+          clients: this.data.clients,
+          company: this.data.company,
+          settings: this.data.settings
+        };
+        this.downloadJSON(data, 'quote-all-data.json');
+        console.log('💾 Exported all data');
+      }
+      
+      exportProducts() {
+        this.downloadJSON(this.data.products, 'quote-products.json');
+        console.log('📦 Exported products');
+      }
+      
+      exportClients() {
+        this.downloadJSON(this.data.clients, 'quote-clients.json');
+        console.log('👥 Exported clients');
+      }
+      
+      importFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (!data || typeof data !== 'object') {
+              alert('Invalid file: not a JSON object.');
+              return;
+            }
+            if (Array.isArray(data.products)) {
+              localStorage.setItem('invoiceApp_products', JSON.stringify(data.products));
+            }
+            if (Array.isArray(data.clients)) {
+              localStorage.setItem('invoiceApp_clients', JSON.stringify(data.clients));
+            }
+            if (data.company && typeof data.company === 'object') {
+              localStorage.setItem('invoiceApp_company', JSON.stringify(data.company));
+            }
+            if (data.settings && typeof data.settings === 'object') {
+              localStorage.setItem('invoiceApp_settings', JSON.stringify(data.settings));
+            }
+            this.loadData();
+            this.updateAllDropdowns();
+            this.updateUI();
+            this.populateCompanyForm();
+            if (this.sendMessageToFocusedIframe) {
+              this.sendMessageToFocusedIframe({ type: 'reload-quote-data', data: this.data });
+            }
+            alert('Import successful. Data has been loaded.');
+            console.log('📥 Import successful');
+          } catch (err) {
+            alert('Import failed: ' + (err.message || 'Invalid JSON'));
+          }
+        };
+        reader.onerror = () => alert('Could not read file.');
+        reader.readAsText(file);
+      }
+      
+      clearAllData() {
+        if (!confirm('Are you sure you want to clear ALL data? This cannot be undone.')) return;
+        localStorage.removeItem('invoiceApp_products');
+        localStorage.removeItem('invoiceApp_clients');
+        localStorage.removeItem('invoiceApp_company');
+        localStorage.removeItem('invoiceApp_settings');
+        this.loadData();
+        this.populateCompanyForm();
+        this.updateAllDropdowns();
+        this.updateUI();
+        if (this.sendMessageToFocusedIframe) {
+          this.sendMessageToFocusedIframe({ type: 'reload-quote-data', data: this.data });
+        }
+        alert('All data has been cleared.');
+        console.log('🗑️ All data cleared');
+      }
+      
+      printCurrentQuote() {
+        this.sendMessageToFocusedIframe({ type: 'print' });
+      }
+      
+      // ========================================
+      // UI UPDATE METHODS
+      // ========================================
+      
+      updateUI() {
+        this.updateCompanyDisplay();
+        this.updateProductDropdowns();
+        this.updateClientSearch();
+        this.setCurrentDates();
+        this.calculateAmounts();
+      }
+      
+      updateCompanyDisplay() {
+        const company = this.data.company;
+        
+        // Update company info display
+        const companyInfo = document.getElementById('companyInfo');
+        companyInfo.innerHTML = `
+          <p><strong>${company.name || 'Your Company Name'}</strong></p>
+          <p>${company.address || 'Your Company Address'}</p>
+          <p>${company.city || 'Your City, Postcode'}</p>
+          <p>Phone: ${company.phone || 'Your Phone Number'}</p>
+          <p>Email: ${company.email || 'your.email@company.com'}</p>
+          <p>Company Number: ${company.companyNumber || 'Your Company Number'}</p>
+          <p>VAT NO.: ${company.vatNumber || 'Your VAT Number'}</p>
+        `;
+        
+        // Update company logo
+        const logoImg = document.getElementById('companyLogo');
+        if (company.logo) {
+          logoImg.src = company.logo;
+        }
+      }
+      
+      updateProductDropdowns() {
+        const selects = document.querySelectorAll('.description-select');
+        selects.forEach(select => {
+          const currentValue = select.value;
+          select.innerHTML = '';
+          
+          // Add products from data
+          this.data.products.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.name;
+            option.textContent = product.name;
+            select.appendChild(option);
+          });
+          
+          // Add "Enter New" option
+          const enterNewOption = document.createElement('option');
+          enterNewOption.value = 'Enter New';
+          enterNewOption.textContent = 'Enter New';
+          select.appendChild(enterNewOption);
+          
+          // Restore selection if it exists
+          if (Array.from(select.options).find(opt => opt.value === currentValue)) {
+            select.value = currentValue;
+          } else if (this.data.products.length > 0) {
+            select.value = this.data.products[0].name;
+          }
+        });
+        
+        // Update product images and prices
+        this.updateAllItemImages();
+        this.updateAllItemPrices();
+      }
+
+      syncReferenceToQuoteNumber() {
+        const invoiceNo = document.getElementById('invoiceNo');
+        const reference = document.getElementById('reference');
+        if (invoiceNo && reference) {
+          reference.textContent = invoiceNo.textContent.trim();
+        }
+      }
+      
+      updateClientSearch() {
+        // Replace customer name field with search box
+        const customerNameCell = document.getElementById('customerName');
+        if (customerNameCell && !customerNameCell.querySelector('.client-search-container')) {
+          this.createClientSearchBox(customerNameCell);
+        }
+      }
+      
+      createClientSearchBox(cell) {
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'client-search-container';
+        
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'client-search-input';
+        searchInput.placeholder = 'Search clients or type manually...';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'client-autocomplete-dropdown';
+        
+        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(dropdown);
+        
+        // Handle search
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+          const query = e.target.value.trim();
+          clearTimeout(searchTimeout);
+          
+          if (!query) {
+            dropdown.classList.remove('show');
+            return;
+          }
+          
+          searchTimeout = setTimeout(() => {
+            this.performClientSearch(query, dropdown);
+          }, 200);
+        });
+        
+        // Handle selection
+        dropdown.addEventListener('click', (e) => {
+          const item = e.target.closest('.client-autocomplete-item');
+          if (item) {
+            if (item.classList.contains('add-new-client-item')) {
+              // Handle adding new client
+              const query = item.dataset.query;
+              this.addNewClientFromSearch(query);
+              dropdown.classList.remove('show');
+            } else {
+              // Handle selecting existing client
+              const clientData = JSON.parse(item.dataset.clientData);
+              this.selectClient(clientData);
+              dropdown.classList.remove('show');
+            }
+          }
+        });
+        
+        cell.innerHTML = '';
+        cell.appendChild(searchContainer);
+        cell.contentEditable = false;
+      }
+      
+      performClientSearch(query, dropdown) {
+        const results = this.data.clients.filter(clientData => {
+          const client = clientData.client;
+          const searchText = `${client.name} ${client.address}`.toLowerCase();
+          return searchText.includes(query.toLowerCase());
+        });
+        
+        if (results.length === 0) {
+          dropdown.innerHTML = `
+            <div class="client-autocomplete-item">No clients found</div>
+            <div class="client-autocomplete-item add-new-client-item" data-query="${query}">
+              <div class="client-name" style="color: #007bff; font-weight: 600;">➕ Add new client: "${query}"</div>
+              <div class="client-address" style="font-size: 12px; color: #666;">Click to create a new client</div>
+            </div>
+          `;
+        } else {
+          dropdown.innerHTML = results.slice(0, 10).map(clientData => {
+            const client = clientData.client;
+            return `
+              <div class="client-autocomplete-item" data-client-data='${JSON.stringify(clientData)}'>
+                <div class="client-name">${client.name}</div>
+                <div class="client-address">${client.address}, ${client.city}</div>
+              </div>
+            `;
+          }).join('');
+        }
+        
+        dropdown.classList.add('show');
+      }
+      
+      addNewClientFromSearch(query) {
+        // Switch to data management modal
+        this.showDataManagement();
+        
+        // Wait for modal to fully render and populate, then switch tabs
+        setTimeout(() => {
+          // Switch to clients tab using the app's switchTab method
+          if (typeof this.switchTab === 'function') {
+            this.switchTab('clients');
+          } else {
+            // Fallback: click the clients tab button directly
+            const clientsTabButton = document.querySelector('[data-tab="clients"]');
+            if (clientsTabButton) {
+              clientsTabButton.click();
+            }
+          }
+          
+          // Wait for tab content to load, then click "Add New Client" button
+          setTimeout(() => {
+            const addClientBtn = document.getElementById('addClientBtn');
+            if (addClientBtn) {
+              addClientBtn.click();
+              
+              // Wait for form to appear, then populate the client name field
+              setTimeout(() => {
+                const clientNameField = document.getElementById('clientName');
+                if (clientNameField) {
+                  clientNameField.value = query;
+                  clientNameField.focus();
+                  
+                  // Scroll the form into view if needed
+                  const form = clientNameField.closest('.client-form');
+                  if (form) {
+                    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }
+              }, 200);
+            } else {
+              // Fallback: try to show the form directly
+              if (typeof this.showClientForm === 'function') {
+                this.showClientForm();
+                
+                // Wait for form to appear, then populate the client name field
+                setTimeout(() => {
+                  const clientNameField = document.getElementById('clientName');
+                  if (clientNameField) {
+                    clientNameField.value = query;
+                    clientNameField.focus();
+                    
+                    // Scroll the form into view if needed
+                    const form = clientNameField.closest('.client-form');
+                    if (form) {
+                      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }
+                }, 200);
+              }
+            }
+          }, 300);
+        }, 300);
+      }
+      
+      selectClient(clientData) {
+        const client = clientData.client;
+        
+        // Update search input
+        const searchInput = document.querySelector('.client-search-input');
+        if (searchInput) {
+          searchInput.value = client.name;
+        }
+        
+        // Auto-fill other fields
+        const addressEl = document.getElementById('customerAddress');
+        const cityEl = document.getElementById('customerCity');
+        const phoneEl = document.getElementById('customerPhone');
+        const emailEl = document.getElementById('customerEmail');
+        
+        if (addressEl) addressEl.textContent = client.address || '';
+        if (cityEl) cityEl.textContent = client.city || '';
+        if (phoneEl) phoneEl.textContent = client.phone || '';
+        if (emailEl) emailEl.textContent = client.email || '';
+        
+        console.log(`✅ Selected client: ${client.name}`);
+      }
+      
+      // ========================================
+      // QUOTE FUNCTIONALITY
+      // ========================================
+      
+      initQuoteControls() {
+        // Description dropdown handlers
+        document.querySelectorAll('.description-select').forEach(select => {
+          select.addEventListener('change', (e) => this.handleDescriptionChange(e.target));
+        });
+        
+        // Description input handlers
+        document.querySelectorAll('.description-input').forEach(input => {
+          input.addEventListener('blur', (e) => this.handleDescriptionInputBlur(e.target));
+        });
+        
+        // Auto-calculation handlers
+        document.querySelectorAll('[contenteditable]').forEach(cell => {
+          cell.addEventListener('blur', () => {
+            if (cell.classList.contains('qty')) {
+              this.validateQuantity(cell);
+            }
+            this.calculateAmounts();
+          });
+        });
+      }
+
+      // ========================================
+      // FILE LOAD / NEW / EXPORT
+      // ========================================
+
+      initOpenQuoteButton() {
+        const openBtn = document.getElementById('openQuoteBtn');
+        if (openBtn) {
+          openBtn.addEventListener('click', () => {
+            this.loadQuote();
+          });
+        }
+      }
+
+      loadQuote(filePath = null) {
+        if (filePath) {
+          const iframe = this.createNewQuoteArtboard();
+          if (!iframe) return;
+          this.currentFile = filePath;
+          this.loadQuoteContent(filePath, iframe);
+          return;
+        }
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.html,.htm';
+
+        input.onchange = function(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const iframe = this.createNewQuoteArtboard();
+          if (!iframe) {
+            console.error('❌ Failed to create artboard for quote');
+            return;
+          }
+          this.currentFile = file.name;
+          this.loadQuoteContent(file, iframe);
+        }.bind(this);
+
+        input.click();
+      }
+
+      createNewQuoteArtboard() {
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        if (!canvasOverlay) return null;
+        const state = window.artboardState;
+        if (!state) return null;
+        const existing = canvasOverlay.querySelectorAll('.artboard-container');
+        const offsetX = 50 + existing.length * 50;
+        const offsetY = 50 + existing.length * 50;
+        const newId = getNextArtboardId();
+        const pageNum = existing.length + 1;
+
+        const container = document.createElement('div');
+        container.className = 'artboard-container';
+        container.style.position = 'absolute';
+        container.style.left = offsetX + 'px';
+        container.style.top = offsetY + 'px';
+        container.setAttribute('data-artboard-id', newId);
+
+        const artboard = document.createElement('div');
+        artboard.className = 'artboard';
+        artboard.style.width = '794px';
+        artboard.style.minHeight = '1123px';
+        artboard.style.height = 'auto';
+
+        const header = document.createElement('div');
+        header.className = 'artboard-header';
+        header.innerHTML = `
+          <div class="artboard-info">
+            <span class="artboard-title">Page ${pageNum}</span>
+            <span class="artboard-size-badge">A4 Portrait</span>
+          </div>
+          <div class="artboard-controls">
+            <button type="button" class="artboard-control-btn" onclick="duplicateArtboard('${newId}')" title="Duplicate">⧉</button>
+            <button type="button" class="artboard-control-btn" onclick="changeArtboardSize('${newId}')" title="Resize">⤢</button>
+            <button type="button" class="artboard-control-btn" onclick="removeArtboard('${newId}')" title="Delete">✕</button>
+          </div>
+        `;
+
+        const content = document.createElement('div');
+        content.className = 'artboard-content';
+        const iframe = document.createElement('iframe');
+        iframe.id = 'quoteFrame_' + Date.now();
+        const slot = state.artboards.size;
+        iframe.src = slot === 0 ? 'quote.html' : 'quote.html?slot=' + slot;
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('allowfullscreen', '');
+        content.appendChild(iframe);
+
+        const status = document.createElement('div');
+        status.className = 'artboard-status';
+        status.textContent = '794px × 1123px';
+
+        artboard.appendChild(header);
+        artboard.appendChild(content);
+        artboard.appendChild(status);
+        container.appendChild(artboard);
+        canvasOverlay.appendChild(container);
+
+        const baseZIndex = 10 + state.artboards.size;
+        container.style.zIndex = baseZIndex;
+        state.artboards.set(newId, {
+          container: container,
+          artboard: artboard,
+          header: header,
+          position: { x: offsetX, y: offsetY },
+          baseZIndex: baseZIndex
+        });
+
+        artboard.addEventListener('click', (e) => { e.stopPropagation(); focusArtboard(newId); });
+        header.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('artboard-control-btn') || e.target.closest('.artboard-control-btn')) return;
+          e.stopPropagation();
+          focusArtboard(newId);
+          startDrag(newId, e);
+        });
+        header.querySelectorAll('.artboard-control-btn').forEach(btn => {
+          btn.addEventListener('mousedown', e => e.stopPropagation());
+          btn.addEventListener('click', e => e.stopPropagation());
+        });
+
+        focusArtboard(newId);
+        return iframe;
+      }
+
+      loadQuoteContent(fileOrPath, targetIframe = null) {
+        try {
+          if (typeof fileOrPath === 'string') {
+            fetch(fileOrPath)
+              .then(response => response.text())
+              .then(quoteHTML => {
+                this.processQuoteContent(quoteHTML, targetIframe);
+              })
+              .catch(error => {
+                console.error('❌ Failed to load file from path:', error);
+                this.showFileLoadError(fileOrPath, error.message);
+              });
+          } else {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              const quoteHTML = e.target.result;
+              this.processQuoteContent(quoteHTML, targetIframe);
+            }.bind(this);
+            reader.readAsText(fileOrPath);
+          }
+        } catch (error) {
+          console.error('❌ File loading error:', error);
+          this.showFileLoadError(fileOrPath, error.message);
+        }
+      }
+
+      processQuoteContent(quoteHTML, targetIframe = null) {
+        if (targetIframe) {
+          targetIframe.srcdoc = quoteHTML;
+          const artboardContainer = targetIframe.closest('.artboard-container');
+          if (artboardContainer && this.currentFile) {
+            const titleEl = artboardContainer.querySelector('.artboard-title');
+            if (titleEl) {
+              const filename = this.currentFile.replace(/\.(html|htm)$/i, '');
+              titleEl.textContent = filename;
+            }
+          }
+          console.log('📂 Loaded quote HTML into new artboard:', this.currentFile || 'quote.html');
+          return;
+        }
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'load-quote-html',
+            html: quoteHTML,
+            filename: this.currentFile || 'quote.html'
+          }, '*');
+          console.log('📂 Loaded quote HTML into iframe:', this.currentFile || 'unknown');
+        } else {
+          document.open();
+          document.write(quoteHTML);
+          document.close();
+          console.log('📂 Loaded quote HTML:', this.currentFile || 'unknown');
+        }
+      }
+
+      showFileLoadError(filePath, errorMessage) {
+        alert(`Failed to load file: ${filePath}\nError: ${errorMessage}\n\nThis may be due to browser security restrictions for local files.`);
+      }
+
+      initNewQuoteButton() {
+        const newBtn = document.getElementById('newQuoteBtn');
+        if (newBtn) {
+          newBtn.addEventListener('click', () => {
+            this.createNewQuoteArtboard();
+          });
+        }
+      }
+
+      resetNewQuote() {
+        console.log('🆕 Resetting quote to new...');
+
+        if (this.currentMode === 'preview') {
+          this.switchMode('edit');
+        }
+
+        const currentInvoiceNo = document.getElementById('invoiceNo');
+        if (currentInvoiceNo) {
+          const currentNo = currentInvoiceNo.textContent.trim();
+          if (/^\d+$/.test(currentNo)) {
+            const nextNumber = String(parseInt(currentNo) + 1).padStart(5, '0');
+            currentInvoiceNo.textContent = nextNumber;
+          } else {
+            currentInvoiceNo.textContent = '00001';
+          }
+          this.syncReferenceToQuoteNumber();
+        }
+
+        const today = new Date();
+        const currentDate = today.toLocaleDateString('en-GB');
+        const dueDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB');
+
+        const invoiceDate = document.getElementById('invoiceDate');
+        const invoiceDueDate = document.getElementById('dueDate');
+        if (invoiceDate) invoiceDate.textContent = currentDate;
+        if (invoiceDueDate) invoiceDueDate.textContent = dueDate;
+
+        const terms = document.getElementById('terms');
+        if (terms) terms.textContent = 'Net 30';
+
+        const customerName = document.getElementById('customerName');
+        const customerAddress = document.getElementById('customerAddress');
+        const customerCity = document.getElementById('customerCity');
+        const customerPhone = document.getElementById('customerPhone');
+        const customerEmail = document.getElementById('customerEmail');
+        const clientSearchInput = document.querySelector('.client-search-input');
+        if (clientSearchInput) {
+          clientSearchInput.value = '';
+        } else if (customerName) {
+          customerName.textContent = 'Your Customer Name';
+        }
+        if (customerAddress) customerAddress.textContent = 'Your Customer Address';
+        if (customerCity) customerCity.textContent = 'Your Customer City';
+        if (customerPhone) customerPhone.textContent = 'Your Customer Phone';
+        if (customerEmail) customerEmail.textContent = 'Your Customer Email';
+
+        const tbody = document.querySelector('.items-table tbody');
+        if (tbody) {
+          const rows = tbody.querySelectorAll('tr');
+          for (let i = rows.length - 1; i > 0; i--) {
+            tbody.removeChild(rows[i]);
+          }
+          const firstRow = rows[0];
+          if (firstRow) {
+            const descSelect = firstRow.querySelector('.description-select');
+            const descInput = firstRow.querySelector('.description-input');
+            if (descSelect && this.data.products.length > 0) {
+              descSelect.value = this.data.products[0].name;
+              descSelect.style.display = 'block';
+              if (descInput) {
+                descInput.style.display = 'none';
+                descInput.value = '';
+              }
+              this.updateItemImageDisplay('1', descSelect.value);
+            }
+            const unitPriceCell = firstRow.querySelector('.unit-price');
+            const qtyCell = firstRow.querySelector('.qty');
+            if (descSelect && unitPriceCell && qtyCell) {
+              const selectedProduct = this.data.products.find(p => p.name === descSelect.value);
+              if (selectedProduct && selectedProduct.price) {
+                unitPriceCell.textContent = `£${selectedProduct.price.toFixed(2)}`;
+              } else {
+                unitPriceCell.textContent = '£0.00';
+              }
+              unitPriceCell.removeAttribute('data-loaded-from-save');
+              if (selectedProduct && selectedProduct.category === 'service') {
+                qtyCell.textContent = '0';
+                qtyCell.contentEditable = false;
+                qtyCell.style.backgroundColor = '#f5f5f5';
+                qtyCell.style.color = 'transparent';
+                qtyCell.style.cursor = 'not-allowed';
+                qtyCell.title = 'Services are charged as flat rate';
+              } else {
+                qtyCell.textContent = '1';
+                qtyCell.contentEditable = true;
+                qtyCell.style.backgroundColor = '';
+                qtyCell.style.color = '';
+                qtyCell.style.cursor = 'text';
+                qtyCell.title = 'Enter quantity';
+              }
+            }
+            const amountCell = firstRow.querySelector('.amount');
+            if (amountCell) amountCell.textContent = '£0.00';
+            const dateCell = firstRow.querySelector('td:nth-child(6)');
+            if (dateCell) dateCell.textContent = currentDate;
+          }
+        }
+
+        const discount = document.getElementById('discount');
+        const delivery = document.getElementById('delivery');
+        const tax = document.getElementById('tax');
+        const amountPaid = document.getElementById('amountPaid');
+        if (discount) discount.textContent = '£0.00';
+        if (delivery) delivery.textContent = '£0.00';
+        if (tax) tax.textContent = '£0.00';
+        if (amountPaid) amountPaid.textContent = '£0.00';
+
+        this.calculateAmounts();
+        this.updateRowNumbers();
+
+        console.log('✅ Quote reset to new successfully');
+      }
+
+      initExportFunctionality() {
+        const exportBtn = document.getElementById('exportPngBtn');
+        if (exportBtn) {
+          exportBtn.addEventListener('click', () => {
+            this.sendInvoice();
+          });
+        }
+      }
+
+      async sendInvoice() {
+        console.log('🚀 Starting SEND export...');
+
+        if (typeof html2canvas === 'undefined') {
+          console.error('html2canvas library not loaded');
+          alert('Export library not loaded. Please refresh the page and try again.');
+          return;
+        }
+
+        const quoteEl = document.getElementById('invoice');
+        if (!quoteEl) {
+          console.error('Quote element not found');
+          alert('Quote element not found. Please refresh the page and try again.');
+          return;
+        }
+
+        const originalMode = this.currentMode;
+
+        try {
+          this.switchMode('preview');
+          await new Promise(resolve => setTimeout(resolve, 200));
+
+          const a4Width = 794;
+          const a4Height = 1123;
+
+          await new Promise(resolve => setTimeout(resolve, 200));
+
+          const canvas = await html2canvas(quoteEl, {
+            scale: 1.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: a4Width,
+            height: a4Height,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: a4Width,
+            windowHeight: a4Height,
+            logging: true,
+            foreignObjectRendering: false,
+            imageTimeout: 0
+          });
+
+          const link = document.createElement('a');
+          const invoiceNo = document.getElementById('invoiceNo').textContent || 'invoice';
+          link.download = `quote-${invoiceNo}.png`;
+          link.href = canvas.toDataURL('image/png');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          console.log('📤 Quote sent as PNG');
+        } catch (error) {
+          console.error('Send failed:', error);
+          alert(`Send failed: ${error.message}. Please check the console for details.`);
+        } finally {
+          this.switchMode(originalMode);
+        }
+      }
+      
+      addNewRow() {
+        const tbody = document.querySelector('.items-table tbody');
+        const existingRows = tbody.querySelectorAll('tr');
+        const newRowNumber = existingRows.length + 1;
+        
+        // Build options HTML from global items list
+        let optionsHTML = '';
+        this.globalItemsList.forEach(item => {
+          optionsHTML += `<option value="${item}">${item}</option>`;
+        });
+        optionsHTML += '<option value="Enter New">Enter New</option>';
+        
+        const newRow = document.createElement('tr');
+        newRow.id = `row${newRowNumber}`;
+        newRow.innerHTML = `
+          <td>${newRowNumber}</td>
+          <td id="desc${newRowNumber}">
+            <div class="item-with-image" id="itemDisplay${newRowNumber}">
+              <div class="item-image placeholder" id="itemImage${newRowNumber}">📦</div>
+              <div class="item-text">
+                <select id="descSelect${newRowNumber}" class="description-select">
+                  ${optionsHTML}
+                </select>
+                <input type="text" id="descInput${newRowNumber}" class="description-input" style="display: none;">
+              </div>
+            </div>
+          </td>
+          <td id="qty${newRowNumber}" class="qty" contenteditable="true">1</td>
+          <td id="unitPrice${newRowNumber}" class="unit-price" contenteditable="true">£0.00</td>
+          <td id="amount${newRowNumber}" class="amount">£0.00</td>
+          <td id="date${newRowNumber}" contenteditable="true">${new Date().toLocaleDateString('en-GB')}</td>
+          <td class="actions-cell">
+            <button class="table-btn table-btn-up" onclick="app.moveRowUp(${newRowNumber})" title="Move Up">↑</button>
+            <button class="table-btn table-btn-down" onclick="app.moveRowDown(${newRowNumber})" title="Move Down">↓</button>
+            <button class="table-btn table-btn-delete" onclick="app.deleteRow(${newRowNumber})" title="Delete Row">×</button>
+          </td>
+        `;
+        
+        tbody.appendChild(newRow);
+        
+        // Add event listeners for new row
+        const newSelect = newRow.querySelector('.description-select');
+        const newInput = newRow.querySelector('.description-input');
+        if (newSelect) {
+          newSelect.addEventListener('change', (e) => this.handleDescriptionChange(e.target));
+          // Set initial price for the selected product
+          this.updateItemPriceForRow(newRowNumber, newSelect.value);
+        }
+        if (newInput) {
+          newInput.addEventListener('blur', (e) => this.handleDescriptionInputBlur(e.target));
+        }
+        
+        const newEditableCells = newRow.querySelectorAll('[contenteditable]');
+        newEditableCells.forEach(cell => {
+          cell.addEventListener('blur', () => {
+            if (cell.classList.contains('qty')) {
+              this.validateQuantity(cell);
+            }
+            this.calculateAmounts();
+          });
+        });
+        
+        this.calculateAmounts();
+        console.log(`➕ Added new row ${newRowNumber}`);
+      }
+      
+      // ========================================
+      // ROW MANAGEMENT FUNCTIONS
+      // ========================================
+      
+      moveRowUp(rowNumber) {
+        const tbody = document.querySelector('.items-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const currentRowIndex = rows.findIndex(row => row.id === `row${rowNumber}`);
+        
+        if (currentRowIndex > 0) {
+          const currentRow = rows[currentRowIndex];
+          const previousRow = rows[currentRowIndex - 1];
+          
+          // Swap the rows
+          tbody.insertBefore(currentRow, previousRow);
+          
+          // Update row numbers and IDs
+          this.updateRowNumbers();
+          this.calculateAmounts();
+          
+          console.log(`⬆️ Moved row ${rowNumber} up`);
+        }
+      }
+      
+      moveRowDown(rowNumber) {
+        const tbody = document.querySelector('.items-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const currentRowIndex = rows.findIndex(row => row.id === `row${rowNumber}`);
+        
+        if (currentRowIndex < rows.length - 1) {
+          const currentRow = rows[currentRowIndex];
+          const nextRow = rows[currentRowIndex + 1];
+          
+          // Swap the rows
+          tbody.insertBefore(nextRow, currentRow);
+          
+          // Update row numbers and IDs
+          this.updateRowNumbers();
+          this.calculateAmounts();
+          
+          console.log(`⬇️ Moved row ${rowNumber} down`);
+        }
+      }
+      
+      deleteRow(rowNumber) {
+        const tbody = document.querySelector('.items-table tbody');
+        const rows = tbody.querySelectorAll('tr');
+        
+        if (rows.length > 1) {
+          const targetRow = document.getElementById(`row${rowNumber}`);
+          if (targetRow) {
+            tbody.removeChild(targetRow);
+            
+            // Update row numbers and IDs
+            this.updateRowNumbers();
+            this.calculateAmounts();
+            
+            console.log(`🗑️ Deleted row ${rowNumber}`);
+          }
+        } else {
+          alert('Cannot delete the last remaining row.');
+        }
+      }
+      
+      updateRowNumbers() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        rows.forEach((row, index) => {
+          const newRowNumber = index + 1;
+          
+          // Update row ID
+          row.id = `row${newRowNumber}`;
+          
+          // Update row number in first cell
+          const firstCell = row.querySelector('td:first-child');
+          if (firstCell) {
+            firstCell.textContent = newRowNumber;
+          }
+          
+          // Update all IDs to match new row number
+          const descCell = row.querySelector('td:nth-child(2)');
+          const qtyCell = row.querySelector('td:nth-child(3)');
+          const unitPriceCell = row.querySelector('td:nth-child(4)');
+          const amountCell = row.querySelector('td:nth-child(5)');
+          const dateCell = row.querySelector('td:nth-child(6)');
+          
+          if (descCell) descCell.id = `desc${newRowNumber}`;
+          if (qtyCell) qtyCell.id = `qty${newRowNumber}`;
+          if (unitPriceCell) unitPriceCell.id = `unitPrice${newRowNumber}`;
+          if (amountCell) amountCell.id = `amount${newRowNumber}`;
+          if (dateCell) dateCell.id = `date${newRowNumber}`;
+          
+          // Update description select and input IDs
+          const descSelect = row.querySelector('.description-select');
+          const descInput = row.querySelector('.description-input');
+          if (descSelect) descSelect.id = `descSelect${newRowNumber}`;
+          if (descInput) descInput.id = `descInput${newRowNumber}`;
+          
+          // Update item display and image IDs
+          const itemDisplay = row.querySelector('.item-with-image');
+          const itemImage = row.querySelector('.item-image');
+          if (itemDisplay) itemDisplay.id = `itemDisplay${newRowNumber}`;
+          if (itemImage) itemImage.id = `itemImage${newRowNumber}`;
+          
+          // Update row control buttons
+          const upBtn = row.querySelector('.table-btn-up');
+          const downBtn = row.querySelector('.table-btn-down');
+          const deleteBtn = row.querySelector('.table-btn-delete');
+
+          if (upBtn) upBtn.setAttribute('onclick', `app.moveRowUp(${newRowNumber})`);
+          if (downBtn) downBtn.setAttribute('onclick', `app.moveRowDown(${newRowNumber})`);
+          if (deleteBtn) deleteBtn.setAttribute('onclick', `app.deleteRow(${newRowNumber})`);
+        });
+      }
+      
+      handleDescriptionChange(selectElement) {
+        const row = selectElement.closest('tr');
+        const inputField = row.querySelector('.description-input');
+        const selectedValue = selectElement.value;
+        
+        if (selectedValue === 'Enter New') {
+          // Hide dropdown and show input field
+          selectElement.style.display = 'none';
+          inputField.style.display = 'block';
+          
+          // Clear the input field completely
+          inputField.value = '';
+          inputField.placeholder = 'Enter custom item name...';
+          
+          // Reset quantity, unit price, and amount to zero
+          const qtyCell = row.querySelector('.qty');
+          const unitPriceCell = row.querySelector('.unit-price');
+          const amountCell = row.querySelector('.amount');
+          
+          if (qtyCell) {
+            qtyCell.textContent = '0';
+            qtyCell.contentEditable = true;
+            qtyCell.style.backgroundColor = '';
+            qtyCell.style.color = '';
+            qtyCell.style.cursor = 'text';
+            qtyCell.title = 'Enter quantity';
+          }
+          
+          if (unitPriceCell) {
+            unitPriceCell.textContent = '£0.00';
+          }
+          
+          if (amountCell) {
+            amountCell.textContent = '£0.00';
+          }
+          
+          // Focus the input field after a short delay to ensure it's visible
+          setTimeout(() => {
+          inputField.focus();
+          }, 100);
+          
+          // Recalculate amounts
+          this.calculateAmounts();
+        } else {
+          inputField.value = selectedValue;
+          
+          // Auto-fill price
+          const product = this.data.products.find(p => p.name === selectedValue);
+          if (product && product.price) {
+            const unitPriceCell = row.querySelector('.unit-price');
+            if (unitPriceCell) {
+              unitPriceCell.textContent = `£${product.price.toFixed(2)}`;
+              this.calculateAmounts();
+            }
+          }
+          
+          // Handle quantity based on item type
+          this.updateQuantityField(row, selectedValue);
+          
+          // Update product image
+          const rowId = row.id.replace('row', '');
+          this.updateItemImageDisplay(rowId, selectedValue);
+        }
+      }
+      
+      handleDescriptionInputBlur(inputElement) {
+        const row = inputElement.closest('tr');
+        const selectField = row.querySelector('.description-select');
+        const inputValue = inputElement.value.trim();
+        
+        console.log('Input blur - inputValue:', inputValue);
+        console.log('Input blur - inputValue type:', typeof inputValue);
+        console.log('Input blur - inputValue length:', inputValue.length);
+        
+        if (inputValue) {
+          // Check if item already exists in products
+          const existingProduct = this.data.products.find(p => p.name === inputValue);
+          
+          if (!existingProduct) {
+            // Add the new item to the products list
+            const newId = Math.max(...this.data.products.map(p => p.id), 0) + 1;
+            const newProduct = {
+              id: newId,
+              name: inputValue,
+              category: 'product',
+              price: 0.00,
+              icon: '📦',
+              image: '',
+              description: ''
+            };
+            this.data.products.push(newProduct);
+            this.saveData();
+          }
+          
+          // Add to global items list and update all dropdowns
+          this.addToGlobalItemsList(inputValue);
+          
+          // Set the dropdown to show the custom value
+          selectField.value = inputValue;
+          // Hide input, show select
+          inputElement.style.display = 'none';
+          selectField.style.display = 'block';
+          
+          // Update the product image display
+          const rowId = row.id.replace('row', '');
+          this.updateItemImageDisplay(rowId, inputValue);
+          
+          // Recalculate amounts
+          this.calculateAmounts();
+        } else {
+          // If empty, revert to default selection
+          inputElement.value = this.data.products[0]?.name || 'Example Product';
+          selectField.value = this.data.products[0]?.name || 'Example Product';
+          inputElement.style.display = 'none';
+          selectField.style.display = 'block';
+        }
+      }
+      
+      addToGlobalItemsList(itemName) {
+        if (!this.globalItemsList.includes(itemName)) {
+          this.globalItemsList.push(itemName);
+          this.updateAllDropdowns();
+          console.log('✅ Added to global items:', itemName);
+          console.log('Global items list:', this.globalItemsList);
+        }
+      }
+      
+      updateAllDropdowns() {
+        console.log('🔄 Updating all dropdowns with global items:', this.globalItemsList);
+        
+        const allSelects = document.querySelectorAll('.description-select');
+        console.log('📋 Found description selects:', allSelects.length);
+        
+        allSelects.forEach((select, index) => {
+          const currentValue = select.value;
+          console.log(`📝 Select ${index + 1} current value:`, currentValue);
+          
+          // Clear existing options except "Enter New"
+          const enterNewOption = select.querySelector('option[value="Enter New"]');
+          select.innerHTML = '';
+          
+          // Add all global items
+          this.globalItemsList.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            select.appendChild(option);
+          });
+          
+          // Add "Enter New" at the bottom
+          if (enterNewOption) {
+            select.appendChild(enterNewOption);
+          } else {
+            const newEnterNewOption = document.createElement('option');
+            newEnterNewOption.value = 'Enter New';
+            newEnterNewOption.textContent = 'Enter New';
+            select.appendChild(newEnterNewOption);
+          }
+          
+          // Restore selection if it still exists
+          if (this.globalItemsList.includes(currentValue) || currentValue === 'Enter New') {
+            select.value = currentValue;
+          } else {
+            select.value = this.globalItemsList[0] || 'Example Product';
+          }
+          
+          console.log(`✅ Select ${index + 1} updated with ${select.options.length} options`);
+        });
+      }
+      
+      updateQuantityField(row, productName) {
+        const qtyCell = row.querySelector('.qty');
+        const product = this.data.products.find(p => p.name === productName);
+        
+        if (product) {
+          if (product.category === 'service') {
+            // For services, set quantity to 0 and show visual cue
+            qtyCell.textContent = '0';
+            qtyCell.contentEditable = false;
+            qtyCell.style.backgroundColor = '#f5f5f5';
+            qtyCell.style.color = 'transparent';
+            qtyCell.style.cursor = 'not-allowed';
+            qtyCell.title = 'Services are charged as flat rate';
+          } else {
+            // For products, make quantity editable and visible
+            qtyCell.contentEditable = true;
+            qtyCell.style.backgroundColor = '';
+            qtyCell.style.color = '';
+            qtyCell.style.cursor = 'text';
+            qtyCell.title = 'Enter quantity';
+            if (qtyCell.textContent === '0' || qtyCell.textContent === '') {
+              qtyCell.textContent = '1';
+            }
+          }
+        }
+      }
+      
+      updateItemImageDisplay(rowId, itemName) {
+        const itemImageDiv = document.getElementById(`itemImage${rowId}`);
+        if (!itemImageDiv) return;
+        
+        const product = this.data.products.find(p => p.name === itemName);
+        if (product && product.image) {
+          itemImageDiv.innerHTML = `<img src="${product.image}" alt="${itemName}">`;
+          itemImageDiv.classList.remove('placeholder');
+        } else {
+          const icon = product?.icon || '📦';
+          itemImageDiv.innerHTML = icon;
+          itemImageDiv.classList.add('placeholder');
+        }
+      }
+      
+      updateAllItemImages() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        rows.forEach((row, index) => {
+          const rowId = index + 1;
+          const select = row.querySelector('.description-select');
+          if (select) {
+            this.updateItemImageDisplay(rowId, select.value);
+          }
+        });
+      }
+      
+      updateAllItemPrices() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        rows.forEach((row, index) => {
+          const select = row.querySelector('.description-select');
+          if (select && select.value !== 'Enter New') {
+            const product = this.data.products.find(p => p.name === select.value);
+            if (product) {
+              // Always update price from Settings unless it's loaded from saved data
+              const unitPriceCell = row.querySelector('.unit-price');
+              if (unitPriceCell && !unitPriceCell.hasAttribute('data-loaded-from-save')) {
+                if (product.price) {
+                  unitPriceCell.textContent = `£${product.price.toFixed(2)}`;
+                }
+              }
+              
+              // Update quantity field based on item type
+              this.updateQuantityField(row, select.value);
+              
+              // Update image
+              const rowId = row.id.replace('row', '');
+              this.updateItemImageDisplay(rowId, select.value);
+            }
+          }
+        });
+        
+        // Recalculate all amounts after updates
+        this.calculateAmounts();
+      }
+      
+      updateItemPriceForRow(rowNumber, productName) {
+        if (productName && productName !== 'Enter New') {
+          const product = this.data.products.find(p => p.name === productName);
+          if (product) {
+            const unitPriceCell = document.getElementById(`unitPrice${rowNumber}`);
+            if (unitPriceCell && !unitPriceCell.hasAttribute('data-loaded-from-save')) {
+              if (product.price) {
+                unitPriceCell.textContent = `£${product.price.toFixed(2)}`;
+                this.calculateAmounts();
+              }
+            }
+          }
+          
+          // Update quantity field based on item type
+          const row = document.getElementById(`row${rowNumber}`);
+          if (row) {
+            this.updateQuantityField(row, productName);
+          }
+        }
+      }
+      
+      validateQuantity(cell) {
+        let qty = parseFloat(cell.textContent.replace(/[£,]/g, '')) || 0;
+        
+        // Check if this is an "Enter New" scenario (input field is visible)
+        const row = cell.closest('tr');
+        const inputField = row.querySelector('.description-input');
+        const isEnterNewMode = inputField && inputField.style.display !== 'none';
+        
+        // Only enforce minimum of 1 if not in "Enter New" mode
+        if (qty < 1 && !isEnterNewMode) {
+          qty = 1;
+          cell.textContent = '1';
+        }
+        
+        return qty;
+      }
+      
+      calculateAmounts() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        let subtotal = 0;
+        
+        rows.forEach(row => {
+          const qtyCell = row.querySelector('.qty');
+          const unitPriceCell = row.querySelector('.unit-price');
+          const amountCell = row.querySelector('.amount');
+          
+          if (qtyCell && unitPriceCell && amountCell) {
+            const qty = this.validateQuantity(qtyCell);
+            const unitPrice = parseFloat(unitPriceCell.textContent.replace(/[£,]/g, '')) || 0;
+            const amount = qty * unitPrice;
+            
+            amountCell.textContent = `£${amount.toFixed(2)}`;
+            subtotal += amount;
+          }
+        });
+        
+        // Update summary
+        const discount = parseFloat(document.getElementById('discount').textContent.replace(/[£,]/g, '')) || 0;
+        const delivery = parseFloat(document.getElementById('delivery').textContent.replace(/[£,]/g, '')) || 0;
+        const tax = parseFloat(document.getElementById('tax').textContent.replace(/[£,]/g, '')) || 0;
+        const amountPaid = parseFloat(document.getElementById('amountPaid').textContent.replace(/[£,]/g, '')) || 0;
+
+        const total = subtotal - discount + delivery + tax;
+        const outstanding = total - amountPaid;
+
+        document.getElementById('subtotal').textContent = `£${subtotal.toFixed(2)}`;
+        document.getElementById('total').textContent = `£${total.toFixed(2)}`;
+        document.getElementById('outstanding').textContent = `£${outstanding.toFixed(2)}`;
+
+        // Format editable summary fields with £ symbol
+        const discountElement = document.getElementById('discount');
+        if (discountElement && !discountElement.textContent.includes('£')) {
+          discountElement.textContent = `£${discount.toFixed(2)}`;
+        }
+
+        const deliveryElement = document.getElementById('delivery');
+        if (deliveryElement && !deliveryElement.textContent.includes('£')) {
+          deliveryElement.textContent = `£${delivery.toFixed(2)}`;
+        }
+
+        const taxElement = document.getElementById('tax');
+        if (taxElement && !taxElement.textContent.includes('£')) {
+          taxElement.textContent = `£${tax.toFixed(2)}`;
+        }
+
+        const amountPaidElement = document.getElementById('amountPaid');
+        if (amountPaidElement && !amountPaidElement.textContent.includes('£')) {
+          amountPaidElement.textContent = `£${amountPaid.toFixed(2)}`;
+        }
+      }
+      
+      setCurrentDates() {
+        const today = new Date();
+        const currentDate = today.toLocaleDateString('en-GB');
+        const dueDate = new Date(today.getTime() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB');
+        
+        
+        const invoiceDate = document.getElementById('invoiceDate');
+        const invoiceDueDate = document.getElementById('dueDate');
+        if (invoiceDate && !invoiceDate.textContent.trim()) {
+          invoiceDate.textContent = currentDate;
+        }
+        if (invoiceDueDate && !invoiceDueDate.textContent.trim()) {
+          invoiceDueDate.textContent = dueDate;
+        }
+        
+        const dateCells = document.querySelectorAll('.items-table tbody tr td:nth-child(6)');
+        dateCells.forEach(cell => {
+          if (cell && !cell.textContent.trim()) {
+            cell.textContent = currentDate;
+          }
+        });
+      }
+      
+      
+      // ========================================
+      // SAVE FUNCTIONALITY
+      // ========================================
+      
+      initSaveFunctionality() {
+        document.getElementById('saveBtn').addEventListener('click', () => {
+          this.saveInvoiceData();
+        });
+        const proceedBtn = document.getElementById('proceedBtn');
+        if (proceedBtn) {
+          proceedBtn.addEventListener('click', () => {
+            this.saveInvoiceData();
+            window.open('clientForm.html', '_blank', 'noopener,noreferrer');
+          });
+        }
+      }
+      
+      saveInvoiceData() {
+        // Save all current quote data to global storage
+        const invoiceData = {
+          invoiceNo: document.getElementById('invoiceNo').textContent,
+          invoiceDate: document.getElementById('invoiceDate').textContent,
+          dueDate: document.getElementById('dueDate').textContent,
+          terms: document.getElementById('terms').textContent,
+          customerName: document.querySelector('.client-search-input')?.value || document.getElementById('customerName')?.textContent,
+          customerAddress: document.getElementById('customerAddress').textContent,
+          customerCity: document.getElementById('customerCity').textContent,
+          customerPhone: document.getElementById('customerPhone').textContent,
+          customerEmail: document.getElementById('customerEmail').textContent,
+          items: this.getCurrentItems(),
+          subtotal: document.getElementById('subtotal').textContent,
+          discount: document.getElementById('discount').textContent,
+          delivery: document.getElementById('delivery').textContent,
+          tax: document.getElementById('tax').textContent,
+          total: document.getElementById('total').textContent,
+          amountPaid: document.getElementById('amountPaid').textContent,
+          outstanding: document.getElementById('outstanding').textContent,
+          // Payment Information
+          reference: document.getElementById('reference').textContent,
+          bankName: document.getElementById('bankName').textContent,
+          accountName: document.getElementById('accountName').textContent,
+          sortCode: document.getElementById('sortCode').textContent,
+          account: document.getElementById('account').textContent,
+          lastSaved: new Date().toISOString()
+        };
+        
+        // Use GlobalStorage instead of localStorage
+        GlobalStorage.saveInvoiceData(invoiceData);
+        
+        // Show success message
+        const saveBtn = document.getElementById('saveBtn');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '✅ Saved!';
+        saveBtn.style.background = '#4CAF50';
+        
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '';
+        }, 2000);
+        
+        console.log('💾 Quote data saved to global storage');
+      }
+      
+      getCurrentItems() {
+        const items = [];
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        
+        rows.forEach((row, index) => {
+          const qty = row.querySelector('.qty')?.textContent || '1';
+          const unitPrice = row.querySelector('.unit-price')?.textContent || '£0.00';
+          const amount = row.querySelector('.amount')?.textContent || '£0.00';
+          const date = row.querySelector('td:nth-child(6)')?.textContent || '';
+          const select = row.querySelector('.description-select');
+          const input = row.querySelector('.description-input');
+          const description = select?.style.display === 'none' ? input?.value : select?.value;
+          
+          items.push({
+            rowNumber: index + 1,
+            description: description || '',
+            qty: qty,
+            unitPrice: unitPrice,
+            amount: amount,
+            date: date
+          });
+        });
+        
+        return items;
+      }
+      
+      loadSavedQuote() {
+        try {
+          const invoiceData = GlobalStorage.getInvoiceData();
+          if (invoiceData) {
+            this.populateQuoteFromData(invoiceData);
+            this.incrementQuoteNumber();
+            console.log('📂 Loaded saved quote data from global storage');
+          } else {
+            console.log('❌ No saved quote data found in global storage');
+          }
+        } catch (error) {
+          console.error('Error loading saved quote from global storage:', error);
+        }
+      }
+      
+      incrementQuoteNumber() {
+        const currentInvoiceNo = document.getElementById('invoiceNo').textContent.trim();
+        
+        // Check if it's a numeric quote number
+        if (/^\d+$/.test(currentInvoiceNo)) {
+          const nextNumber = String(parseInt(currentInvoiceNo) + 1).padStart(5, '0');
+          document.getElementById('invoiceNo').textContent = nextNumber;
+          console.log(`📈 Quote number incremented: ${currentInvoiceNo} → ${nextNumber}`);
+          } else {
+          // If it's not numeric, start with 00001
+          document.getElementById('invoiceNo').textContent = '00001';
+          console.log('📈 Quote number set to: 00001');
+        }
+      }
+      
+      populateQuoteFromData(data) {
+        // Load header information
+        if (data.invoiceNo) document.getElementById('invoiceNo').textContent = data.invoiceNo;
+        if (data.invoiceDate) document.getElementById('invoiceDate').textContent = data.invoiceDate;
+        if (data.dueDate) document.getElementById('dueDate').textContent = data.dueDate;
+        if (data.terms) document.getElementById('terms').textContent = data.terms;
+        
+        // Load customer information
+        if (data.customerName) {
+          const searchInput = document.querySelector('.client-search-input');
+          if (searchInput) {
+            searchInput.value = data.customerName;
+          } else {
+            document.getElementById('customerName').textContent = data.customerName;
+          }
+        }
+        if (data.customerAddress) document.getElementById('customerAddress').textContent = data.customerAddress;
+        if (data.customerCity) document.getElementById('customerCity').textContent = data.customerCity;
+        if (data.customerPhone) document.getElementById('customerPhone').textContent = data.customerPhone;
+        if (data.customerEmail) document.getElementById('customerEmail').textContent = data.customerEmail;
+        
+        // Load financial summary
+        if (data.subtotal) document.getElementById('subtotal').textContent = data.subtotal;
+        if (data.discount) document.getElementById('discount').textContent = data.discount;
+        if (data.delivery) document.getElementById('delivery').textContent = data.delivery;
+        if (data.tax) document.getElementById('tax').textContent = data.tax;
+        if (data.total) document.getElementById('total').textContent = data.total;
+        if (data.amountPaid) document.getElementById('amountPaid').textContent = data.amountPaid;
+        if (data.outstanding) document.getElementById('outstanding').textContent = data.outstanding;
+        
+        // Load payment information
+        if (data.reference) document.getElementById('reference').textContent = data.reference;
+        if (data.bankName) document.getElementById('bankName').textContent = data.bankName;
+        if (data.accountName) document.getElementById('accountName').textContent = data.accountName;
+        if (data.sortCode) document.getElementById('sortCode').textContent = data.sortCode;
+        if (data.account) document.getElementById('account').textContent = data.account;
+        
+        // Load items if they exist
+        if (data.items && data.items.length > 0) {
+          this.loadQuoteItems(data.items);
+        }
+      }
+      
+      loadQuoteItems(items) {
+        const tbody = document.querySelector('.items-table tbody');
+        if (!tbody) return;
+        
+        // Clear existing rows except the first one
+        const existingRows = tbody.querySelectorAll('tr');
+        for (let i = existingRows.length - 1; i > 0; i--) {
+          tbody.removeChild(existingRows[i]);
+        }
+        
+        // Update the first row
+        if (items.length > 0) {
+          this.populateRow(1, items[0]);
+        }
+        
+        // Add additional rows for remaining items
+        for (let i = 1; i < items.length; i++) {
+          this.addNewRow();
+          this.populateRow(i + 1, items[i]);
+        }
+        
+        // Update row numbers
+        this.updateRowNumbers();
+        this.calculateAmounts();
+      }
+      
+      populateRow(rowNumber, item) {
+        const row = document.getElementById(`row${rowNumber}`);
+        if (!row) return;
+        
+        // Set quantity
+        const qtyCell = row.querySelector('.qty');
+        if (qtyCell && item.qty) qtyCell.textContent = item.qty;
+        
+        // Set unit price
+        const unitPriceCell = row.querySelector('.unit-price');
+        if (unitPriceCell && item.unitPrice) {
+          unitPriceCell.textContent = item.unitPrice;
+          unitPriceCell.setAttribute('data-loaded-from-save', 'true');
+        }
+        
+        // Set amount
+        const amountCell = row.querySelector('.amount');
+        if (amountCell && item.amount) amountCell.textContent = item.amount;
+        
+        // Set date
+        const dateCell = row.querySelector('td:nth-child(6)');
+        if (dateCell && item.date) dateCell.textContent = item.date;
+        
+        // Set description
+        const select = row.querySelector('.description-select');
+        const input = row.querySelector('.description-input');
+        if (item.description) {
+          // Check if it's a predefined product
+          const product = this.data.products.find(p => p.name === item.description);
+          if (product && select) {
+            select.value = item.description;
+            select.style.display = 'block';
+            if (input) input.style.display = 'none';
+            this.updateItemImageDisplay(rowNumber, item.description);
+          } else {
+            // It's a custom entry
+            if (select) select.value = 'Enter New';
+            if (input) {
+              input.value = item.description;
+              input.style.display = 'block';
+              select.style.display = 'none';
+            }
+          }
+        }
+      }
+      
+    }
+    
+    // ========================================
+    // INITIALIZE APPLICATION
+    // ========================================
+    
+    // Global app instance
+    window.app = new StaticQuoteApp();
+    
+    // ========================================
+    // ARTBOARD BEHAVIORS (draggable handles, focus, duplicate, resize, remove)
+    // ========================================
+    function getNextArtboardId() {
+      const state = window.artboardState;
+      if (!state || state.artboards.size === 0) return 'artboard_1';
+      let maxNumber = 0;
+      state.artboards.forEach((data, artboardId) => {
+        const match = artboardId.match(/^artboard_(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) maxNumber = num;
+        }
+      });
+      return 'artboard_' + (maxNumber + 1);
+    }
+
+    function focusArtboard(artboardId) {
+      const state = window.artboardState;
+      if (!state) return;
+      if (state.focusedArtboard) {
+        const prev = state.artboards.get(state.focusedArtboard);
+        if (prev) {
+          prev.artboard.classList.remove('focused');
+          prev.container.classList.remove('focused');
+          prev.container.style.zIndex = String(prev.baseZIndex || 10);
+        }
+      }
+      if (artboardId && state.artboards.has(artboardId)) {
+        state.focusedArtboard = artboardId;
+        const current = state.artboards.get(artboardId);
+        if (current) {
+          current.artboard.classList.add('focused');
+          current.container.classList.add('focused');
+          current.container.style.zIndex = '1000';
+        }
+      } else {
+        state.focusedArtboard = null;
+      }
+    }
+
+    function startDrag(artboardId, e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const state = window.artboardState;
+      if (!state) return;
+      const artboardData = state.artboards.get(artboardId);
+      if (!artboardData) return;
+      state.draggedArtboard = artboardId;
+      const camera = window.app ? window.app.camera : { x: 0, y: 0, zoom: 1 };
+      const screenToCanvas = (clientX, clientY) => ({
+        x: (clientX - camera.x) / camera.zoom,
+        y: (clientY - camera.y) / camera.zoom
+      });
+      const startPos = screenToCanvas(e.clientX, e.clientY);
+      const initialX = artboardData.position.x;
+      const initialY = artboardData.position.y;
+
+      const onMouseMove = (ev) => {
+        ev.preventDefault();
+        const currentPos = screenToCanvas(ev.clientX, ev.clientY);
+        artboardData.position.x = initialX + (currentPos.x - startPos.x);
+        artboardData.position.y = initialY + (currentPos.y - startPos.y);
+        artboardData.container.style.left = artboardData.position.x + 'px';
+        artboardData.container.style.top = artboardData.position.y + 'px';
+      };
+
+      const onMouseUp = (ev) => {
+        ev.preventDefault();
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        if (window.artboardState) window.artboardState.draggedArtboard = null;
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function duplicateArtboard(artboardId) {
+      const state = window.artboardState;
+      if (!state || !state.artboards) return;
+      const source = state.artboards.get(artboardId);
+      if (!source) return;
+      const newId = getNextArtboardId();
+      const newContainer = source.container.cloneNode(true);
+      newContainer.setAttribute('data-artboard-id', newId);
+      newContainer.style.left = (source.position.x + 50) + 'px';
+      newContainer.style.top = (source.position.y + 50) + 'px';
+
+      const buttons = newContainer.querySelectorAll('.artboard-control-btn');
+      if (buttons.length >= 3) {
+        buttons[0].setAttribute('onclick', "duplicateArtboard('" + newId + "')");
+        buttons[1].setAttribute('onclick', "changeArtboardSize('" + newId + "')");
+        buttons[2].setAttribute('onclick', "removeArtboard('" + newId + "')");
+      }
+
+      const iframe = newContainer.querySelector('iframe');
+      if (iframe) {
+        iframe.id = 'quoteFrame_' + Date.now();
+        const slot = state.artboards.size;
+        iframe.src = slot === 0 ? 'quote.html' : 'quote.html?slot=' + slot;
+      }
+
+      const title = newContainer.querySelector('.artboard-title');
+      if (title) title.textContent = 'Page ' + (state.artboards.size + 1);
+
+      source.container.parentNode.appendChild(newContainer);
+
+      const artboard = newContainer.querySelector('.artboard');
+      const header = newContainer.querySelector('.artboard-header');
+      const baseZIndex = 10 + state.artboards.size;
+      newContainer.style.zIndex = baseZIndex;
+      state.artboards.set(newId, {
+        container: newContainer,
+        artboard: artboard,
+        header: header,
+        position: { x: source.position.x + 50, y: source.position.y + 50 },
+        baseZIndex: baseZIndex
+      });
+
+      artboard.addEventListener('click', (e) => { e.stopPropagation(); focusArtboard(newId); });
+      header.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('artboard-control-btn') || e.target.closest('.artboard-control-btn')) return;
+        e.stopPropagation();
+        focusArtboard(newId);
+        startDrag(newId, e);
+      });
+      header.querySelectorAll('.artboard-control-btn').forEach(btn => {
+        btn.addEventListener('mousedown', e => e.stopPropagation());
+        btn.addEventListener('click', e => e.stopPropagation());
+      });
+
+      focusArtboard(newId);
+    }
+
+    function changeArtboardSize(artboardId) {
+      const state = window.artboardState;
+      if (!state || !state.artboards) return;
+      const artboardData = state.artboards.get(artboardId);
+      if (!artboardData) return;
+      const artboard = artboardData.artboard;
+      const badge = artboardData.header.querySelector('.artboard-size-badge');
+      const status = artboard.querySelector('.artboard-status');
+      const sizes = [
+        { name: 'A4 Portrait', width: '794px', height: '1123px' },
+        { name: 'A4 Landscape', width: '1123px', height: '794px' }
+      ];
+      const currentBadge = badge ? badge.textContent : '';
+      const currentIndex = sizes.findIndex(s => s.name === currentBadge);
+      const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % sizes.length : 0;
+      const next = sizes[nextIndex];
+      artboard.style.width = next.width;
+      artboard.style.height = next.height;
+      artboard.style.minHeight = next.height;
+      if (badge) badge.textContent = next.name;
+      if (status) status.textContent = next.width.replace('px', '') + ' × ' + next.height.replace('px', '');
+    }
+
+    function removeArtboard(artboardId) {
+      const state = window.artboardState;
+      if (!state || !state.artboards) return;
+      if (!confirm('Remove this artboard?')) return;
+      const artboardData = state.artboards.get(artboardId);
+      if (!artboardData) return;
+      artboardData.container.remove();
+      state.artboards.delete(artboardId);
+      if (state.focusedArtboard === artboardId) state.focusedArtboard = null;
+    }
+
+    function initArtboardBehaviors() {
+      const containers = document.querySelectorAll('.artboard-container');
+      containers.forEach((container, index) => {
+        const artboard = container.querySelector('.artboard');
+        const header = container.querySelector('.artboard-header');
+        const artboardId = container.getAttribute('data-artboard-id');
+        if (!artboardId || !artboard || !header) return;
+
+        const leftMatch = container.style.left.match(/(\d+)px/);
+        const topMatch = container.style.top.match(/(\d+)px/);
+        const x = leftMatch ? parseInt(leftMatch[1], 10) : 50;
+        const y = topMatch ? parseInt(topMatch[1], 10) : 50;
+        const state = window.artboardState;
+        if (!state) return;
+
+        const baseZIndex = 10 + index;
+        container.style.zIndex = baseZIndex;
+        state.artboards.set(artboardId, {
+          container: container,
+          artboard: artboard,
+          header: header,
+          position: { x, y },
+          baseZIndex: baseZIndex
+        });
+        container.style.left = x + 'px';
+        container.style.top = y + 'px';
+
+        artboard.addEventListener('click', (e) => { e.stopPropagation(); focusArtboard(artboardId); });
+        header.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('artboard-control-btn') || e.target.closest('.artboard-control-btn')) return;
+          e.stopPropagation();
+          focusArtboard(artboardId);
+          startDrag(artboardId, e);
+        });
+        header.querySelectorAll('.artboard-control-btn').forEach(btn => {
+          btn.addEventListener('mousedown', e => e.stopPropagation());
+          btn.addEventListener('click', e => e.stopPropagation());
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.mode-bar') || e.target.closest('.zoom-bar') || e.target.closest('.action-buttons') ||
+            e.target.closest('.mode-btn') || e.target.closest('.btn') || e.target.closest('.modal-overlay') || e.target.closest('.modal')) return;
+        if (!e.target.closest('.artboard-container')) focusArtboard(null);
+      });
+
+      const first = document.querySelector('.artboard-container');
+      if (first && !window.artboardState.focusedArtboard) {
+        const id = first.getAttribute('data-artboard-id');
+        if (id) focusArtboard(id);
+      }
+    }
+
+    window.duplicateArtboard = duplicateArtboard;
+    window.changeArtboardSize = changeArtboardSize;
+    window.removeArtboard = removeArtboard;
+
+    // Additional initialization when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🎉 Static Quote System ready!');
+      initArtboardBehaviors();
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,5060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Static Invoice System</title>
+  
+  <!-- html2canvas for export functionality -->
+  <script src="js/html2canvas.min.js"></script>
+  
+  <!-- Global Storage Manager -->
+  <script src="js/global-storage.js"></script>
+  
+  <!-- Google Fonts -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+  </style>
+  
+  <style>
+    /* ========================================
+       BASE STYLES (From Original)
+       ======================================== */
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a url('Html.png') no-repeat center center;
+      background-attachment: fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      min-width: auto;
+      color: #e5e5e5;
+      position: relative;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.7);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .font-display {
+      font-family: 'Playfair Display', serif;
+    }
+
+    /* ========================================
+       MODE TOGGLE BAR
+       ======================================== */
+    .mode-bar {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 210mm;
+      min-width: 800px;
+      background: #1a1a1a;
+      color: #e5e5e5;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .mode-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .mode-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.2);
+      border-radius: 25px;
+      padding: 3px;
+      position: relative;
+    }
+    
+    .mode-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: #000000;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .mode-btn.active {
+      background: #2a2a2a;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn-primary {
+      background: #2a2a2a;
+      color: #ffffff;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-primary:hover {
+      background: #3a3a3a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .btn-export {
+      background: #2a2a2a;
+      color: #ffffff;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-export:hover {
+      background: #3a3a3a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .btn-secondary {
+      background: rgba(42, 42, 42, 0.6);
+      color: #e5e5e5;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-weight: 500;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(42, 42, 42, 0.8);
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-info {
+      background: rgba(42, 42, 42, 0.6);
+      color: #e5e5e5;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-weight: 500;
+    }
+
+    .btn-info:hover {
+      background: rgba(42, 42, 42, 0.8);
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* ========================================
+       MAIN CONTENT AREA
+       ======================================== */
+    .main-content {
+      margin-top: 0;
+      width: 210mm;
+      min-width: 800px;
+      display: flex;
+      justify-content: center;
+      padding: 0px;
+      transition: all 0.3s ease;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ========================================
+       QUOTE STYLES (Original + Enhancements)
+       ======================================== */
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: rgba(26, 26, 26, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 0;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+    
+    .a4::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('Html.png') no-repeat center center;
+      background-size: cover;
+      opacity: 0.15;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    .quote-wrapper {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-banner {
+      background: #0f0f0f;
+      height: 136px;
+      width: 100%;
+      position: relative;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      visibility: hidden;
+    }
+
+    .quote-wrapper {
+      padding: 1mm 10mm 0 10mm;
+      position: relative;
+      z-index: 1;
+    }
+
+    .top-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 30px;
+    }
+
+    .branding {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .branding img {
+      width: 100px;
+      height: auto;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .company-info {
+      margin-bottom: 15px;
+    }
+
+    .company-info p {
+      margin: 2px 0;
+      font-size: 13px;
+      color: #999999;
+    }
+    
+    .company-info strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .quote-title {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #ffffff;
+      font-family: 'Playfair Display', serif;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .quote-details {
+      text-align: right;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #b3b3b3;
+    }
+
+    .quote-details p {
+      margin: 5px 0;
+      color: #b3b3b3;
+    }
+
+    .label {
+      font-weight: 500;
+      color: #808080;
+      margin-right: 8px;
+    }
+
+    .customer-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .bill-to, .ship-to {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .bill-to h3, .ship-to h3 {
+      margin: 0 0 10px 0;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .bill-to p, .ship-to p {
+      margin: 3px 0;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      color: #999999;
+    }
+
+    /* ========================================
+       TABLE STYLES
+       ======================================== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    th, td {
+      padding: 12px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #0f0f0f;
+      color: #ffffff;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 11px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+    }
+    
+    td {
+      background: #1a1a1a;
+      color: #cccccc;
+    }
+    
+    tbody tr:hover td {
+      background: #222222;
+      transition: background 0.2s ease;
+    }
+
+    .items-table th:nth-child(1) { width: 5%; }  /* SL */
+    .items-table th:nth-child(2) { width: 40%; } /* Description */
+    .items-table th:nth-child(3) { width: 12%; } /* Qty */
+    .items-table th:nth-child(4) { width: 18%; } /* Unit Price */
+    .items-table th:nth-child(5) { width: 18%; } /* Amount */
+    .items-table th:nth-child(6) { width: 7%; } /* Actions */
+
+    .items-table td:nth-child(3),
+    .items-table td:nth-child(4),
+    .items-table td:nth-child(5) {
+      text-align: right;
+      color: #cccccc;
+      font-weight: 500;
+    }
+    
+    .items-table td:nth-child(5) {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* ========================================
+       TABLE ACTION BUTTONS
+       ======================================== */
+    .actions-cell {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .table-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 0 2px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .table-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .table-btn-up {
+      background: #2a2a2a;
+      color: #cccccc;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table-btn-up:hover {
+      background: #3a3a3a;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .table-btn-down {
+      background: #2a2a2a;
+      color: #cccccc;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table-btn-down:hover {
+      background: #3a3a3a;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .table-btn-delete {
+      background: #2a2a2a;
+      color: #999999;
+      opacity: 0.8;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table-btn-delete:hover {
+      background: #3a3a3a;
+      color: #ffffff;
+      opacity: 1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .items-table tbody tr:hover .table-btn-delete {
+      opacity: 1;
+    }
+
+    .add-row-btn {
+      position: absolute;
+      bottom: 246px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: #2a2a2a;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .add-row-btn:hover {
+      background: #3a3a3a;
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ========================================
+       MOBILE RESPONSIVENESS
+       ======================================== */
+    
+    /* Touch-specific improvements for mobile devices */
+    @media (hover: none) and (pointer: coarse) {
+      /* Mobile/tablet specific styles */
+      .add-row-btn {
+        min-height: 44px; /* iOS recommended touch target size */
+        min-width: 44px;
+        padding: 12px 20px;
+        font-size: 16px;
+        border-radius: 8px;
+      }
+      
+      .table-btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px;
+        font-size: 16px;
+      }
+      
+      .description-select,
+      .description-input {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 12px;
+      }
+      
+      /* Make contenteditable cells more touch-friendly */
+      [contenteditable] {
+        min-height: 44px;
+        padding: 8px;
+        font-size: 16px;
+      }
+    }
+    
+    /* Mobile-specific positioning for better accessibility */
+    @media (max-width: 768px) {
+      .add-row-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        left: auto;
+        transform: none;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        padding: 0;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      
+      .add-row-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+      }
+      
+      /* Ensure A4 page fits on mobile */
+      .a4 {
+        width: 100%;
+        max-width: 210mm;
+        margin: 0 auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      
+      /* Make table more mobile-friendly */
+      .items-table {
+        font-size: 14px;
+      }
+      
+      .items-table th,
+      .items-table td {
+        padding: 8px 4px;
+        font-size: 14px;
+      }
+      
+      /* Adjust column widths for mobile */
+      .items-table th:nth-child(1) { width: 8%; }   /* SL */
+      .items-table th:nth-child(2) { width: 40%; }  /* Description */
+      .items-table th:nth-child(3) { width: 12%; }  /* Qty */
+      .items-table th:nth-child(4) { width: 18%; }  /* Unit Price */
+      .items-table th:nth-child(5) { width: 18%; }  /* Amount */
+      .items-table th:nth-child(6) { width: 4%; }   /* Date */
+    }
+    
+    /* Very small screens */
+    @media (max-width: 480px) {
+      .add-row-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
+      
+      .items-table th,
+      .items-table td {
+        padding: 6px 2px;
+        font-size: 12px;
+      }
+      
+      .quote-title {
+        font-size: 32px;
+      }
+      
+      .company-info p,
+      .bill-to p,
+      .ship-to p {
+        font-size: 13px;
+      }
+      
+      /* Make mode toggle more mobile-friendly */
+      .mode-bar {
+        padding: 8px 15px;
+        font-size: 14px;
+      }
+      
+      .mode-toggle {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      
+      /* Improve modal sizing on mobile */
+      .modal-content {
+        margin: 5% auto;
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+    }
+    
+    /* Landscape mobile orientation */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .add-row-btn {
+        bottom: 10px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+      }
+      
+      .a4 {
+        margin: 10px auto;
+      }
+    }
+
+    /* Table styling */
+    .items-table {
+      position: relative;
+      margin-bottom: 0;
+    }
+    
+    /* Table container for horizontal scrolling */
+    .table-container {
+      position: relative;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: none;
+      border-radius: 0;
+    }
+    
+    .table-container::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb {
+      background: #c0392b;
+      border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #a93226;
+    }
+
+    /* ========================================
+       PRODUCT DISPLAY STYLES
+       ======================================== */
+    .item-with-image {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+    }
+    
+    .item-image {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 3px;
+    }
+    
+    .item-image:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      border-color: #007bff;
+    }
+    
+    .item-image.placeholder {
+      background: linear-gradient(135deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(225deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(315deg, #e9ecef 25%, transparent 25%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .item-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ========================================
+       FORM CONTROLS
+       ======================================== */
+    .description-select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: #0f0f0f;
+      color: #cccccc;
+      cursor: pointer;
+      box-sizing: border-box;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .description-select:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+      background-color: #1a1a1a;
+    }
+    
+    .description-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: #0f0f0f;
+      color: #cccccc;
+      box-sizing: border-box;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .description-input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+      background-color: #1a1a1a;
+    }
+    
+    .items-table td:nth-child(2) {
+      padding: 0;
+    }
+
+    /* ========================================
+       CLIENT SEARCH STYLES
+       ======================================== */
+    .client-search-container {
+      position: relative;
+      display: inline-block;
+      flex: 1;
+      margin-left: 5px;
+    }
+    
+    .client-search-input {
+      width: 100%;
+      padding: 2px 4px;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+      color: #cccccc;
+      min-width: 200px;
+    }
+    
+    .client-search-input:focus {
+      color: #ffffff;
+    }
+    
+    .client-autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #0f0f0f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+      display: none;
+      min-width: 250px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .client-autocomplete-dropdown.show {
+      display: block;
+    }
+    
+    .client-autocomplete-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.2s;
+      color: #999999;
+    }
+    
+    .client-autocomplete-item:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+      color: #ffffff;
+    }
+    
+    .client-autocomplete-item.add-new-client-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .client-autocomplete-item.selected {
+      background: #2a2a2a;
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    /* ========================================
+       SUMMARY SECTION
+       ======================================== */
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .summary-table {
+      width: 300px;
+      border-collapse: collapse;
+    }
+
+    .summary-table td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+    }
+
+    .summary-table td:first-child {
+      font-weight: 500;
+      background: #0f0f0f;
+      width: 60%;
+      color: #b3b3b3;
+    }
+
+    .summary-table td:last-child {
+      text-align: right;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .total-row td {
+      background: #0f0f0f !important;
+      color: #ffffff !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-top: 2px solid rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .outstanding-row td {
+      background-color: #726e6e !important;
+      color: white !important;
+      font-weight: bold !important;
+    }
+    
+    .amount-paid-row td {
+      background-color: #ffeaa7 !important;
+      color: #856404 !important;
+      font-weight: bold !important;
+    }
+
+    .terms-section {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .payment-info, .terms-info {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .payment-info h3, .terms-info h3 {
+      margin: 0 0 10px 0;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .payment-info p, .terms-info p {
+      margin: 3px 0;
+      font-size: 13px;
+      color: #999999;
+    }
+
+    .footer-banner {
+      background: #0f0f0f;
+      height: 40px;
+      width: 100%;
+      margin-top: auto;
+      position: relative;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    [contenteditable] {
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+      padding: 2px;
+      min-width: 50px;
+      color: #cccccc;
+    }
+    
+    [contenteditable]:focus {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      outline: none;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* ========================================
+       DATA MANAGEMENT MODAL
+       ======================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20000;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #1a1a1a;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+      animation: modalSlideIn 0.3s ease-out;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      background: #0f0f0f;
+      color: #ffffff;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #999999;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+      font-weight: 300;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      transform: rotate(90deg);
+    }
+
+    .modal-body {
+      padding: 0;
+      overflow-y: auto;
+      max-height: calc(80vh - 80px);
+    }
+
+    /* ========================================
+       TABS SYSTEM
+       ======================================== */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0f0f0f;
+    }
+
+    .tab-button {
+      padding: 15px 25px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666666;
+      transition: all 0.3s ease;
+      position: relative;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .tab-button:hover {
+      color: #cccccc;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .tab-button.active {
+      color: #ffffff;
+      background: #0f0f0f;
+      font-weight: 600;
+    }
+
+    .tab-button.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .tab-content {
+      padding: 30px;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ========================================
+       DATA MANAGEMENT STYLES
+       ======================================== */
+    .data-section {
+      margin-bottom: 30px;
+    }
+
+    .data-section h3 {
+      margin: 0 0 15px 0;
+      color: #ffffff;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .data-list {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      overflow: hidden;
+      background: #0f0f0f;
+    }
+
+    .data-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+    }
+
+    .data-item:last-child {
+      border-bottom: none;
+    }
+
+    .data-item:hover {
+      background: #f8f9fa;
+    }
+
+    .data-item-info {
+      flex: 1;
+      margin-right: 15px;
+    }
+
+    .data-item-name {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .data-item-details {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .data-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-edit {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #45a049;
+    }
+
+    .btn-delete {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #da190b;
+    }
+
+    .add-new-section {
+      text-align: center;
+      padding: 20px;
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      margin-bottom: 20px;
+      background: #0f0f0f;
+    }
+    
+    .add-new-section:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: #1a1a1a;
+    }
+
+    .add-new-btn {
+      background: #2a2a2a;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .add-new-btn:hover {
+      background: #3a3a3a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ========================================
+       FORM STYLES
+       ======================================== */
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      flex: 1;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #b3b3b3;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.2s;
+      box-sizing: border-box;
+      background: #0f0f0f;
+      color: #cccccc;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+      background: #1a1a1a;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .image-upload {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .image-upload:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .image-upload input {
+      display: none;
+    }
+
+    .image-preview {
+      margin-top: 15px;
+    }
+
+    .image-preview img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* ========================================
+       MODE SPECIFIC STYLES
+       ======================================== */
+    /* Edit Mode - Show all controls */
+    body.edit-mode .actions-cell,
+    body.edit-mode .add-row-btn,
+    body.edit-mode .items-table th:last-child {
+      display: table-cell;
+    }
+
+    body.edit-mode [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      pointer-events: auto;
+    }
+
+    body.edit-mode .description-select,
+    body.edit-mode .description-input,
+    body.edit-mode .client-search-input {
+      pointer-events: auto;
+    }
+
+    /* Preview Mode - Hide all edit controls and disable editing */
+    body.preview-mode .actions-cell,
+    body.preview-mode .add-row-btn,
+    body.preview-mode .items-table th:last-child,
+    body.preview-mode .items-table td:last-child {
+      display: none !important;
+    }
+
+    body.preview-mode [contenteditable] {
+      border-bottom: none !important;
+      outline: none !important;
+      pointer-events: none !important;
+      user-select: text;
+      cursor: default !important;
+    }
+
+    body.preview-mode .description-select,
+    body.preview-mode .description-input {
+      pointer-events: none !important;
+      border: none !important;
+      background: transparent !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      cursor: default !important;
+      color: inherit !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+    }
+
+    body.preview-mode .client-search-input {
+      pointer-events: none !important;
+      border: none !important;
+      background: transparent !important;
+      cursor: default !important;
+    }
+
+    body.preview-mode .client-autocomplete-dropdown {
+      display: none !important;
+      pointer-events: none !important;
+    }
+
+    /* Disable all interactive elements in preview mode except essential buttons */
+    body.preview-mode select,
+    body.preview-mode input,
+    body.preview-mode textarea,
+    body.preview-mode button:not(.mode-btn):not(.preview-mode-only) {
+      pointer-events: none !important;
+      cursor: default !important;
+    }
+    
+    /* Ensure essential buttons remain clickable */
+    body.preview-mode .mode-btn,
+    body.preview-mode .preview-mode-only {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* Prevent text selection while maintaining readability */
+    body.preview-mode * {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+
+    /* Remove any hover or focus effects */
+    body.preview-mode *:hover,
+    body.preview-mode *:focus {
+      outline: none !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+    }
+
+    body.preview-mode .a4 {
+      box-shadow: none;
+    }
+
+    /* Ensure table borders are visible in preview mode */
+    body.preview-mode .items-table,
+    body.preview-mode .items-table th,
+    body.preview-mode .items-table td {
+      border: 1px solid #ddd !important;
+      border-collapse: collapse !important;
+    }
+
+    body.preview-mode .items-table tbody tr:last-child td {
+      border-bottom: 1px solid #ddd !important;
+    }
+
+    /* Disable editing of payment info and tax in preview mode */
+    body.preview-mode .payment-info span[contenteditable],
+    body.preview-mode #tax[contenteditable] {
+      pointer-events: none !important;
+      border-bottom: none !important;
+      outline: none !important;
+      user-select: text;
+    }
+
+    body.preview-mode .main-content {
+      padding: 0;
+      margin-top: 0;
+    }
+    
+  
+    /* ========================================
+       PRINT & EXPORT OPTIMIZATIONS
+       ======================================== */
+    @media print {
+      .mode-bar {
+        display: none !important;
+      }
+      
+      .main-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+      }
+      
+      .a4 {
+        box-shadow: none !important;
+        margin: 0 !important;
+      }
+      
+      body {
+        background: white !important;
+      }
+      
+      .actions-cell,
+      .add-row-btn,
+      .items-table th:last-child,
+      .items-table td:last-child {
+        display: none !important;
+      }
+      
+      .description-select,
+      .description-input {
+        border: none !important;
+        background: transparent !important;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+      
+      [contenteditable] {
+        border-bottom: none !important;
+      }
+    }
+
+  
+    /* ========================================
+       UTILITY CLASSES
+       ======================================== */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-20 {
+      margin-top: 20px;
+    }
+
+    .mb-20 {
+      margin-bottom: 20px;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Hide Ship To section */
+    .ship-to {
+      display: none !important;
+    }
+    
+    /* Additional professional styling */
+    .currency {
+      font-weight: bold;
+    }
+    
+    .contact-info {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .payment-logo {
+      width: 100px;
+      height: auto;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* Invoice class aliases (match quote theme) */
+    .invoice-wrapper {
+      position: relative;
+      z-index: 1;
+      padding: 1mm 10mm 0 10mm;
+    }
+    .invoice-title {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #ffffff;
+      font-family: 'Playfair Display', serif;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+    .invoice-details {
+      text-align: right;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #b3b3b3;
+    }
+    .invoice-details p {
+      margin: 5px 0;
+      color: #b3b3b3;
+    }
+    @media (max-width: 480px) {
+      .invoice-title { font-size: 32px; }
+    }
+
+  </style>
+</head>
+<body class="edit-mode">
+
+  <!-- Mode bar removed: editor/index.html owns mode and sends switch-mode via postMessage -->
+
+  <!-- ========================================
+       MAIN INVOICE CONTENT
+       ======================================== -->
+  <div class="main-content">
+    <div class="a4" id="invoice">
+
+
+      <div class="header-banner"></div>
+      <div class="invoice-wrapper">
+        <!-- Top Section -->
+        <div class="top-section">
+          <div class="branding">
+            <img id="companyLogo" alt="Company Logo" src="./logos\invoLOGO.png">
+            <div class="company-info" id="companyInfo">
+              <p><strong>Your Company Name</strong></p>
+              <p>Your Company Address</p>
+              <p>Your City, Postcode</p>
+              <p>Phone: Your Phone Number</p>
+              <p>Email: your.email@company.com</p>
+              <p>Company Number: Your Company Number</p>
+              <p>VAT NO.: Your VAT Number</p>
+            </div>
+          </div>
+          <div class="invoice-details">
+            <div class="invoice-title" contenteditable="true">INVOICE</div>
+            <p><span class="label">Invoice No:</span> <span id="invoiceNo" contenteditable="true">00001</span></p>
+            <p><span class="label">Date:</span> <span id="invoiceDate" contenteditable="true"></span></p>
+            <p><span class="label">Due Date:</span> <span id="dueDate" contenteditable="true"></span></p>
+            <p><span class="label">Terms:</span> <span class="terms-field"><select id="terms" class="terms-select"><option value="Net 14">Net 14</option><option value="Due on receipt">Due on receipt</option><option value="Net 7">Net 7</option><option value="Net 30">Net 30</option><option value="Net 60">Net 60</option><option value="Net 90">Net 90</option><option value="End of month">End of month</option><option value="50% upfront, balance on delivery">50% upfront, balance on delivery</option><option value="Enter New">Enter New</option></select><input type="text" id="termsCustom" class="terms-input" placeholder="Enter custom terms..." style="display: none;"></span></p>
+          </div>
+        </div>
+
+        <!-- Customer Section -->
+        <div class="customer-section">
+          <div class="bill-to">
+            <h3>Bill To:</h3>
+            <p><span class="label">Name:</span> <span id="customerName" contenteditable="true">Your Customer Name</span></p>
+            <p><span class="label">Address:</span> <span id="customerAddress" contenteditable="true">Your Customer Address</span></p>
+            <p><span class="label">City:</span> <span id="customerCity" contenteditable="true">Your Customer City</span></p>
+            <p><span class="label">Phone:</span> <span id="customerPhone" contenteditable="true">Your Customer Phone</span></p>
+            <p><span class="label">Email:</span> <span id="customerEmail" contenteditable="true">Your Customer Email</span></p>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="table-container">
+          <table class="items-table">
+          <thead>
+            <tr>
+              <th>SL.</th>
+              <th>Description</th>
+              <th>Qty / Hours</th>
+              <th>Unit Price</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="row1">
+              <td>1</td>
+              <td id="desc1">
+                <div class="item-with-image" id="itemDisplay1">
+                  <div class="item-image placeholder" id="itemImage1">📦</div>
+                  <div class="item-text">
+                    <select id="descSelect1" class="description-select">
+                      <option value="Example Product">Example Product</option>
+                      <option value="Service Example">Service Example</option>
+                      <option value="Enter New">Enter New</option>
+                    </select>
+                    <input type="text" id="descInput1" class="description-input" value="Example Product" style="display: none;" contenteditable="true">
+                  </div>
+                </div>
+              </td>
+              <td id="qty1" class="qty" contenteditable="true">1</td>
+              <td id="unitPrice1" class="unit-price" contenteditable="true">£0.00</td>
+              <td id="amount1" class="amount">£0.00</td>
+              <td id="date1" contenteditable="true"></td>
+              <td class="actions-cell">
+                <button class="table-btn table-btn-up" onclick="app.moveRowUp(1)" title="Move Up">↑</button>
+                <button class="table-btn table-btn-down" onclick="app.moveRowDown(1)" title="Move Down">↓</button>
+                <button class="table-btn table-btn-delete" onclick="app.deleteRow(1)" title="Delete Row">×</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        
+        <!-- Add Row Button -->
+          <button class="add-row-btn" onclick="app.addNewRow()">+ Add New Row</button>
+
+        <!-- Summary and Payment Section -->
+        <div class="summary-section">
+          <div class="payment-info">
+            <h3>Payment Information</h3>
+            <p><span class="label">Reference:</span> <span id="reference" contenteditable="true">Your Reference</span></p>
+            <p><span class="label">Bank:</span> <span id="bankName" contenteditable="true">Your Bank Name</span></p>
+            <p><span class="label">Account Name:</span> <span id="accountName" contenteditable="true">Your Account Name</span></p>
+            <p><span class="label">Sort Code:</span> <span id="sortCode" contenteditable="true">Your Sort Code</span></p>
+            <p><span class="label">Account No:</span> <span id="account" contenteditable="true">Your Account Number</span></p>
+          </div>
+          <table class="summary-table">
+            <tbody>
+              <tr>
+                <td>Subtotal:</td>
+                <td id="subtotal">£0.00</td>
+              </tr>
+              <tr>
+                <td>Discount:</td>
+                <td id="discount" contenteditable="true">£0.00</td>
+              </tr>
+              <tr>
+                <td>Delivery:</td>
+                <td id="delivery" contenteditable="true">£0.00</td>
+              </tr>
+              <tr>
+                <td>Tax (VAT):</td>
+                <td id="tax" contenteditable="true">£0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total:</td>
+                <td id="total">£0.00</td>
+              </tr>
+              <tr class="amount-paid-row">
+                <td>Amount Paid:</td>
+                <td id="amountPaid" contenteditable="true">£0.00</td>
+              </tr>
+              <tr class="outstanding-row">
+                <td>Outstanding:</td>
+                <td id="outstanding">£0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="footer-banner">
+      <div class="branding-footer">
+        <p style="text-align: center; margin: 10px 0; font-size: 12px; color: #ffffff;">
+          Powered by <strong>INVOXX.COM</strong> - Professional Invoice Management System
+        </p>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================
+       DATA MANAGEMENT MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="dataModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Settings</h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="products">📦 Invoice Details</button>
+          <button class="tab-button" data-tab="clients">👥 Clients</button>
+          <button class="tab-button" data-tab="company">🏢 Company</button>
+          <button class="tab-button" data-tab="export">📤 Export</button>
+        </div>
+        
+        <!-- Products Tab -->
+        <div class="tab-content active" id="products-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addProductBtn">
+              ➕ Add Product / Service
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Products or Services</h3>
+            <div class="data-list" id="productsList">
+              <!-- Products will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Clients Tab -->
+        <div class="tab-content" id="clients-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addClientBtn">
+              ➕ Add New Client
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Current Clients</h3>
+            <div class="data-list" id="clientsList">
+              <!-- Clients will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Company Tab -->
+        <div class="tab-content" id="company-tab">
+          <div class="data-section">
+            <h3>Company Information</h3>
+            <form id="companyForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Company Name</label>
+                  <input type="text" id="companyName" required>
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="text" id="companyPhone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Address</label>
+                  <input type="text" id="companyAddress">
+                </div>
+                <div class="form-group">
+                  <label>City & Postcode</label>
+                  <input type="text" id="companyCity">
+                </div>
+              </div>
+              <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="companyEmail">
+                </div>
+                <div class="form-group">
+                  <label>Company Number</label>
+                  <input type="text" id="companyNumber">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>VAT Number</label>
+                <input type="text" id="vatNumber">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Bank Name</label>
+                  <input type="text" id="companyBankName">
+                </div>
+                <div class="form-group">
+                  <label>Account Name</label>
+                  <input type="text" id="companyAccountName">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Sort Code</label>
+                  <input type="text" id="companySortCode">
+                </div>
+                <div class="form-group">
+                  <label>Account No</label>
+                  <input type="text" id="companyAccountNo">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Company Logo</label>
+                <div class="image-upload" id="logoUpload">
+                  <input type="file" id="logoFile" accept="image/*">
+                  <p>📁 Click to upload company logo</p>
+                  <div class="image-preview" id="logoPreview"></div>
+                </div>
+              </div>
+              <div class="text-center mt-20">
+                <button type="submit" class="btn btn-primary">💾 Save Company Info</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Export Tab -->
+        <div class="tab-content" id="export-tab">
+          <div class="data-section">
+            <h3>Export data</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button type="button" class="btn btn-primary" onclick="app.exportAllData()">💾 Export All Data</button>
+              <button type="button" class="btn btn-primary" onclick="app.exportProducts()">📦 Export Products</button>
+              <button type="button" class="btn btn-primary" onclick="app.exportClients()">👥 Export Clients</button>
+              <button type="button" class="btn btn-primary" onclick="app.exportInvoices()">📚 Export Invoices</button>
+              <button type="button" class="btn import-btn" onclick="document.getElementById('settingsImportFileInput').click()">📥 Import Data</button>
+              <input type="file" id="settingsImportFileInput" accept=".json,application/json" style="display: none" onchange="if(this.files[0]) app.importFromFile(this.files[0]); this.value='';">
+              <button type="button" class="btn btn-export" onclick="app.renderInvoices()">📄 Render Invoices</button>
+              <button type="button" class="btn btn-export" onclick="app.printInvoices()">🖨️ Print Invoices</button>
+            </div>
+          </div>
+          <div class="data-section" style="margin-top: 20px; border-color: #0d6efd; background: #f0f7ff;">
+            <h3 style="color: #0d6efd;">Invoice number counter</h3>
+            <p style="color: #666; margin-bottom: 12px;">Set the next invoice number: use the stepper, type a value, or reset to 1.</p>
+            <div class="counter-control-wrap">
+              <div class="counter-stepper">
+                <button type="button" id="counterStepperMinus" aria-label="Decrease">−</button>
+                <input type="number" id="counterInput" min="1" max="99999" step="1" value="1" aria-label="Next invoice number">
+                <button type="button" id="counterStepperPlus" aria-label="Increase">+</button>
+              </div>
+              <button type="button" class="counter-reset-btn" id="counterResetBtn">Reset to 1</button>
+            </div>
+          </div>
+          <div class="data-section" style="margin-top: 20px; border-color: #dc3545; background: #fff5f5;">
+            <h3 style="color: #721c24;">Clear all data</h3>
+            <p style="color: #666; margin-bottom: 16px;">Remove all products, clients, company info, current invoice, archived invoices, and reset the invoice number counter. This cannot be undone.</p>
+            <button type="button" class="btn" style="background: #dc3545; color: white;" onclick="app.clearAllData()">🗑️ Clear All Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice List Modal -->
+  <div class="modal-overlay" id="invoiceListModal" style="display: none;">
+    <div class="modal" style="max-width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h2 class="modal-title">📋 Saved Invoices</h2>
+        <button class="modal-close" id="closeInvoiceListModal">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+        <!-- Search Bar -->
+        <input type="text" id="invoiceSearchInput" 
+          placeholder="🔍 Search by invoice number, customer name, email, or phone..."
+          style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box;" />
+        
+        <!-- Invoice Count -->
+        <div style="margin: 10px 0 15px; color: #666; font-size: 14px;">
+          <span id="invoiceCount">0</span> invoice(s) found
+        </div>
+        
+        <!-- Invoice List Container -->
+        <div id="invoiceListContainer" style="display: flex; flex-direction: column; gap: 12px;">
+        </div>
+        
+        <!-- Empty State -->
+        <div id="emptyInvoiceState" style="text-align: center; padding: 40px; color: #999; display: none;">
+          <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+          <h3 style="color: #666; margin-bottom: 10px;">No saved invoices</h3>
+          <p>Create an invoice and click SEND to archive it here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       JAVASCRIPT IMPLEMENTATION
+       ======================================== -->
+  <script>
+    // ========================================
+    // STATIC DATA MANAGEMENT SYSTEM
+    // ========================================
+    
+    class StaticInvoiceApp {
+      constructor() {
+        this.currentMode = 'edit';
+        this.data = {
+          products: [],
+          clients: [],
+          company: {},
+          settings: { currentMode: 'edit', autoSave: true, defaultCurrency: '£' },
+          customTerms: []
+        };
+        
+        // Global items list for shared dropdown management
+        this.globalItemsList = [];
+        
+        // Auto-save and export state
+        this.autoSaveInterval = null;
+        this.isExporting = false;
+        
+        // Initialize the application
+        this.init();
+      }
+      
+      init() {
+        console.log('🚀 Initializing Static Invoice System...');
+        
+        // Load data from localStorage or set defaults
+        this.loadData();
+        
+        // Initialize UI components
+        this.initModeToggle();
+        this.initDataManagement();
+        this.initSaveFunctionality();
+        this.initExportFunctionality();
+        this.initInvoiceControls();
+        this.initNewInvoiceButton();
+        
+        // Update all dropdowns with global items list
+        this.updateAllDropdowns();
+        
+        // Update UI with loaded data
+        this.updateUI();
+        
+        // Load saved invoice data if it exists
+        this.loadSavedInvoice();
+        
+        console.log('✅ Static Invoice System initialized successfully!');
+      }
+      
+      // ========================================
+      // DATA PERSISTENCE
+      // ========================================
+      
+      loadData() {
+        try {
+          // Load products
+          const savedProducts = localStorage.getItem('invoiceApp_products');
+          this.data.products = savedProducts ? JSON.parse(savedProducts) : this.getDefaultProducts();
+          
+          // Initialize global items list from products
+          this.globalItemsList = this.data.products.map(product => product.name);
+          
+          // Load clients
+          const savedClients = localStorage.getItem('invoiceApp_clients');
+          this.data.clients = savedClients ? JSON.parse(savedClients) : this.getDefaultClients();
+          
+          // Load company info
+          const savedCompany = localStorage.getItem('invoiceApp_company');
+          this.data.company = savedCompany ? JSON.parse(savedCompany) : this.getDefaultCompany();
+          
+          // Load settings
+          const savedSettings = localStorage.getItem('invoiceApp_settings');
+          this.data.settings = savedSettings ? JSON.parse(savedSettings) : { currentMode: 'edit', autoSave: true, defaultCurrency: '£' };
+          
+          // Load custom terms (for reuse across invoices)
+          const savedCustomTerms = localStorage.getItem('invoiceApp_customTerms');
+          this.data.customTerms = savedCustomTerms ? JSON.parse(savedCustomTerms) : [];
+          if (!Array.isArray(this.data.customTerms)) this.data.customTerms = [];
+          
+          console.log('📁 Data loaded from localStorage');
+        } catch (error) {
+          console.error('Error loading data:', error);
+          this.data = {
+            products: this.getDefaultProducts(),
+            clients: this.getDefaultClients(),
+            company: this.getDefaultCompany(),
+            settings: { currentMode: 'edit', autoSave: true, defaultCurrency: '£' },
+            customTerms: []
+          };
+        }
+      }
+      
+      saveData() {
+        try {
+          localStorage.setItem('invoiceApp_products', JSON.stringify(this.data.products));
+          localStorage.setItem('invoiceApp_clients', JSON.stringify(this.data.clients));
+          localStorage.setItem('invoiceApp_company', JSON.stringify(this.data.company));
+          localStorage.setItem('invoiceApp_settings', JSON.stringify(this.data.settings));
+          localStorage.setItem('invoiceApp_customTerms', JSON.stringify(this.data.customTerms || []));
+          console.log('💾 Data saved to localStorage');
+        } catch (error) {
+          console.error('Error saving data:', error);
+        }
+      }
+      
+      // ========================================
+      // DEFAULT DATA
+      // ========================================
+      
+      getDefaultProducts() {
+        return [
+          {
+            id: 1,
+            name: 'Example Product',
+            category: 'product',
+            icon: '📦',
+            image: null,
+            description: 'Sample product for demonstration',
+            price: 0.00
+          },
+          {
+            id: 2,
+            name: 'Service Example',
+            category: 'service',
+            icon: '🔧',
+            image: null,
+            description: 'Sample service for demonstration',
+            price: 0.00
+          }
+        ];
+      }
+      
+      getDefaultClients() {
+        return [
+          {
+            clientId: 1,
+            client: {
+              name: 'John Smith',
+              address: '123 Main Street',
+              city: 'London, E1 1AA',
+              phone: '+44 20 1234 5678',
+              email: 'john.smith@email.com',
+              type: 'Individual',
+              status: 'active',
+              notes: 'Regular customer, prefers morning deliveries'
+            }
+          },
+          {
+            clientId: 2,
+            client: {
+              name: 'Sarah Johnson',
+              address: '456 High Road',
+              city: 'Manchester, M1 1AA',
+              phone: '+44 161 123 4567',
+              email: 'sarah.j@email.com',
+              type: 'Company',
+              status: 'active',
+              notes: 'Business client, office hours only'
+            }
+          }
+        ];
+      }
+      
+      getDefaultCompany() {
+        return {
+          name: 'Your Company Name',
+          address: 'Your Company Address',
+          city: 'Your City, Postcode',
+          phone: 'Your Phone Number',
+          email: 'your.email@company.com',
+          companyNumber: 'Your Company Number',
+          vatNumber: 'Your VAT Number',
+          bankName: 'Your Bank Name',
+          accountName: 'Your Account Name',
+          sortCode: 'Your Sort Code',
+          account: 'Your Account Number',
+          logo: null
+        };
+      }
+      
+      // ========================================
+      // MODE MANAGEMENT
+      // ========================================
+      
+      initModeToggle() {
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        modeButtons.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const mode = e.target.dataset.mode;
+            this.switchMode(mode);
+          });
+        });
+        
+        // Set initial mode
+        this.switchMode(this.data.settings.currentMode);
+      }
+      
+      switchMode(mode) {
+        this.currentMode = mode;
+        this.data.settings.currentMode = mode;
+        
+        // Update body class
+        document.body.className = `${mode}-mode`;
+        
+        // Update mode buttons
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+        
+        // Show/hide mode-specific buttons
+        document.querySelectorAll('.edit-mode-only').forEach(el => {
+          el.classList.toggle('hidden', mode !== 'edit');
+        });
+        
+        document.querySelectorAll('.preview-mode-only').forEach(el => {
+          el.classList.toggle('hidden', mode !== 'preview');
+        });
+        
+        // Apply JavaScript-based editing restrictions for preview mode
+        if (mode === 'preview') {
+          this.disableEditing();
+          this.resizeTermsInput();
+          this.resizeTermsSelect();
+        } else {
+          this.enableEditing();
+        }
+        
+        this.saveData();
+        console.log(`🔄 Switched to ${mode} mode`);
+      }
+      
+      // ========================================
+      // EDITING CONTROL METHODS
+      // ========================================
+      
+      disableEditing() {
+        // Disable all contenteditable elements
+        document.querySelectorAll('[contenteditable]').forEach(el => {
+          el.setAttribute('data-original-contenteditable', 'true');
+          el.contentEditable = false;
+        });
+        
+        // Disable all input, textarea, select (store original state as 'true'/'false' for reliable restore)
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+          el.setAttribute('data-original-disabled', el.disabled === true ? 'true' : 'false');
+          el.disabled = true;
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.readOnly = true;
+        });
+        
+        // Disable all buttons except mode buttons, preview mode buttons, and always-enabled buttons
+        document.querySelectorAll('button:not(.mode-btn):not(.preview-mode-only):not(.always-enabled)').forEach(el => {
+          el.setAttribute('data-original-disabled', el.disabled === true ? 'true' : 'false');
+          el.disabled = true;
+        });
+        
+        console.log('🔒 Editing disabled in preview mode');
+      }
+      
+      enableEditing() {
+        // Ensure body is not stuck with preview-mode (so CSS pointer-events etc. no longer apply)
+        document.body.classList.remove('preview-mode');
+        
+        // Restore contenteditable elements (only those we marked)
+        document.querySelectorAll('[data-original-contenteditable]').forEach(el => {
+          el.contentEditable = true;
+          el.removeAttribute('data-original-contenteditable');
+        });
+        
+        // Restore input/textarea/select from stored state
+        document.querySelectorAll('input[data-original-disabled], textarea[data-original-disabled], select[data-original-disabled]').forEach(el => {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.readOnly = false;
+          el.removeAttribute('data-original-disabled');
+        });
+        
+        // Restore buttons (only those we marked; mode/preview-only/always-enabled are left as-is)
+        document.querySelectorAll('button[data-original-disabled]:not(.mode-btn):not(.preview-mode-only):not(.always-enabled)').forEach(el => {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          el.removeAttribute('data-original-disabled');
+        });
+        
+        // Fallback: re-enable any still-disabled form controls and buttons in invoice/mode-bar/modal (e.g. after SEND)
+        const invoiceEl = document.getElementById('invoice');
+        if (invoiceEl) {
+          invoiceEl.querySelectorAll('input, textarea, select').forEach(el => {
+            if (el.disabled) { el.disabled = false; if (el.tagName !== 'SELECT') el.readOnly = false; }
+          });
+        }
+        document.querySelectorAll('.mode-bar button, #dataModal button').forEach(btn => {
+          if (btn.disabled) btn.disabled = false;
+        });
+        
+        console.log('🔓 Editing enabled in edit mode');
+      }
+      
+      // Event prevention methods removed - using CSS-based approach instead
+      
+      // ========================================
+      // DATA MANAGEMENT MODAL
+      // ========================================
+      
+      showDataManagement() {
+        const modal = document.getElementById('dataModal');
+        modal.classList.add('show');
+        this.populateDataModal();
+      }
+      
+      initDataManagement() {
+        const dataBtn = document.getElementById('dataManagementBtn');
+        const modal = document.getElementById('dataModal');
+        const closeBtn = document.getElementById('closeModal');
+        
+        // Open modal
+        dataBtn.addEventListener('click', () => {
+          this.showDataManagement();
+        });
+        
+        // Close modal
+        closeBtn.addEventListener('click', () => {
+          modal.classList.remove('show');
+          // Refresh invoice table when Settings modal is closed
+          this.updateAllItemPrices();
+          this.updateAllItemImages();
+        });
+        
+        // Close on overlay click
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.remove('show');
+            // Refresh invoice table when Settings modal is closed
+            this.updateAllItemPrices();
+            this.updateAllItemImages();
+          }
+        });
+        
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const tabId = e.target.dataset.tab;
+            this.switchTab(tabId);
+          });
+        });
+        
+        // Initialize forms
+        this.initProductForm();
+        this.initClientForm();
+        this.initCompanyForm();
+        
+        // Invoice number counter control (Export tab)
+        this.initCounterControl();
+        
+        // Initialize mobile touch support
+        this.initMobileSupport();
+      }
+      
+      initMobileSupport() {
+        // Add touch support for the Add New Row button
+        const addRowBtn = document.querySelector('.add-row-btn');
+        if (addRowBtn) {
+          addRowBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.addNewRow();
+          });
+        }
+        
+        // Add touch support for table action buttons
+        document.addEventListener('touchend', (e) => {
+          if (e.target.classList.contains('table-btn')) {
+            e.preventDefault();
+            e.target.click();
+          }
+        });
+        
+        // Prevent zoom on double tap for better mobile experience
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+          const now = (new Date()).getTime();
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, false);
+        
+        console.log('📱 Mobile touch support initialized');
+      }
+
+      initCounterControl() {
+        const input = document.getElementById('counterInput');
+        const minusBtn = document.getElementById('counterStepperMinus');
+        const plusBtn = document.getElementById('counterStepperPlus');
+        const resetBtn = document.getElementById('counterResetBtn');
+        if (!input || !minusBtn || !plusBtn || !resetBtn) return;
+
+        const syncInputFromStorage = () => {
+          const n = GlobalStorage.getNextInvoiceNumber();
+          input.value = n;
+        };
+
+        const applyAndUpdate = (value) => {
+          const n = Math.max(1, Math.min(99999, Math.floor(Number(value)) || 1));
+          GlobalStorage.setNextInvoiceNumber(n);
+          input.value = n;
+          this.updateUI();
+          // If we're in draft mode, make the current invoice assume the new counter value
+          this.applyCounterToDraftIfAny(n);
+        };
+
+        syncInputFromStorage();
+
+        minusBtn.addEventListener('click', () => {
+          const current = Math.max(1, Math.floor(Number(input.value)) || 1);
+          applyAndUpdate(current - 1);
+        });
+        plusBtn.addEventListener('click', () => {
+          const current = Math.max(1, Math.floor(Number(input.value)) || 1);
+          applyAndUpdate(current + 1);
+        });
+        resetBtn.addEventListener('click', () => applyAndUpdate(1));
+
+        input.addEventListener('change', () => applyAndUpdate(input.value));
+        input.addEventListener('blur', () => {
+          const v = input.value;
+          if (v === '' || isNaN(Number(v))) syncInputFromStorage();
+          else applyAndUpdate(v);
+        });
+      }
+
+      refreshCounterControl() {
+        const input = document.getElementById('counterInput');
+        if (input && typeof GlobalStorage !== 'undefined') {
+          input.value = GlobalStorage.getNextInvoiceNumber();
+        }
+      }
+
+      /** When the global counter is reset or changed: if current invoice is a draft (not editing), update its number to the new counter and save. */
+      applyCounterToDraftIfAny(newCounterValue) {
+        if (typeof GlobalStorage === 'undefined') return;
+        const invoiceData = GlobalStorage.getInvoiceData();
+        if (!invoiceData) return;
+        if (GlobalStorage.isEditingMode()) return; // don't change an archived invoice being edited
+        const formatted = GlobalStorage.formatInvoiceNumber(newCounterValue);
+        const invoiceNoEl = document.getElementById('invoiceNo');
+        if (invoiceNoEl) {
+          invoiceNoEl.textContent = formatted;
+          this.syncReferenceToInvoiceNumber();
+          this.saveInvoiceData(true);
+        }
+      }
+
+      switchTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.toggle('active', content.id === `${tabId}-tab`);
+        });
+        
+        // Refresh tab-specific content
+        if (tabId === 'products') {
+          this.populateProductsList();
+        } else if (tabId === 'clients') {
+          this.populateClientsList();
+        } else if (tabId === 'company') {
+          this.populateCompanyForm();
+        }
+      }
+      
+      populateDataModal() {
+        this.populateProductsList();
+        this.populateClientsList();
+        this.refreshCounterControl();
+        this.populateCompanyForm();
+      }
+      
+      // ========================================
+      // PRODUCTS MANAGEMENT
+      // ========================================
+      
+      initProductForm() {
+        document.getElementById('addProductBtn').addEventListener('click', () => {
+          this.showProductForm();
+        });
+      }
+      
+      showProductForm(product = null) {
+        const isEdit = !!product;
+        const formHtml = `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Name *</label>
+              <input type="text" id="productName" value="${product?.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="productCategory">
+                <option value="product" ${product?.category === 'product' ? 'selected' : ''}>Product</option>
+                <option value="service" ${product?.category === 'service' ? 'selected' : ''}>Service</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Price (£)</label>
+              <input type="number" id="productPrice" step="0.01" value="${product?.price || '0.00'}" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Icon</label>
+              <input type="text" id="productIcon" value="${product?.icon || '📦'}" placeholder="📦">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="productDescription" placeholder="Item description...">${product?.description || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Item Image</label>
+            <div class="image-upload" onclick="document.getElementById('productImageFile').click()">
+              <input type="file" id="productImageFile" accept="image/*" style="display: none;">
+              <p>📁 Click to upload item image</p>
+              <div class="image-preview" id="productImagePreview">
+                ${product?.image ? `<img src="${product.image}" alt="Item">` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="text-center mt-20">
+            <button type="button" class="btn btn-primary" onclick="app.saveProduct(${isEdit ? product.id : 'null'})">
+              💾 ${isEdit ? 'Update' : 'Add'} Item
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="app.populateProductsList()">
+              ❌ Cancel
+            </button>
+          </div>
+        `;
+        
+        document.getElementById('productsList').innerHTML = formHtml;
+        
+        // Handle image upload
+        document.getElementById('productImageFile').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById('productImagePreview').innerHTML = 
+                `<img src="${e.target.result}" alt="Product">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      saveProduct(editId = null) {
+        const name = document.getElementById('productName').value.trim();
+        const category = document.getElementById('productCategory').value;
+        const price = parseFloat(document.getElementById('productPrice').value) || 0.00;
+        const icon = document.getElementById('productIcon').value.trim() || '📦';
+        const description = document.getElementById('productDescription').value.trim();
+        const imagePreview = document.querySelector('#productImagePreview img');
+        const image = imagePreview ? imagePreview.src : null;
+        
+        if (!name) {
+          alert('Name is required!');
+          return;
+        }
+        
+        const productData = { name, category, price, icon, description, image };
+        
+        if (editId) {
+          // Update existing product
+          const index = this.data.products.findIndex(p => p.id === editId);
+          if (index !== -1) {
+            this.data.products[index] = { ...this.data.products[index], ...productData };
+          }
+        } else {
+          // Add new product
+          const newId = Math.max(...this.data.products.map(p => p.id), 0) + 1;
+          this.data.products.push({ id: newId, ...productData });
+        }
+        
+        this.saveData();
+        this.populateProductsList();
+        this.updateProductDropdowns();
+        
+        // Update global items list and refresh all dropdowns
+        this.globalItemsList = this.data.products.map(product => product.name);
+        this.updateAllDropdowns();
+        
+        this.updateAllItemPrices();
+        this.updateAllItemImages();
+        
+        console.log(`✅ Product ${editId ? 'updated' : 'added'}: ${name}`);
+      }
+      
+      deleteProduct(id) {
+        if (confirm('Are you sure you want to delete this product?')) {
+          this.data.products = this.data.products.filter(p => p.id !== id);
+          this.saveData();
+          this.populateProductsList();
+          this.updateProductDropdowns();
+        
+        // Update global items list and refresh all dropdowns
+        this.globalItemsList = this.data.products.map(product => product.name);
+        this.updateAllDropdowns();
+        
+        this.updateAllItemPrices();
+        this.updateAllItemImages();
+          console.log(`🗑️ Product deleted: ID ${id}`);
+        }
+      }
+      
+      populateProductsList() {
+        const container = document.getElementById('productsList');
+        if (this.data.products.length === 0) {
+          container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">No products added yet.</div>';
+          return;
+        }
+        
+        const html = this.data.products.map(product => `
+          <div class="data-item">
+            <div class="data-item-info">
+              <div class="data-item-name">${product.icon} ${product.name}</div>
+              <div class="data-item-details">
+                ${product.category} • £${product.price.toFixed(2)} • ${product.description}
+              </div>
+            </div>
+            <div class="data-item-actions">
+              <button class="btn-sm btn-edit" onclick="app.showProductForm(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                ✏️ Edit
+              </button>
+              <button class="btn-sm btn-delete" onclick="app.deleteProduct(${product.id})">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `).join('');
+        
+        container.innerHTML = html;
+      }
+      
+      // ========================================
+      // CLIENTS MANAGEMENT  
+      // ========================================
+      
+      initClientForm() {
+        document.getElementById('addClientBtn').addEventListener('click', () => {
+          this.showClientForm();
+        });
+      }
+      
+      showClientForm(clientData = null) {
+        const isEdit = !!clientData;
+        const client = clientData?.client || {};
+        
+        const formHtml = `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Client Name *</label>
+              <input type="text" id="clientName" value="${client.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="clientType">
+                <option value="Individual" ${client.type === 'Individual' ? 'selected' : ''}>Individual</option>
+                <option value="Company" ${client.type === 'Company' ? 'selected' : ''}>Company</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" id="clientAddress" value="${client.address || ''}">
+            </div>
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" id="clientCity" value="${client.city || ''}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" id="clientPhone" value="${client.phone || ''}">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="clientEmail" value="${client.email || ''}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="clientNotes" placeholder="Additional notes...">${client.notes || ''}</textarea>
+          </div>
+          <div class="text-center mt-20">
+            <button type="button" class="btn btn-primary" onclick="app.saveClient(${isEdit ? clientData.clientId : 'null'})">
+              💾 ${isEdit ? 'Update' : 'Add'} Client
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="app.populateClientsList()">
+              ❌ Cancel
+            </button>
+          </div>
+        `;
+        
+        document.getElementById('clientsList').innerHTML = formHtml;
+      }
+      
+      saveClient(editId = null) {
+        const name = document.getElementById('clientName').value.trim();
+        const type = document.getElementById('clientType').value;
+        const address = document.getElementById('clientAddress').value.trim();
+        const city = document.getElementById('clientCity').value.trim();
+        const phone = document.getElementById('clientPhone').value.trim();
+        const email = document.getElementById('clientEmail').value.trim();
+        const notes = document.getElementById('clientNotes').value.trim();
+        
+        if (!name) {
+          alert('Client name is required!');
+          return;
+        }
+        
+        const clientData = {
+          client: { name, type, address, city, phone, email, notes, status: 'active' }
+        };
+        
+        if (editId) {
+          // Update existing client
+          const index = this.data.clients.findIndex(c => c.clientId === editId);
+          if (index !== -1) {
+            this.data.clients[index] = { clientId: editId, ...clientData };
+          }
+        } else {
+          // Add new client
+          const newId = Math.max(...this.data.clients.map(c => c.clientId), 0) + 1;
+          this.data.clients.push({ clientId: newId, ...clientData });
+        }
+        
+        this.saveData();
+        this.populateClientsList();
+        this.updateClientSearch();
+        
+        console.log(`✅ Client ${editId ? 'updated' : 'added'}: ${name}`);
+      }
+      
+      deleteClient(id) {
+        if (confirm('Are you sure you want to delete this client?')) {
+          this.data.clients = this.data.clients.filter(c => c.clientId !== id);
+          this.saveData();
+          this.populateClientsList();
+          this.updateClientSearch();
+          console.log(`🗑️ Client deleted: ID ${id}`);
+        }
+      }
+      
+      populateClientsList() {
+        const container = document.getElementById('clientsList');
+        if (this.data.clients.length === 0) {
+          container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">No clients added yet.</div>';
+          return;
+        }
+        
+        const html = this.data.clients.map(clientData => {
+          const client = clientData.client;
+          return `
+            <div class="data-item">
+              <div class="data-item-info">
+                <div class="data-item-name">👤 ${client.name}</div>
+                <div class="data-item-details">
+                  ${client.type} • ${client.address}, ${client.city} • ${client.phone} • ${client.email}
+                </div>
+              </div>
+              <div class="data-item-actions">
+                <button class="btn-sm btn-edit" onclick="app.showClientForm(${JSON.stringify(clientData).replace(/"/g, '&quot;')})">
+                  ✏️ Edit
+                </button>
+                <button class="btn-sm btn-delete" onclick="app.deleteClient(${clientData.clientId})">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+        container.innerHTML = html;
+      }
+      
+      // ========================================
+      // COMPANY MANAGEMENT
+      // ========================================
+      
+      initCompanyForm() {
+        const form = document.getElementById('companyForm');
+        const logoUpload = document.getElementById('logoUpload');
+        const logoFile = document.getElementById('logoFile');
+        
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          this.saveCompanyInfo();
+        });
+        
+        logoUpload.addEventListener('click', () => {
+          logoFile.click();
+        });
+        
+        logoFile.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById('logoPreview').innerHTML = 
+                `<img src="${e.target.result}" alt="Company Logo">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      populateCompanyForm() {
+        document.getElementById('companyName').value = this.data.company.name || '';
+        document.getElementById('companyPhone').value = this.data.company.phone || '';
+        document.getElementById('companyAddress').value = this.data.company.address || '';
+        document.getElementById('companyCity').value = this.data.company.city || '';
+        document.getElementById('companyEmail').value = this.data.company.email || '';
+        document.getElementById('companyNumber').value = this.data.company.companyNumber || '';
+        document.getElementById('vatNumber').value = this.data.company.vatNumber || '';
+        document.getElementById('companyBankName').value = this.data.company.bankName || '';
+        document.getElementById('companyAccountName').value = this.data.company.accountName || '';
+        document.getElementById('companySortCode').value = this.data.company.sortCode || '';
+        document.getElementById('companyAccountNo').value = this.data.company.account || '';
+        
+        const logoPreview = document.getElementById('logoPreview');
+        if (this.data.company.logo) {
+          logoPreview.innerHTML = `<img src="${this.data.company.logo}" alt="Company Logo">`;
+        } else {
+          logoPreview.innerHTML = '';
+        }
+      }
+      
+      saveCompanyInfo() {
+        const logoPreview = document.querySelector('#logoPreview img');
+        
+        this.data.company = {
+          name: document.getElementById('companyName').value.trim(),
+          phone: document.getElementById('companyPhone').value.trim(),
+          address: document.getElementById('companyAddress').value.trim(),
+          city: document.getElementById('companyCity').value.trim(),
+          email: document.getElementById('companyEmail').value.trim(),
+          companyNumber: document.getElementById('companyNumber').value.trim(),
+          vatNumber: document.getElementById('vatNumber').value.trim(),
+          bankName: document.getElementById('companyBankName').value.trim(),
+          accountName: document.getElementById('companyAccountName').value.trim(),
+          sortCode: document.getElementById('companySortCode').value.trim(),
+          account: document.getElementById('companyAccountNo').value.trim(),
+          logo: logoPreview ? logoPreview.src : this.data.company.logo
+        };
+        
+        this.saveData();
+        this.updateCompanyDisplay();
+        
+        alert('✅ Company information saved successfully!');
+        console.log('✅ Company information updated');
+      }
+      
+      // ========================================
+      // EXPORT & CLEAR (Settings > Export tab)
+      // ========================================
+      
+      downloadJSON(data, filename) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      exportAllData() {
+        const globalData = GlobalStorage.getGlobalData();
+        const data = {
+          nextInvoiceNumber: globalData.nextInvoiceNumber != null ? globalData.nextInvoiceNumber : 1,
+          products: this.data.products,
+          clients: this.data.clients,
+          company: this.data.company,
+          settings: this.data.settings,
+          customTerms: this.data.customTerms || [],
+          currentInvoice: globalData.currentInvoice || {},
+          savedInvoices: globalData.savedInvoices || []
+        };
+        this.downloadJSON(data, 'invoice-all-data.json');
+        console.log('💾 Exported all data');
+      }
+      
+      exportProducts() {
+        this.downloadJSON(this.data.products, 'invoice-products.json');
+        console.log('📦 Exported products');
+      }
+      
+      exportClients() {
+        this.downloadJSON(this.data.clients, 'invoice-clients.json');
+        console.log('👥 Exported clients');
+      }
+      
+      exportInvoices() {
+        const savedInvoices = GlobalStorage.getAllSavedInvoices();
+        this.downloadJSON(savedInvoices, 'invoice-archived-invoices.json');
+        console.log('📚 Exported invoices:', savedInvoices.length);
+      }
+      
+      importFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (!data || typeof data !== 'object') {
+              alert('Invalid file: not a JSON object.');
+              return;
+            }
+            if (Array.isArray(data.products)) {
+              localStorage.setItem('invoiceApp_products', JSON.stringify(data.products));
+            }
+            if (Array.isArray(data.clients)) {
+              localStorage.setItem('invoiceApp_clients', JSON.stringify(data.clients));
+            }
+            if (data.company && typeof data.company === 'object') {
+              localStorage.setItem('invoiceApp_company', JSON.stringify(data.company));
+            }
+            if (data.settings && typeof data.settings === 'object') {
+              localStorage.setItem('invoiceApp_settings', JSON.stringify(data.settings));
+            }
+            if (Array.isArray(data.customTerms)) {
+              localStorage.setItem('invoiceApp_customTerms', JSON.stringify(data.customTerms));
+            }
+            const existingGlobal = GlobalStorage.getGlobalData();
+            const globalData = {
+              ...existingGlobal,
+              currentInvoice: data.currentInvoice != null ? data.currentInvoice : existingGlobal.currentInvoice,
+              savedInvoices: Array.isArray(data.savedInvoices) ? data.savedInvoices : (existingGlobal.savedInvoices || []),
+              nextInvoiceNumber: data.nextInvoiceNumber != null && typeof data.nextInvoiceNumber === 'number' ? data.nextInvoiceNumber : (existingGlobal.nextInvoiceNumber != null ? existingGlobal.nextInvoiceNumber : 1),
+              lastSaved: data.lastSaved || existingGlobal.lastSaved || new Date().toISOString()
+            };
+            GlobalStorage.saveGlobalData(globalData);
+            this.loadData();
+            this.updateAllDropdowns();
+            this.updateTermsDropdown();
+            this.updateUI();
+            this.loadSavedInvoice();
+            alert('Import successful. Data has been loaded.');
+            console.log('📥 Import successful');
+          } catch (err) {
+            alert('Import failed: ' + (err.message || 'Invalid JSON'));
+          }
+        };
+        reader.onerror = () => alert('Could not read file.');
+        reader.readAsText(file);
+      }
+      
+      async renderInvoices() {
+        const savedInvoices = GlobalStorage.getAllSavedInvoices();
+        if (savedInvoices.length === 0) {
+          alert('No archived invoices to render.');
+          return;
+        }
+        this._cancelBatchRequested = false;
+        const total = savedInvoices.length;
+        const parent = window.parent;
+        if (parent && parent !== window) {
+          parent.postMessage({ type: 'render-start', total }, '*');
+        }
+        const modal = document.getElementById('dataModal');
+        if (modal) modal.classList.remove('show');
+        try {
+          for (let i = 0; i < savedInvoices.length; i++) {
+            if (this._cancelBatchRequested) break;
+            const inv = savedInvoices[i];
+            const id = inv.id;
+            if (!id) continue;
+            GlobalStorage.loadInvoiceForEditing(id);
+            this.loadSavedInvoice();
+            await new Promise(r => setTimeout(r, 300));
+            if (this._cancelBatchRequested) break;
+            await this.exportCurrentInvoiceAsPngOnly();
+            if (parent && parent !== window) {
+              parent.postMessage({ type: 'render-progress', current: i + 1, total }, '*');
+            }
+          }
+        } catch (err) {
+          console.error('Render invoices failed:', err);
+          alert('Rendering failed: ' + (err.message || err));
+        } finally {
+          if (parent && parent !== window) {
+            parent.postMessage({ type: 'render-progress', done: true }, '*');
+          }
+        }
+      }
+      
+      async printInvoices() {
+        const savedInvoices = GlobalStorage.getAllSavedInvoices();
+        if (savedInvoices.length === 0) {
+          alert('No archived invoices to print.');
+          return;
+        }
+        this._cancelBatchRequested = false;
+        const total = savedInvoices.length;
+        const parent = window.parent;
+        if (parent && parent !== window) {
+          parent.postMessage({ type: 'print-start', total }, '*');
+        }
+        const modal = document.getElementById('dataModal');
+        if (modal) modal.classList.remove('show');
+        const originalMode = this.currentMode;
+        try {
+          for (let i = 0; i < savedInvoices.length; i++) {
+            if (this._cancelBatchRequested) break;
+            const inv = savedInvoices[i];
+            const id = inv.id;
+            if (!id) continue;
+            GlobalStorage.loadInvoiceForEditing(id);
+            this.loadSavedInvoice();
+            await new Promise(r => setTimeout(r, 300));
+            if (this._cancelBatchRequested) break;
+            // Switch to preview mode for clean print
+            this.switchMode('preview');
+            await new Promise(r => setTimeout(r, 200));
+            // Open print dialog
+            window.print();
+            // Wait a bit for user to interact with print dialog before moving to next invoice
+            await new Promise(r => setTimeout(r, 1000));
+            // Switch back to original mode
+            this.switchMode(originalMode);
+            if (parent && parent !== window) {
+              parent.postMessage({ type: 'print-progress', current: i + 1, total }, '*');
+            }
+          }
+        } catch (err) {
+          console.error('Print invoices failed:', err);
+          alert('Printing failed: ' + (err.message || err));
+        } finally {
+          this.switchMode(originalMode);
+          if (parent && parent !== window) {
+            parent.postMessage({ type: 'print-progress', done: true }, '*');
+          }
+        }
+      }
+      
+      clearAllData() {
+        if (!confirm('Are you sure you want to clear ALL invoice data? This will remove products, clients, company, current invoice, archived invoices, and the invoice number counter. This cannot be undone!')) {
+          return;
+        }
+        localStorage.removeItem('invoiceApp_products');
+        localStorage.removeItem('invoiceApp_clients');
+        localStorage.removeItem('invoiceApp_company');
+        localStorage.removeItem('invoiceApp_settings');
+        localStorage.removeItem('invoiceApp_customTerms');
+        localStorage.removeItem('invoiceApp_currentInvoice');
+        localStorage.removeItem('invoiceApp_globalData');
+        this.loadData();
+        this.updateAllDropdowns();
+        this.updateTermsDropdown();
+        this.updateUI();
+        this.loadSavedInvoice();
+        this.refreshCounterControl();
+        const modal = document.getElementById('dataModal');
+        if (modal) modal.classList.remove('show');
+        alert('All invoice data has been cleared. The invoice number counter will reset to 1 when you create the next new invoice.');
+        console.log('🗑️ All data cleared');
+      }
+      
+      // ========================================
+      // UI UPDATE METHODS
+      // ========================================
+      
+      updateUI() {
+        this.updateCompanyDisplay();
+        this.updateProductDropdowns();
+        this.updateClientSearch();
+        this.setCurrentDates();
+        this.calculateAmounts();
+        // Sync reference to invoice number on initial load
+        this.syncReferenceToInvoiceNumber();
+      }
+      
+      updateCompanyDisplay() {
+        const company = this.data.company;
+        
+        // Update company info display
+        const companyInfo = document.getElementById('companyInfo');
+        companyInfo.innerHTML = `
+          <p><strong>${company.name || 'Your Company Name'}</strong></p>
+          <p>${company.address || 'Your Company Address'}</p>
+          <p>${company.city || 'Your City, Postcode'}</p>
+          <p>Phone: ${company.phone || 'Your Phone Number'}</p>
+          <p>Email: ${company.email || 'your.email@company.com'}</p>
+          <p>Company Number: ${company.companyNumber || 'Your Company Number'}</p>
+          <p>VAT NO.: ${company.vatNumber || 'Your VAT Number'}</p>
+        `;
+        
+        // Update invoice payment section from company bank details
+        const bankNameEl = document.getElementById('bankName');
+        const accountNameEl = document.getElementById('accountName');
+        const sortCodeEl = document.getElementById('sortCode');
+        const accountEl = document.getElementById('account');
+        if (bankNameEl) bankNameEl.textContent = company.bankName || 'Your Bank Name';
+        if (accountNameEl) accountNameEl.textContent = company.accountName || 'Your Account Name';
+        if (sortCodeEl) sortCodeEl.textContent = company.sortCode || 'Your Sort Code';
+        if (accountEl) accountEl.textContent = company.account || 'Your Account Number';
+        
+        // Update company logo
+        const logoImg = document.getElementById('companyLogo');
+        if (company.logo) {
+          logoImg.src = company.logo;
+        }
+      }
+      
+      updateProductDropdowns() {
+        const selects = document.querySelectorAll('.description-select');
+        selects.forEach(select => {
+          const currentValue = select.value;
+          select.innerHTML = '';
+          
+          // Add products from data
+          this.data.products.forEach(product => {
+            const option = document.createElement('option');
+            option.value = product.name;
+            option.textContent = product.name;
+            select.appendChild(option);
+          });
+          
+          // Add "Enter New" option
+          const enterNewOption = document.createElement('option');
+          enterNewOption.value = 'Enter New';
+          enterNewOption.textContent = 'Enter New';
+          select.appendChild(enterNewOption);
+          
+          // Restore selection if it exists
+          if (Array.from(select.options).find(opt => opt.value === currentValue)) {
+            select.value = currentValue;
+          } else if (this.data.products.length > 0) {
+            select.value = this.data.products[0].name;
+          }
+        });
+        
+        // Update product images and prices
+        this.updateAllItemImages();
+        this.updateAllItemPrices();
+      }
+      
+      updateClientSearch() {
+        // Replace customer name field with search box
+        const customerNameCell = document.getElementById('customerName');
+        if (customerNameCell && !customerNameCell.querySelector('.client-search-container')) {
+          this.createClientSearchBox(customerNameCell);
+        }
+      }
+      
+      createClientSearchBox(cell) {
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'client-search-container';
+        
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'client-search-input';
+        searchInput.placeholder = 'Search clients or type manually...';
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'client-autocomplete-dropdown';
+        
+        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(dropdown);
+        
+        // Handle search
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+          const query = e.target.value.trim();
+          clearTimeout(searchTimeout);
+          
+          if (!query) {
+            dropdown.classList.remove('show');
+            return;
+          }
+          
+          searchTimeout = setTimeout(() => {
+            this.performClientSearch(query, dropdown);
+          }, 200);
+        });
+        
+        // Handle selection
+        dropdown.addEventListener('click', (e) => {
+          const item = e.target.closest('.client-autocomplete-item');
+          if (item) {
+            if (item.classList.contains('add-new-client-item')) {
+              // Handle adding new client
+              const query = item.dataset.query;
+              this.addNewClientFromSearch(query);
+              dropdown.classList.remove('show');
+            } else {
+              // Handle selecting existing client
+              const clientData = JSON.parse(item.dataset.clientData);
+              this.selectClient(clientData);
+              dropdown.classList.remove('show');
+            }
+          }
+        });
+        
+        cell.innerHTML = '';
+        cell.appendChild(searchContainer);
+        cell.contentEditable = false;
+      }
+      
+      performClientSearch(query, dropdown) {
+        const results = this.data.clients.filter(clientData => {
+          const client = clientData.client;
+          const searchText = `${client.name} ${client.address}`.toLowerCase();
+          return searchText.includes(query.toLowerCase());
+        });
+        
+        if (results.length === 0) {
+          dropdown.innerHTML = `
+            <div class="client-autocomplete-item">No clients found</div>
+            <div class="client-autocomplete-item add-new-client-item" data-query="${query}">
+              <div class="client-name" style="color: #007bff; font-weight: 600;">➕ Add new client: "${query}"</div>
+              <div class="client-address" style="font-size: 12px; color: #666;">Click to create a new client</div>
+            </div>
+          `;
+        } else {
+          dropdown.innerHTML = results.slice(0, 10).map(clientData => {
+            const client = clientData.client;
+            return `
+              <div class="client-autocomplete-item" data-client-data='${JSON.stringify(clientData)}'>
+                <div class="client-name">${client.name}</div>
+                <div class="client-address">${client.address}, ${client.city}</div>
+              </div>
+            `;
+          }).join('');
+        }
+        
+        dropdown.classList.add('show');
+      }
+      
+      addNewClientFromSearch(query) {
+        // Switch to data management modal
+        this.showDataManagement();
+        
+        // Wait for modal to fully render and populate, then switch tabs
+        setTimeout(() => {
+          // Switch to clients tab using the app's switchTab method
+          if (typeof this.switchTab === 'function') {
+            this.switchTab('clients');
+          } else {
+            // Fallback: click the clients tab button directly
+            const clientsTabButton = document.querySelector('[data-tab="clients"]');
+            if (clientsTabButton) {
+              clientsTabButton.click();
+            }
+          }
+          
+          // Wait for tab content to load, then click "Add New Client" button
+          setTimeout(() => {
+            const addClientBtn = document.getElementById('addClientBtn');
+            if (addClientBtn) {
+              addClientBtn.click();
+              
+              // Wait for form to appear, then populate the client name field
+              setTimeout(() => {
+                const clientNameField = document.getElementById('clientName');
+                if (clientNameField) {
+                  clientNameField.value = query;
+                  clientNameField.focus();
+                  
+                  // Scroll the form into view if needed
+                  const form = clientNameField.closest('.client-form');
+                  if (form) {
+                    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }
+              }, 200);
+            } else {
+              // Fallback: try to show the form directly
+              if (typeof this.showClientForm === 'function') {
+                this.showClientForm();
+                
+                // Wait for form to appear, then populate the client name field
+                setTimeout(() => {
+                  const clientNameField = document.getElementById('clientName');
+                  if (clientNameField) {
+                    clientNameField.value = query;
+                    clientNameField.focus();
+                    
+                    // Scroll the form into view if needed
+                    const form = clientNameField.closest('.client-form');
+                    if (form) {
+                      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }
+                }, 200);
+              }
+            }
+          }, 300);
+        }, 300);
+      }
+      
+      selectClient(clientData) {
+        const client = clientData.client;
+        
+        // Update search input
+        const searchInput = document.querySelector('.client-search-input');
+        if (searchInput) {
+          searchInput.value = client.name;
+        }
+        
+        // Auto-fill other fields
+        const addressEl = document.getElementById('customerAddress');
+        const cityEl = document.getElementById('customerCity');
+        const phoneEl = document.getElementById('customerPhone');
+        const emailEl = document.getElementById('customerEmail');
+        
+        if (addressEl) addressEl.textContent = client.address || '';
+        if (cityEl) cityEl.textContent = client.city || '';
+        if (phoneEl) phoneEl.textContent = client.phone || '';
+        if (emailEl) emailEl.textContent = client.email || '';
+        
+        console.log(`✅ Selected client: ${client.name}`);
+      }
+      
+      // ========================================
+      // INVOICE FUNCTIONALITY
+      // ========================================
+      
+      initInvoiceControls() {
+        // Description dropdown handlers
+        document.querySelectorAll('.description-select').forEach(select => {
+          select.addEventListener('change', (e) => this.handleDescriptionChange(e.target));
+        });
+        
+        // Description input handlers
+        document.querySelectorAll('.description-input').forEach(input => {
+          input.addEventListener('blur', (e) => this.handleDescriptionInputBlur(e.target));
+        });
+        
+        // Auto-calculation handlers
+        document.querySelectorAll('[contenteditable]').forEach(cell => {
+          cell.addEventListener('blur', () => {
+            if (cell.classList.contains('qty')) {
+              this.validateQuantity(cell);
+            }
+            this.calculateAmounts();
+          });
+        });
+        
+        // Sync reference to invoice number when invoice number changes (as default)
+        // User can still manually edit the reference field independently
+        const invoiceNo = document.getElementById('invoiceNo');
+        if (invoiceNo) {
+          invoiceNo.addEventListener('blur', () => {
+            this.syncReferenceToInvoiceNumber();
+          });
+          invoiceNo.addEventListener('input', () => {
+            this.syncReferenceToInvoiceNumber();
+          });
+        }
+        
+        // Calculate due date when invoice date changes
+        const invoiceDate = document.getElementById('invoiceDate');
+        if (invoiceDate) {
+          invoiceDate.addEventListener('blur', () => {
+            this.calculateDueDateFromTerms();
+          });
+          invoiceDate.addEventListener('input', () => {
+            // Debounce the calculation on input
+            clearTimeout(this.invoiceDateInputTimeout);
+            this.invoiceDateInputTimeout = setTimeout(() => {
+              this.calculateDueDateFromTerms();
+            }, 500);
+          });
+        }
+        
+        const termsSelect = document.getElementById('terms');
+        const termsCustom = document.getElementById('termsCustom');
+        if (termsSelect) {
+          termsSelect.addEventListener('change', (e) => this.handleTermsChange(e.target));
+          this.updateTermsDropdown();
+        }
+        if (termsCustom) {
+          termsCustom.addEventListener('blur', (e) => this.handleTermsInputBlur(e.target));
+          termsCustom.addEventListener('input', () => this.resizeTermsInput());
+        }
+      }
+      
+      getTermsPresets() {
+        return ['Net 14', 'Due on receipt', 'Net 7', 'Net 30', 'Net 60', 'Net 90', 'End of month', '50% upfront, balance on delivery'];
+      }
+      
+      updateTermsDropdown() {
+        const sel = document.getElementById('terms');
+        if (!sel) return;
+        const currentValue = sel.value;
+        const presets = this.getTermsPresets();
+        const customTerms = (this.data && this.data.customTerms) ? this.data.customTerms : [];
+        const enterNew = 'Enter New';
+        const allOptions = [...presets, ...customTerms.filter(t => t && !presets.includes(t)), enterNew];
+        sel.innerHTML = '';
+        allOptions.forEach(val => {
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          sel.appendChild(opt);
+        });
+        if (allOptions.includes(currentValue)) sel.value = currentValue;
+        else sel.value = presets[0] || 'Net 14';
+        this.resizeTermsSelect();
+      }
+      
+      resizeTermsInput() {
+        const input = document.getElementById('termsCustom');
+        if (!input) return;
+        const text = (input.value || input.placeholder || ' ').trim() || ' ';
+        const span = document.createElement('span');
+        const cs = window.getComputedStyle(input);
+        span.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;padding:0;margin:0;font:' + cs.font + ';letter-spacing:' + cs.letterSpacing + ';';
+        span.textContent = text;
+        document.body.appendChild(span);
+        const textW = Math.ceil(span.offsetWidth);
+        document.body.removeChild(span);
+        const paddingLeft = 8;
+        const paddingRight = 4;
+        const w = Math.min(280, Math.max(textW + paddingLeft + paddingRight, 56));
+        input.style.width = w + 'px';
+        input.style.paddingLeft = paddingLeft + 'px';
+        input.style.paddingRight = paddingRight + 'px';
+      }
+      
+      resizeTermsSelect() {
+        const sel = document.getElementById('terms');
+        if (!sel) return;
+        const opt = sel.options[sel.selectedIndex];
+        const text = opt ? opt.text : ' ';
+        const span = document.createElement('span');
+        const cs = window.getComputedStyle(sel);
+        span.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;padding:0;margin:0;font:' + cs.font + ';letter-spacing:' + cs.letterSpacing + ';';
+        span.textContent = text;
+        document.body.appendChild(span);
+        const textW = Math.ceil(span.offsetWidth);
+        document.body.removeChild(span);
+        const paddingLeft = 8;
+        const paddingRight = 4;
+        const w = Math.min(280, Math.max(textW + paddingLeft + paddingRight, 56));
+        sel.style.width = w + 'px';
+        sel.style.paddingLeft = paddingLeft + 'px';
+        sel.style.paddingRight = paddingRight + 'px';
+      }
+      
+      handleTermsChange(selectElement) {
+        const inputField = document.getElementById('termsCustom');
+        const selectedValue = selectElement.value;
+        if (selectedValue === 'Enter New') {
+          selectElement.style.display = 'none';
+          if (inputField) {
+            inputField.style.display = 'block';
+            inputField.value = '';
+            inputField.placeholder = 'Enter custom terms...';
+            inputField.style.width = '';
+            this.resizeTermsInput();
+            setTimeout(() => inputField.focus(), 100);
+          }
+        } else {
+          if (inputField) inputField.value = selectedValue;
+          this.resizeTermsSelect();
+          // Calculate due date based on selected terms
+          this.calculateDueDateFromTerms();
+        }
+      }
+      
+      handleTermsInputBlur(inputElement) {
+        const selectField = document.getElementById('terms');
+        const inputValue = inputElement.value.trim();
+        if (inputValue) {
+          const presets = this.getTermsPresets();
+          if (!presets.includes(inputValue) && this.data.customTerms.indexOf(inputValue) === -1) {
+            this.data.customTerms.push(inputValue);
+            this.saveData();
+          }
+          if (!Array.from(selectField.options).some(o => o.value === inputValue)) {
+            const opt = document.createElement('option');
+            opt.value = inputValue;
+            opt.textContent = inputValue;
+            selectField.insertBefore(opt, selectField.querySelector('option[value="Enter New"]'));
+          }
+          selectField.value = inputValue;
+          inputElement.style.display = 'none';
+          selectField.style.display = 'block';
+          this.resizeTermsSelect();
+          // Calculate due date based on custom terms
+          this.calculateDueDateFromTerms();
+        } else {
+          selectField.value = 'Net 14';
+          inputElement.value = '';
+          inputElement.style.display = 'none';
+          selectField.style.display = 'block';
+          this.resizeTermsSelect();
+          // Calculate due date based on default terms
+          this.calculateDueDateFromTerms();
+        }
+      }
+      
+      getTermsValue() {
+        const custom = document.getElementById('termsCustom');
+        const sel = document.getElementById('terms');
+        if (custom && custom.style.display !== 'none') return (custom.value || '').trim();
+        return (sel && sel.value && sel.value !== 'Enter New') ? sel.value : '';
+      }
+      
+      extractDaysFromTerms(terms) {
+        if (!terms) return null;
+        
+        // Handle "Due on receipt" - same day (0 days)
+        if (terms.toLowerCase().includes('due on receipt')) {
+          return 0;
+        }
+        
+        // Handle "Net X" format (e.g., "Net 14", "Net 30")
+        const netMatch = terms.match(/net\s+(\d+)/i);
+        if (netMatch) {
+          return parseInt(netMatch[1], 10);
+        }
+        
+        // Handle "End of month"
+        if (terms.toLowerCase().includes('end of month')) {
+          return 'end_of_month'; // Special flag
+        }
+        
+        // Exclude split payment terms (e.g., "50% upfront, balance on delivery")
+        // These shouldn't auto-calculate a due date
+        if (terms.toLowerCase().includes('%') && (terms.toLowerCase().includes('upfront') || terms.toLowerCase().includes('balance'))) {
+          return null;
+        }
+        
+        // Try to extract any number from the terms
+        const numberMatch = terms.match(/(\d+)/);
+        if (numberMatch) {
+          return parseInt(numberMatch[1], 10);
+        }
+        
+        // If no number found, return null (don't auto-calculate)
+        return null;
+      }
+      
+      calculateDueDateFromTerms() {
+        const invoiceDateEl = document.getElementById('invoiceDate');
+        const dueDateEl = document.getElementById('dueDate');
+        const terms = this.getTermsValue();
+        
+        if (!invoiceDateEl || !dueDateEl || !terms) return;
+        
+        const invoiceDateText = invoiceDateEl.textContent.trim();
+        if (!invoiceDateText) return;
+        
+        // Parse invoice date (assuming DD/MM/YYYY or DD-MM-YYYY format)
+        let invoiceDate;
+        try {
+          // Try DD/MM/YYYY format first
+          const parts = invoiceDateText.split(/[\/\-]/);
+          if (parts.length === 3) {
+            invoiceDate = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+          } else {
+            // Try parsing as-is
+            invoiceDate = new Date(invoiceDateText);
+          }
+          
+          if (isNaN(invoiceDate.getTime())) return;
+        } catch (e) {
+          return;
+        }
+        
+        const days = this.extractDaysFromTerms(terms);
+        
+        if (days === null) {
+          // Can't auto-calculate, don't change due date
+          return;
+        }
+        
+        let dueDate;
+        if (days === 'end_of_month') {
+          // Calculate to end of month
+          dueDate = new Date(invoiceDate.getFullYear(), invoiceDate.getMonth() + 1, 0);
+        } else {
+          // Add days
+          dueDate = new Date(invoiceDate.getTime() + days * 24 * 60 * 60 * 1000);
+        }
+        
+        // Format as DD/MM/YYYY
+        const day = String(dueDate.getDate()).padStart(2, '0');
+        const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+        const year = dueDate.getFullYear();
+        const formattedDate = `${day}/${month}/${year}`;
+        
+        dueDateEl.textContent = formattedDate;
+      }
+      
+      initNewInvoiceButton() {
+        const newBtn = document.getElementById('newInvoiceBtn');
+        if (newBtn) {
+          newBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to create a new invoice? This will reset all current invoice fields.')) {
+              this.resetNewInvoice();
+            }
+          });
+        }
+      }
+      
+      syncReferenceToInvoiceNumber() {
+        const invoiceNo = document.getElementById('invoiceNo');
+        const reference = document.getElementById('reference');
+        if (invoiceNo && reference) {
+          reference.textContent = invoiceNo.textContent.trim();
+        }
+      }
+      
+      resetNewInvoice() {
+        console.log('🆕 Resetting invoice to new...');
+        
+        // Clear currentInvoice from storage (reset to null)
+        GlobalStorage.saveGlobalData({ currentInvoice: null });
+        
+        // Switch to edit mode if in preview mode so user can edit the new invoice
+        if (this.currentMode === 'preview') {
+          this.switchMode('edit');
+        }
+        
+        // Display the next invoice number from the global counter (read-only, no increment).
+        // Counter only advances when this number is actually saved/archived.
+        const currentInvoiceNo = document.getElementById('invoiceNo');
+        if (currentInvoiceNo) {
+          const nextNum = GlobalStorage.getNextInvoiceNumber();
+          currentInvoiceNo.textContent = GlobalStorage.formatInvoiceNumber(nextNum);
+          // Sync reference to invoice number
+          this.syncReferenceToInvoiceNumber();
+        }
+        
+        // Reset dates
+        const today = new Date();
+        const currentDate = today.toLocaleDateString('en-GB');
+        
+        const invoiceDate = document.getElementById('invoiceDate');
+        if (invoiceDate) invoiceDate.textContent = currentDate;
+        
+        // Reset terms (same as description: select visible, first option)
+        const termsEl = document.getElementById('terms');
+        const termsCustomEl = document.getElementById('termsCustom');
+        if (termsEl) { termsEl.value = 'Net 14'; termsEl.style.display = 'block'; }
+        if (termsCustomEl) { termsCustomEl.value = ''; termsCustomEl.style.display = 'none'; }
+        
+        // Calculate due date based on terms
+        this.calculateDueDateFromTerms();
+        
+        // Reset customer information
+        const customerName = document.getElementById('customerName');
+        const customerAddress = document.getElementById('customerAddress');
+        const customerCity = document.getElementById('customerCity');
+        const customerPhone = document.getElementById('customerPhone');
+        const customerEmail = document.getElementById('customerEmail');
+        
+        // Check if client search input exists
+        const clientSearchInput = document.querySelector('.client-search-input');
+        if (clientSearchInput) {
+          clientSearchInput.value = '';
+        } else if (customerName) {
+          customerName.textContent = 'Your Customer Name';
+        }
+        
+        if (customerAddress) customerAddress.textContent = 'Your Customer Address';
+        if (customerCity) customerCity.textContent = 'Your Customer City';
+        if (customerPhone) customerPhone.textContent = 'Your Customer Phone';
+        if (customerEmail) customerEmail.textContent = 'Your Customer Email';
+        
+        // Reset items table - remove all rows except first, then reset first row
+        const tbody = document.querySelector('.items-table tbody');
+        if (tbody) {
+          const rows = tbody.querySelectorAll('tr');
+          // Remove all rows except the first one
+          for (let i = rows.length - 1; i > 0; i--) {
+            tbody.removeChild(rows[i]);
+          }
+          
+          // Reset first row to defaults
+          const firstRow = rows[0];
+          if (firstRow) {
+            // Reset description select
+            const descSelect = firstRow.querySelector('.description-select');
+            const descInput = firstRow.querySelector('.description-input');
+            if (descSelect && this.data.products.length > 0) {
+              descSelect.value = this.data.products[0].name;
+              descSelect.style.display = 'block';
+              if (descInput) {
+                descInput.style.display = 'none';
+                descInput.value = '';
+              }
+              // Update item image
+              this.updateItemImageDisplay('1', descSelect.value);
+            }
+            
+            // Reset unit price and quantity based on product type
+            const unitPriceCell = firstRow.querySelector('.unit-price');
+            const qtyCell = firstRow.querySelector('.qty');
+            
+            if (descSelect && unitPriceCell && qtyCell) {
+              const selectedProduct = this.data.products.find(p => p.name === descSelect.value);
+              
+              // Reset unit price
+              if (selectedProduct && selectedProduct.price) {
+                unitPriceCell.textContent = `£${selectedProduct.price.toFixed(2)}`;
+              } else {
+                unitPriceCell.textContent = '£0.00';
+              }
+              unitPriceCell.removeAttribute('data-loaded-from-save');
+              
+              // Reset quantity (now supports both Qty and Hours)
+              qtyCell.textContent = '1';
+              qtyCell.contentEditable = true;
+              qtyCell.style.backgroundColor = '';
+              qtyCell.style.color = '';
+              qtyCell.style.cursor = 'text';
+              qtyCell.title = 'Enter quantity or hours';
+            }
+            
+            // Reset amount
+            const amountCell = firstRow.querySelector('.amount');
+            if (amountCell) amountCell.textContent = '£0.00';
+            
+            // Reset date
+            const dateCell = firstRow.querySelector('td:nth-child(6)');
+            if (dateCell) dateCell.textContent = currentDate;
+          }
+        }
+        
+        // Reset summary fields
+        const discount = document.getElementById('discount');
+        const delivery = document.getElementById('delivery');
+        const tax = document.getElementById('tax');
+        const amountPaid = document.getElementById('amountPaid');
+        
+        if (discount) discount.textContent = '£0.00';
+        if (delivery) delivery.textContent = '£0.00';
+        if (tax) tax.textContent = '£0.00';
+        if (amountPaid) amountPaid.textContent = '£0.00';
+        
+        // Payment information (Bank Name, Account Name, Sort Code, Account No) is preserved
+        // Reference is already synced to invoice number above, don't reset it
+        
+        // Recalculate amounts
+        this.calculateAmounts();
+        
+        // Update row numbers
+        this.updateRowNumbers();
+        
+        // Reset auto-save timer so it doesn't fire immediately after reset
+        this.initAutoSave();
+        
+        console.log('✅ Invoice reset to new successfully');
+      }
+      
+      addNewRow() {
+        const tbody = document.querySelector('.items-table tbody');
+        const existingRows = tbody.querySelectorAll('tr');
+        const newRowNumber = existingRows.length + 1;
+        
+        // Build options HTML from global items list
+        let optionsHTML = '';
+        this.globalItemsList.forEach(item => {
+          optionsHTML += `<option value="${item}">${item}</option>`;
+        });
+        optionsHTML += '<option value="Enter New">Enter New</option>';
+        
+        const newRow = document.createElement('tr');
+        newRow.id = `row${newRowNumber}`;
+        newRow.innerHTML = `
+          <td>${newRowNumber}</td>
+          <td id="desc${newRowNumber}">
+            <div class="item-with-image" id="itemDisplay${newRowNumber}">
+              <div class="item-image placeholder" id="itemImage${newRowNumber}">📦</div>
+              <div class="item-text">
+                <select id="descSelect${newRowNumber}" class="description-select">
+                  ${optionsHTML}
+                </select>
+                <input type="text" id="descInput${newRowNumber}" class="description-input" style="display: none;">
+              </div>
+            </div>
+          </td>
+          <td id="qty${newRowNumber}" class="qty" contenteditable="true">1</td>
+          <td id="unitPrice${newRowNumber}" class="unit-price" contenteditable="true">£0.00</td>
+          <td id="amount${newRowNumber}" class="amount">£0.00</td>
+          <td id="date${newRowNumber}" contenteditable="true">${new Date().toLocaleDateString('en-GB')}</td>
+          <td class="actions-cell">
+            <button class="table-btn table-btn-up" onclick="app.moveRowUp(${newRowNumber})" title="Move Up">↑</button>
+            <button class="table-btn table-btn-down" onclick="app.moveRowDown(${newRowNumber})" title="Move Down">↓</button>
+            <button class="table-btn table-btn-delete" onclick="app.deleteRow(${newRowNumber})" title="Delete Row">×</button>
+          </td>
+        `;
+        
+        tbody.appendChild(newRow);
+        
+        // Add event listeners for new row
+        const newSelect = newRow.querySelector('.description-select');
+        const newInput = newRow.querySelector('.description-input');
+        if (newSelect) {
+          newSelect.addEventListener('change', (e) => this.handleDescriptionChange(e.target));
+          // Set initial price for the selected product
+          this.updateItemPriceForRow(newRowNumber, newSelect.value);
+        }
+        if (newInput) {
+          newInput.addEventListener('blur', (e) => this.handleDescriptionInputBlur(e.target));
+        }
+        
+        const newEditableCells = newRow.querySelectorAll('[contenteditable]');
+        newEditableCells.forEach(cell => {
+          cell.addEventListener('blur', () => {
+            if (cell.classList.contains('qty')) {
+              this.validateQuantity(cell);
+            }
+            this.calculateAmounts();
+          });
+        });
+        
+        this.calculateAmounts();
+        console.log(`➕ Added new row ${newRowNumber}`);
+      }
+      
+      // ========================================
+      // ROW MANAGEMENT FUNCTIONS
+      // ========================================
+      
+      moveRowUp(rowNumber) {
+        const tbody = document.querySelector('.items-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const currentRowIndex = rows.findIndex(row => row.id === `row${rowNumber}`);
+        
+        if (currentRowIndex > 0) {
+          const currentRow = rows[currentRowIndex];
+          const previousRow = rows[currentRowIndex - 1];
+          
+          // Swap the rows
+          tbody.insertBefore(currentRow, previousRow);
+          
+          // Update row numbers and IDs
+          this.updateRowNumbers();
+          this.calculateAmounts();
+          
+          console.log(`⬆️ Moved row ${rowNumber} up`);
+        }
+      }
+      
+      moveRowDown(rowNumber) {
+        const tbody = document.querySelector('.items-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const currentRowIndex = rows.findIndex(row => row.id === `row${rowNumber}`);
+        
+        if (currentRowIndex < rows.length - 1) {
+          const currentRow = rows[currentRowIndex];
+          const nextRow = rows[currentRowIndex + 1];
+          
+          // Swap the rows
+          tbody.insertBefore(nextRow, currentRow);
+          
+          // Update row numbers and IDs
+          this.updateRowNumbers();
+          this.calculateAmounts();
+          
+          console.log(`⬇️ Moved row ${rowNumber} down`);
+        }
+      }
+      
+      deleteRow(rowNumber) {
+        const tbody = document.querySelector('.items-table tbody');
+        const rows = tbody.querySelectorAll('tr');
+        
+        if (rows.length > 1) {
+          const targetRow = document.getElementById(`row${rowNumber}`);
+          if (targetRow) {
+            tbody.removeChild(targetRow);
+            
+            // Update row numbers and IDs
+            this.updateRowNumbers();
+            this.calculateAmounts();
+            
+            console.log(`🗑️ Deleted row ${rowNumber}`);
+          }
+        } else {
+          alert('Cannot delete the last remaining row.');
+        }
+      }
+      
+      updateRowNumbers() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        rows.forEach((row, index) => {
+          const newRowNumber = index + 1;
+          
+          // Update row ID
+          row.id = `row${newRowNumber}`;
+          
+          // Update row number in first cell
+          const firstCell = row.querySelector('td:first-child');
+          if (firstCell) {
+            firstCell.textContent = newRowNumber;
+          }
+          
+          // Update all IDs to match new row number
+          const descCell = row.querySelector('td:nth-child(2)');
+          const qtyCell = row.querySelector('td:nth-child(3)');
+          const unitPriceCell = row.querySelector('td:nth-child(4)');
+          const amountCell = row.querySelector('td:nth-child(5)');
+          const dateCell = row.querySelector('td:nth-child(6)');
+          
+          if (descCell) descCell.id = `desc${newRowNumber}`;
+          if (qtyCell) qtyCell.id = `qty${newRowNumber}`;
+          if (unitPriceCell) unitPriceCell.id = `unitPrice${newRowNumber}`;
+          if (amountCell) amountCell.id = `amount${newRowNumber}`;
+          if (dateCell) dateCell.id = `date${newRowNumber}`;
+          
+          // Update description select and input IDs
+          const descSelect = row.querySelector('.description-select');
+          const descInput = row.querySelector('.description-input');
+          if (descSelect) descSelect.id = `descSelect${newRowNumber}`;
+          if (descInput) descInput.id = `descInput${newRowNumber}`;
+          
+          // Update item display and image IDs
+          const itemDisplay = row.querySelector('.item-with-image');
+          const itemImage = row.querySelector('.item-image');
+          if (itemDisplay) itemDisplay.id = `itemDisplay${newRowNumber}`;
+          if (itemImage) itemImage.id = `itemImage${newRowNumber}`;
+          
+          // Update row control buttons
+          const upBtn = row.querySelector('.table-btn-up');
+          const downBtn = row.querySelector('.table-btn-down');
+          const deleteBtn = row.querySelector('.table-btn-delete');
+
+          if (upBtn) upBtn.setAttribute('onclick', `app.moveRowUp(${newRowNumber})`);
+          if (downBtn) downBtn.setAttribute('onclick', `app.moveRowDown(${newRowNumber})`);
+          if (deleteBtn) deleteBtn.setAttribute('onclick', `app.deleteRow(${newRowNumber})`);
+        });
+      }
+      
+      handleDescriptionChange(selectElement) {
+        const row = selectElement.closest('tr');
+        const inputField = row.querySelector('.description-input');
+        const selectedValue = selectElement.value;
+        
+        if (selectedValue === 'Enter New') {
+          // Hide dropdown and show input field
+          selectElement.style.display = 'none';
+          inputField.style.display = 'block';
+          
+          // Clear the input field completely
+          inputField.value = '';
+          inputField.placeholder = 'Enter custom item name...';
+          
+          // Reset quantity, unit price, and amount to zero
+          const qtyCell = row.querySelector('.qty');
+          const unitPriceCell = row.querySelector('.unit-price');
+          const amountCell = row.querySelector('.amount');
+          
+          if (qtyCell) {
+            qtyCell.textContent = '0';
+            qtyCell.contentEditable = true;
+            qtyCell.style.backgroundColor = '';
+            qtyCell.style.color = '';
+            qtyCell.style.cursor = 'text';
+            qtyCell.title = 'Enter quantity';
+          }
+          
+          if (unitPriceCell) {
+            unitPriceCell.textContent = '£0.00';
+          }
+          
+          if (amountCell) {
+            amountCell.textContent = '£0.00';
+          }
+          
+          // Focus the input field after a short delay to ensure it's visible
+          setTimeout(() => {
+          inputField.focus();
+          }, 100);
+          
+          // Recalculate amounts
+          this.calculateAmounts();
+        } else {
+          inputField.value = selectedValue;
+          
+          // Auto-fill price
+          const product = this.data.products.find(p => p.name === selectedValue);
+          if (product && product.price) {
+            const unitPriceCell = row.querySelector('.unit-price');
+            if (unitPriceCell) {
+              unitPriceCell.textContent = `£${product.price.toFixed(2)}`;
+              this.calculateAmounts();
+            }
+          }
+          
+          // Handle quantity based on item type
+          this.updateQuantityField(row, selectedValue);
+          
+          // Update product image
+          const rowId = row.id.replace('row', '');
+          this.updateItemImageDisplay(rowId, selectedValue);
+        }
+      }
+      
+      handleDescriptionInputBlur(inputElement) {
+        const row = inputElement.closest('tr');
+        const selectField = row.querySelector('.description-select');
+        const inputValue = inputElement.value.trim();
+        
+        console.log('Input blur - inputValue:', inputValue);
+        console.log('Input blur - inputValue type:', typeof inputValue);
+        console.log('Input blur - inputValue length:', inputValue.length);
+        
+        if (inputValue) {
+          // Check if item already exists in products
+          const existingProduct = this.data.products.find(p => p.name === inputValue);
+          
+          if (!existingProduct) {
+            // Add the new item to the products list
+            const newId = Math.max(...this.data.products.map(p => p.id), 0) + 1;
+            const newProduct = {
+              id: newId,
+              name: inputValue,
+              category: 'product',
+              price: 0.00,
+              icon: '📦',
+              image: '',
+              description: ''
+            };
+            this.data.products.push(newProduct);
+            this.saveData();
+          }
+          
+          // Add to global items list and update all dropdowns
+          this.addToGlobalItemsList(inputValue);
+          
+          // Set the dropdown to show the custom value
+          selectField.value = inputValue;
+          // Hide input, show select
+          inputElement.style.display = 'none';
+          selectField.style.display = 'block';
+          
+          // Update the product image display
+          const rowId = row.id.replace('row', '');
+          this.updateItemImageDisplay(rowId, inputValue);
+          
+          // Recalculate amounts
+          this.calculateAmounts();
+        } else {
+          // If empty, revert to default selection
+          inputElement.value = this.data.products[0]?.name || 'Example Product';
+          selectField.value = this.data.products[0]?.name || 'Example Product';
+          inputElement.style.display = 'none';
+          selectField.style.display = 'block';
+        }
+      }
+      
+      addToGlobalItemsList(itemName) {
+        if (!this.globalItemsList.includes(itemName)) {
+          this.globalItemsList.push(itemName);
+          this.updateAllDropdowns();
+          console.log('✅ Added to global items:', itemName);
+          console.log('Global items list:', this.globalItemsList);
+        }
+      }
+      
+      updateAllDropdowns() {
+        console.log('🔄 Updating all dropdowns with global items:', this.globalItemsList);
+        
+        const allSelects = document.querySelectorAll('.description-select');
+        console.log('📋 Found description selects:', allSelects.length);
+        
+        allSelects.forEach((select, index) => {
+          const currentValue = select.value;
+          console.log(`📝 Select ${index + 1} current value:`, currentValue);
+          
+          // Clear existing options except "Enter New"
+          const enterNewOption = select.querySelector('option[value="Enter New"]');
+          select.innerHTML = '';
+          
+          // Add all global items
+          this.globalItemsList.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            select.appendChild(option);
+          });
+          
+          // Add "Enter New" at the bottom
+          if (enterNewOption) {
+            select.appendChild(enterNewOption);
+          } else {
+            const newEnterNewOption = document.createElement('option');
+            newEnterNewOption.value = 'Enter New';
+            newEnterNewOption.textContent = 'Enter New';
+            select.appendChild(newEnterNewOption);
+          }
+          
+          // Restore selection if it still exists
+          if (this.globalItemsList.includes(currentValue) || currentValue === 'Enter New') {
+            select.value = currentValue;
+          } else {
+            select.value = this.globalItemsList[0] || 'Example Product';
+          }
+          
+          console.log(`✅ Select ${index + 1} updated with ${select.options.length} options`);
+        });
+      }
+      
+      updateQuantityField(row, productName) {
+        const qtyCell = row.querySelector('.qty');
+        
+        // Ensure quantity/hours field is always editable (supports both Qty and Hours)
+        qtyCell.contentEditable = true;
+        qtyCell.style.backgroundColor = '';
+        qtyCell.style.color = '';
+        qtyCell.style.cursor = 'text';
+        qtyCell.title = 'Enter quantity or hours';
+        
+        // Set default value if empty or 0
+        if (qtyCell.textContent === '0' || qtyCell.textContent === '') {
+          qtyCell.textContent = '1';
+        }
+      }
+      
+      updateItemImageDisplay(rowId, itemName) {
+        const itemImageDiv = document.getElementById(`itemImage${rowId}`);
+        if (!itemImageDiv) return;
+        
+        const product = this.data.products.find(p => p.name === itemName);
+        if (product && product.image) {
+          itemImageDiv.innerHTML = `<img src="${product.image}" alt="${itemName}">`;
+          itemImageDiv.classList.remove('placeholder');
+        } else {
+          const icon = product?.icon || '📦';
+          itemImageDiv.innerHTML = icon;
+          itemImageDiv.classList.add('placeholder');
+        }
+      }
+      
+      updateAllItemImages() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        rows.forEach((row, index) => {
+          const rowId = index + 1;
+          const select = row.querySelector('.description-select');
+          if (select) {
+            this.updateItemImageDisplay(rowId, select.value);
+          }
+        });
+      }
+      
+      updateAllItemPrices() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        rows.forEach((row, index) => {
+          const select = row.querySelector('.description-select');
+          if (select && select.value !== 'Enter New') {
+            const product = this.data.products.find(p => p.name === select.value);
+            if (product) {
+              // Always update price from Settings unless it's loaded from saved data
+              const unitPriceCell = row.querySelector('.unit-price');
+              if (unitPriceCell && !unitPriceCell.hasAttribute('data-loaded-from-save')) {
+                if (product.price) {
+                  unitPriceCell.textContent = `£${product.price.toFixed(2)}`;
+                }
+              }
+              
+              // Update quantity field based on item type
+              this.updateQuantityField(row, select.value);
+              
+              // Update image
+              const rowId = row.id.replace('row', '');
+              this.updateItemImageDisplay(rowId, select.value);
+            }
+          }
+        });
+        
+        // Recalculate all amounts after updates
+        this.calculateAmounts();
+      }
+      
+      updateItemPriceForRow(rowNumber, productName) {
+        if (productName && productName !== 'Enter New') {
+          const product = this.data.products.find(p => p.name === productName);
+          if (product) {
+            const unitPriceCell = document.getElementById(`unitPrice${rowNumber}`);
+            if (unitPriceCell && !unitPriceCell.hasAttribute('data-loaded-from-save')) {
+              if (product.price) {
+                unitPriceCell.textContent = `£${product.price.toFixed(2)}`;
+                this.calculateAmounts();
+              }
+            }
+          }
+          
+          // Update quantity field based on item type
+          const row = document.getElementById(`row${rowNumber}`);
+          if (row) {
+            this.updateQuantityField(row, productName);
+          }
+        }
+      }
+      
+      validateQuantity(cell) {
+        let qty = parseFloat(cell.textContent.replace(/[£,]/g, '')) || 0;
+        
+        // Check if this is an "Enter New" scenario (input field is visible)
+        const row = cell.closest('tr');
+        const inputField = row.querySelector('.description-input');
+        const isEnterNewMode = inputField && inputField.style.display !== 'none';
+        
+        // Only enforce minimum of 1 if not in "Enter New" mode
+        if (qty < 1 && !isEnterNewMode) {
+          qty = 1;
+          cell.textContent = '1';
+        }
+        
+        return qty;
+      }
+      
+      calculateAmounts() {
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        let subtotal = 0;
+        
+        rows.forEach(row => {
+          const qtyCell = row.querySelector('.qty');
+          const unitPriceCell = row.querySelector('.unit-price');
+          const amountCell = row.querySelector('.amount');
+          
+          if (qtyCell && unitPriceCell && amountCell) {
+            const qty = this.validateQuantity(qtyCell);
+            const unitPrice = parseFloat(unitPriceCell.textContent.replace(/[£,]/g, '')) || 0;
+            const amount = qty * unitPrice;
+            
+            amountCell.textContent = `£${amount.toFixed(2)}`;
+            subtotal += amount;
+          }
+        });
+        
+        // Update summary
+        const discount = parseFloat(document.getElementById('discount').textContent.replace(/[£,]/g, '')) || 0;
+        const delivery = parseFloat(document.getElementById('delivery').textContent.replace(/[£,]/g, '')) || 0;
+        const tax = parseFloat(document.getElementById('tax').textContent.replace(/[£,]/g, '')) || 0;
+        const amountPaid = parseFloat(document.getElementById('amountPaid').textContent.replace(/[£,]/g, '')) || 0;
+
+        const total = subtotal - discount + delivery + tax;
+        const outstanding = total - amountPaid;
+
+        document.getElementById('subtotal').textContent = `£${subtotal.toFixed(2)}`;
+        document.getElementById('total').textContent = `£${total.toFixed(2)}`;
+        document.getElementById('outstanding').textContent = `£${outstanding.toFixed(2)}`;
+
+        // Format editable summary fields with £ symbol
+        const discountElement = document.getElementById('discount');
+        if (discountElement && !discountElement.textContent.includes('£')) {
+          discountElement.textContent = `£${discount.toFixed(2)}`;
+        }
+
+        const deliveryElement = document.getElementById('delivery');
+        if (deliveryElement && !deliveryElement.textContent.includes('£')) {
+          deliveryElement.textContent = `£${delivery.toFixed(2)}`;
+        }
+
+        const taxElement = document.getElementById('tax');
+        if (taxElement && !taxElement.textContent.includes('£')) {
+          taxElement.textContent = `£${tax.toFixed(2)}`;
+        }
+
+        const amountPaidElement = document.getElementById('amountPaid');
+        if (amountPaidElement && !amountPaidElement.textContent.includes('£')) {
+          amountPaidElement.textContent = `£${amountPaid.toFixed(2)}`;
+        }
+      }
+      
+      setCurrentDates() {
+        const today = new Date();
+        const currentDate = today.toLocaleDateString('en-GB');
+        
+        const invoiceDate = document.getElementById('invoiceDate');
+        const invoiceDateWasEmpty = invoiceDate && !invoiceDate.textContent.trim();
+        if (invoiceDateWasEmpty) {
+          invoiceDate.textContent = currentDate;
+        }
+        
+        // Calculate due date from terms if invoice date was set or already exists
+        const invoiceDueDate = document.getElementById('dueDate');
+        if (invoiceDueDate && !invoiceDueDate.textContent.trim() && invoiceDate && invoiceDate.textContent.trim()) {
+          this.calculateDueDateFromTerms();
+        }
+        
+        const dateCells = document.querySelectorAll('.items-table tbody tr td:nth-child(6)');
+        dateCells.forEach(cell => {
+          if (cell && !cell.textContent.trim()) {
+            cell.textContent = currentDate;
+          }
+        });
+      }
+      
+      
+      // ========================================
+      // SAVE FUNCTIONALITY
+      // ========================================
+      
+      initSaveFunctionality() {
+        // SEND button - archives and exports PNG
+        document.getElementById('exportPngBtn').addEventListener('click', () => {
+          this.sendInvoice();
+        });
+        
+        // Print button - same as SEND (archive + clean preview) then print dialog
+        document.getElementById('printInvoiceBtn').addEventListener('click', () => {
+          this.printInvoice();
+        });
+        
+        // Load Invoice buttons (edit and preview mode)
+        document.getElementById('loadInvoiceBtnEdit').addEventListener('click', () => {
+          this.showInvoiceList();
+        });
+        document.getElementById('loadInvoiceBtnPreview').addEventListener('click', () => {
+          this.showInvoiceList();
+        });
+        
+        // Close modal button
+        document.getElementById('closeInvoiceListModal').addEventListener('click', () => {
+          this.hideInvoiceList();
+        });
+        
+        // Close modal on overlay click
+        document.getElementById('invoiceListModal').addEventListener('click', (e) => {
+          if (e.target.id === 'invoiceListModal') {
+            this.hideInvoiceList();
+          }
+        });
+        
+        // Search input with debouncing
+        let searchTimeout;
+        document.getElementById('invoiceSearchInput').addEventListener('input', (e) => {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            this.filterInvoices(e.target.value);
+          }, 300);
+        });
+        
+        // Start auto-save
+        this.initAutoSave();
+      }
+      
+      // ========================================
+      // EXPORT FUNCTIONALITY (handled by initSaveFunctionality)
+      // ========================================
+      
+      initExportFunctionality() {
+        // Export is now initialized in initSaveFunctionality
+        // This method kept for backward compatibility
+      }
+      
+      async sendInvoice() {
+        console.log('🚀 Starting SEND export...');
+        
+        // Archive invoice first (without clearing form)
+        this.saveAndArchiveInvoice(false);
+        
+        // Set exporting flag to pause auto-save
+        this.isExporting = true;
+        
+        // Check if html2canvas is available
+        if (typeof html2canvas === 'undefined') {
+          console.error('html2canvas library not loaded');
+          alert('Export library not loaded. Please refresh the page and try again.');
+          this.isExporting = false;
+          return;
+        }
+        
+        const invoice = document.getElementById('invoice');
+        if (!invoice) {
+          console.error('Invoice element not found');
+          alert('Invoice element not found. Please refresh the page and try again.');
+          this.isExporting = false;
+          return;
+        }
+        
+        const originalMode = this.currentMode;
+        try {
+          // Temporarily switch to preview mode for clean export
+          console.log('Switching to preview mode...');
+          this.switchMode('preview');
+          
+          // Wait a moment for mode transition
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Get actual dimensions of the invoice content
+          const a4Width = 794; // A4 width in pixels at 96 DPI
+          const actualHeight = invoice.scrollHeight; // Dynamic height based on actual content
+          const minA4Height = 1123; // Minimum A4 height in pixels at 96 DPI
+          
+          // Use the larger of actual content height or minimum A4 height
+          const exportHeight = Math.max(actualHeight, minA4Height);
+          
+          console.log(`Invoice actual height: ${actualHeight}px`);
+          console.log(`Exporting with dimensions: ${a4Width}x${exportHeight}`);
+          
+          // Wait for styles to apply
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          const canvas = await html2canvas(invoice, {
+            scale: 1.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: a4Width,
+            height: exportHeight,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: a4Width,
+            windowHeight: exportHeight,
+            logging: true,
+            foreignObjectRendering: false,
+            imageTimeout: 0
+          });
+          
+          console.log('Canvas created successfully:', canvas.width, 'x', canvas.height);
+            
+          // Create download link
+          const link = document.createElement('a');
+          const invoiceNo = document.getElementById('invoiceNo').textContent || 'invoice';
+          link.download = `invoice-${invoiceNo}.png`;
+          link.href = canvas.toDataURL('image/png');
+          
+          // Add to DOM temporarily and click
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          console.log('📤 Invoice sent as PNG');
+          
+        } catch (error) {
+          console.error('Send failed:', error);
+          console.error('Error details:', error.message, error.stack);
+          alert(`Send failed: ${error.message}. Please check the console for details.`);
+        } finally {
+          this.isExporting = false;
+          console.log('Switching back to original mode...');
+          this.switchMode(originalMode);
+        }
+      }
+      
+      /** Print: same as SEND (archive + clean preview) but opens print dialog instead of PNG download. */
+      async printInvoice() {
+        console.log('🖨️ Starting Print (archive + print)...');
+        this.saveAndArchiveInvoice(false);
+        this.isExporting = true;
+        const originalMode = this.currentMode;
+        try {
+          this.switchMode('preview');
+          await new Promise(resolve => setTimeout(resolve, 200));
+          window.print();
+        } catch (error) {
+          console.error('Print failed:', error);
+          alert(`Print failed: ${error.message}`);
+        } finally {
+          this.isExporting = false;
+          this.switchMode(originalMode);
+        }
+      }
+      
+      /** Export current invoice as PNG only (no archive). Used when rendering all archived invoices. */
+      async exportCurrentInvoiceAsPngOnly() {
+        if (typeof html2canvas === 'undefined') {
+          throw new Error('Export library not loaded');
+        }
+        const invoice = document.getElementById('invoice');
+        if (!invoice) throw new Error('Invoice element not found');
+        const originalMode = this.currentMode;
+        this.switchMode('preview');
+        await new Promise(r => setTimeout(r, 200));
+        const a4Width = 794;
+        const actualHeight = invoice.scrollHeight;
+        const minA4Height = 1123;
+        const exportHeight = Math.max(actualHeight, minA4Height);
+        await new Promise(r => setTimeout(r, 200));
+        const canvas = await html2canvas(invoice, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: a4Width,
+          height: exportHeight,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: a4Width,
+          windowHeight: exportHeight,
+          logging: false,
+          foreignObjectRendering: false,
+          imageTimeout: 0
+        });
+        const link = document.createElement('a');
+        const invoiceNo = document.getElementById('invoiceNo').textContent || 'invoice';
+        link.download = `invoice-${invoiceNo}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.switchMode(originalMode);
+      }
+      
+      async convertImagesToDataURLs(element) {
+        const images = element.querySelectorAll('img');
+        const promises = Array.from(images).map(img => {
+          return new Promise((resolve) => {
+            if (img.src && !img.src.startsWith('data:')) {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              
+              img.onload = () => {
+                try {
+                  ctx.drawImage(img, 0, 0);
+                  img.src = canvas.toDataURL('image/png');
+                  resolve();
+                } catch (e) {
+                  console.warn('Could not convert image to data URL:', e);
+                  resolve();
+                }
+              };
+              
+              img.onerror = () => {
+                console.warn('Image load error, skipping conversion');
+                resolve();
+              };
+              
+              // If image is already loaded
+              if (img.complete) {
+                img.onload();
+              }
+            } else {
+              resolve();
+            }
+          });
+        });
+        
+        await Promise.all(promises);
+      }
+      
+      saveInvoiceData(silent = false) {
+        // Save all current invoice data to localStorage
+        const invoiceData = {
+          invoiceNo: document.getElementById('invoiceNo').textContent,
+          invoiceDate: document.getElementById('invoiceDate').textContent,
+          dueDate: document.getElementById('dueDate').textContent,
+          terms: this.getTermsValue(),
+          customerName: document.querySelector('.client-search-input')?.value || document.getElementById('customerName')?.textContent,
+          customerAddress: document.getElementById('customerAddress').textContent,
+          customerCity: document.getElementById('customerCity').textContent,
+          customerPhone: document.getElementById('customerPhone').textContent,
+          customerEmail: document.getElementById('customerEmail').textContent,
+          items: this.getCurrentItems(),
+          subtotal: document.getElementById('subtotal').textContent,
+          discount: document.getElementById('discount').textContent,
+          delivery: document.getElementById('delivery').textContent,
+          tax: document.getElementById('tax').textContent,
+          total: document.getElementById('total').textContent,
+          amountPaid: document.getElementById('amountPaid').textContent,
+          outstanding: document.getElementById('outstanding').textContent,
+          // Payment Information
+          reference: document.getElementById('reference').textContent,
+          bankName: document.getElementById('bankName').textContent,
+          accountName: document.getElementById('accountName').textContent,
+          sortCode: document.getElementById('sortCode').textContent,
+          account: document.getElementById('account').textContent,
+          lastSaved: new Date().toISOString()
+        };
+        
+        // Use GlobalStorage instead of localStorage
+        GlobalStorage.saveInvoiceData(invoiceData);
+        
+        if (!silent) {
+          console.log('💾 Invoice data saved to global storage');
+        }
+      }
+      
+      // ========================================
+      // AUTO-SAVE FUNCTIONALITY
+      // ========================================
+      
+      initAutoSave() {
+        // Clear any existing interval
+        if (this.autoSaveInterval) {
+          clearInterval(this.autoSaveInterval);
+        }
+        
+        // Set interval (30 seconds = 30000ms)
+        this.autoSaveInterval = setInterval(() => {
+          // Don't auto-save if currently exporting
+          if (this.isExporting) return;
+          
+          // Don't auto-save if form is empty
+          const invoiceNo = document.getElementById('invoiceNo')?.textContent?.trim();
+          if (!invoiceNo || invoiceNo === '00000') return;
+          
+          // Save draft silently
+          this.saveInvoiceData(true); // true = silent mode
+        }, 30000); // 30 seconds
+        
+        console.log('⏱️ Auto-save initialized (every 30 seconds)');
+      }
+      
+      // ========================================
+      // INVOICE ARCHIVING & MANAGEMENT
+      // ========================================
+      
+      saveAndArchiveInvoice(clearAfter = false) {
+        // Get current invoice from storage to preserve ID if editing
+        const currentInvoice = GlobalStorage.getInvoiceData();
+        
+        // Collect invoice data from DOM
+        const invoiceData = {
+          invoiceNo: document.getElementById('invoiceNo').textContent,
+          invoiceDate: document.getElementById('invoiceDate').textContent,
+          dueDate: document.getElementById('dueDate').textContent,
+          terms: this.getTermsValue(),
+          customerName: document.querySelector('.client-search-input')?.value || document.getElementById('customerName')?.textContent,
+          customerAddress: document.getElementById('customerAddress').textContent,
+          customerCity: document.getElementById('customerCity').textContent,
+          customerPhone: document.getElementById('customerPhone').textContent,
+          customerEmail: document.getElementById('customerEmail').textContent,
+          items: this.getCurrentItems(),
+          subtotal: document.getElementById('subtotal').textContent,
+          discount: document.getElementById('discount').textContent,
+          delivery: document.getElementById('delivery').textContent,
+          tax: document.getElementById('tax').textContent,
+          total: document.getElementById('total').textContent,
+          amountPaid: document.getElementById('amountPaid').textContent,
+          outstanding: document.getElementById('outstanding').textContent,
+          reference: document.getElementById('reference').textContent,
+          bankName: document.getElementById('bankName').textContent,
+          accountName: document.getElementById('accountName').textContent,
+          sortCode: document.getElementById('sortCode').textContent,
+          account: document.getElementById('account').textContent,
+          lastSaved: new Date().toISOString()
+        };
+        
+        // Preserve ID if editing an existing archived invoice
+        if (currentInvoice && (currentInvoice.id || currentInvoice.originalId)) {
+          invoiceData.id = currentInvoice.id || currentInvoice.originalId;
+          invoiceData.createdAt = currentInvoice.createdAt;
+        }
+        
+        const success = GlobalStorage.saveAndArchiveInvoice(invoiceData);
+        
+        if (success) {
+          console.log('📚 Invoice archived successfully');
+          
+          // Advance the global counter only if this invoice used the current counter number
+          GlobalStorage.advanceInvoiceNumberIfUsed(invoiceData.invoiceNo);
+          
+          if (clearAfter) {
+            this.clearInvoiceForm();
+          }
+        } else {
+          console.error('❌ Failed to archive invoice');
+        }
+        
+        return success;
+      }
+      
+      clearInvoiceForm() {
+        // Clear customer search input
+        const searchInput = document.querySelector('.client-search-input');
+        if (searchInput) searchInput.value = '';
+        
+        // Clear all customer fields
+        const customerFields = ['customerName', 'customerAddress', 'customerCity', 'customerPhone', 'customerEmail'];
+        customerFields.forEach(field => {
+          const el = document.getElementById(field);
+          if (el) el.textContent = '';
+        });
+        
+        // Clear date fields
+        const dateFields = ['invoiceDate', 'dueDate'];
+        dateFields.forEach(field => {
+          const el = document.getElementById(field);
+          if (el) el.textContent = '';
+        });
+        
+        // Reset terms (select visible, first option)
+        const termsEl = document.getElementById('terms');
+        const termsCustomEl = document.getElementById('termsCustom');
+        if (termsEl) { termsEl.value = 'Net 14'; termsEl.style.display = 'block'; }
+        if (termsCustomEl) { termsCustomEl.value = ''; termsCustomEl.style.display = 'none'; }
+
+        // Remove all item rows except the first
+        const tbody = document.querySelector('.items-table tbody');
+        if (tbody) {
+          const rows = tbody.querySelectorAll('tr');
+          rows.forEach((row, index) => {
+            if (index === 0) {
+              // Reset first row
+              const qty = row.querySelector('.qty');
+              if (qty) qty.textContent = '1';
+              const unitPrice = row.querySelector('.unit-price');
+              if (unitPrice) unitPrice.textContent = '£0.00';
+              const amount = row.querySelector('.amount');
+              if (amount) amount.textContent = '£0.00';
+              const dateCell = row.querySelector('td:nth-child(6)');
+              if (dateCell) dateCell.textContent = '';
+              const select = row.querySelector('.description-select');
+              if (select) { select.value = ''; select.style.display = 'block'; }
+              const input = row.querySelector('.description-input');
+              if (input) { input.value = ''; input.style.display = 'none'; }
+            } else {
+              row.remove();
+            }
+          });
+        }
+        
+        // Reset financial totals
+        const financialFields = ['subtotal', 'discount', 'delivery', 'tax', 'total', 'amountPaid', 'outstanding'];
+        financialFields.forEach(field => {
+          const el = document.getElementById(field);
+          if (el) el.textContent = '£0.00';
+        });
+        
+        // Recalculate
+        if (typeof this.calculateAmounts === 'function') {
+          this.calculateAmounts();
+        }
+        
+        console.log('🧹 Invoice form cleared');
+      }
+      
+      showInvoiceList() {
+        const modal = document.getElementById('invoiceListModal');
+        modal.style.display = 'flex';
+        this.renderInvoiceList();
+        
+        // Focus search input after a small delay
+        setTimeout(() => {
+          document.getElementById('invoiceSearchInput').focus();
+        }, 100);
+      }
+      
+      hideInvoiceList() {
+        const modal = document.getElementById('invoiceListModal');
+        modal.style.display = 'none';
+        document.getElementById('invoiceSearchInput').value = '';
+      }
+      
+      filterInvoices(query) {
+        const filtered = GlobalStorage.searchSavedInvoices(query);
+        this.renderInvoiceList(filtered);
+      }
+      
+      renderInvoiceList(invoices = null) {
+        if (!invoices) {
+          invoices = GlobalStorage.getAllSavedInvoices();
+        }
+        
+        // Sort by date (newest first)
+        invoices.sort((a, b) => {
+          const dateA = new Date(a.archivedAt || a.createdAt || a.lastSaved || 0);
+          const dateB = new Date(b.archivedAt || b.createdAt || b.lastSaved || 0);
+          return dateB - dateA;
+        });
+        
+        // Update count
+        document.getElementById('invoiceCount').textContent = invoices.length;
+        
+        // Get container
+        const container = document.getElementById('invoiceListContainer');
+        const emptyState = document.getElementById('emptyInvoiceState');
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Show empty state if no invoices
+        if (invoices.length === 0) {
+          emptyState.style.display = 'block';
+          return;
+        }
+        
+        emptyState.style.display = 'none';
+        
+        // Render each invoice card
+        invoices.forEach(invoice => {
+          const card = document.createElement('div');
+          card.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; transition: box-shadow 0.2s;';
+          card.onmouseover = () => card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+          card.onmouseout = () => card.style.boxShadow = 'none';
+          
+          const archiveDate = invoice.archivedAt ? new Date(invoice.archivedAt).toLocaleDateString() : 'N/A';
+          
+          card.innerHTML = `
+            <div style="flex: 1;">
+              <div style="font-weight: bold; font-size: 16px; color: #333; margin-bottom: 4px;">
+                Invoice #${invoice.invoiceNo || 'N/A'}
+              </div>
+              <div style="color: #666; font-size: 14px;">
+                ${invoice.customerName || 'No customer'} ${invoice.customerEmail ? '· ' + invoice.customerEmail : ''}
+              </div>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                Archived: ${archiveDate}
+              </div>
+            </div>
+            <div style="text-align: right; display: flex; align-items: center; gap: 10px;">
+              <div style="font-weight: bold; font-size: 18px; color: #333; margin-right: 15px;">
+                ${invoice.total || '£0.00'}
+              </div>
+              <button onclick="window.app.editInvoice('${invoice.id}')" 
+                style="padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                ✏️ Edit
+              </button>
+              <button onclick="window.app.deleteInvoice('${invoice.id}')" 
+                style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                🗑️ Delete
+              </button>
+            </div>
+          `;
+          
+          container.appendChild(card);
+        });
+      }
+      
+      editInvoice(invoiceId) {
+        if (!confirm('Load this invoice? Any unsaved changes to the current invoice will be lost.')) {
+          return;
+        }
+        
+        const success = GlobalStorage.loadInvoiceForEditing(invoiceId);
+        if (success) {
+          this.hideInvoiceList();
+          this.loadSavedInvoice();
+          
+          // Always switch to preview mode so user can review before editing
+          this.switchMode('preview');
+          
+          console.log('📝 Loaded invoice for review:', invoiceId);
+        } else {
+          alert('Failed to load invoice. Please try again.');
+        }
+      }
+      
+      deleteInvoice(invoiceId) {
+        if (!confirm('Are you sure you want to delete this invoice? This cannot be undone.')) {
+          return;
+        }
+        
+        const success = GlobalStorage.deleteSavedInvoice(invoiceId);
+        if (success) {
+          // Re-render with current search filter
+          const searchQuery = document.getElementById('invoiceSearchInput').value;
+          if (searchQuery) {
+            this.filterInvoices(searchQuery);
+          } else {
+            this.renderInvoiceList();
+          }
+          console.log('🗑️ Invoice deleted:', invoiceId);
+        } else {
+          alert('Failed to delete invoice. Please try again.');
+        }
+      }
+      
+      getCurrentItems() {
+        const items = [];
+        const rows = document.querySelectorAll('.items-table tbody tr');
+        
+        rows.forEach((row, index) => {
+          const qty = row.querySelector('.qty')?.textContent || '1';
+          const unitPrice = row.querySelector('.unit-price')?.textContent || '£0.00';
+          const amount = row.querySelector('.amount')?.textContent || '£0.00';
+          const date = row.querySelector('td:nth-child(6)')?.textContent || '';
+          const select = row.querySelector('.description-select');
+          const input = row.querySelector('.description-input');
+          const description = select?.style.display === 'none' ? input?.value : select?.value;
+          
+          items.push({
+            rowNumber: index + 1,
+            description: description || '',
+            qty: qty,
+            unitPrice: unitPrice,
+            amount: amount,
+            date: date
+          });
+        });
+        
+        return items;
+      }
+      
+      loadSavedInvoice() {
+        try {
+          const invoiceData = GlobalStorage.getInvoiceData();
+          if (invoiceData) {
+            // Draft or editing an archived invoice: populate form from saved data.
+            // Invoice number comes from the saved data — do NOT touch the global counter.
+            this.populateInvoiceFromData(invoiceData);
+            console.log('📂 Loaded saved invoice data from global storage');
+          } else {
+            // No draft: show the next number from the global counter (preview only, no consume).
+            const nextNum = GlobalStorage.getNextInvoiceNumber();
+            const formatted = GlobalStorage.formatInvoiceNumber(nextNum);
+            const invoiceNoEl = document.getElementById('invoiceNo');
+            if (invoiceNoEl) {
+              invoiceNoEl.textContent = formatted;
+              this.syncReferenceToInvoiceNumber();
+            }
+            console.log(`📋 No saved draft — displaying next invoice number: ${formatted}`);
+          }
+        } catch (error) {
+          console.error('Error loading saved invoice from global storage:', error);
+        }
+      }
+      
+      populateInvoiceFromData(data) {
+        // Load header information
+        if (data.invoiceNo) {
+          document.getElementById('invoiceNo').textContent = data.invoiceNo;
+        }
+        if (data.invoiceDate) document.getElementById('invoiceDate').textContent = data.invoiceDate;
+        if (data.dueDate) document.getElementById('dueDate').textContent = data.dueDate;
+        const termsEl = document.getElementById('terms');
+        const termsCustomEl = document.getElementById('termsCustom');
+        if (termsEl && termsCustomEl) {
+          const isPreset = data.terms && Array.from(termsEl.options).some(o => o.value && o.value !== 'Enter New' && o.value === data.terms);
+          if (isPreset) {
+            termsEl.value = data.terms;
+            termsEl.style.display = 'block';
+            termsCustomEl.value = '';
+            termsCustomEl.style.display = 'none';
+          } else if (data.terms) {
+            const presets = this.getTermsPresets();
+            if (!presets.includes(data.terms) && this.data.customTerms.indexOf(data.terms) === -1) {
+              this.data.customTerms.push(data.terms);
+              this.saveData();
+            }
+            if (!Array.from(termsEl.options).some(o => o.value === data.terms)) {
+              const opt = document.createElement('option');
+              opt.value = data.terms;
+              opt.textContent = data.terms;
+              termsEl.insertBefore(opt, termsEl.querySelector('option[value="Enter New"]'));
+            }
+            termsEl.value = data.terms;
+            termsEl.style.display = 'block';
+            termsCustomEl.value = '';
+            termsCustomEl.style.display = 'none';
+          } else {
+            termsEl.value = 'Net 14';
+            termsEl.style.display = 'block';
+            termsCustomEl.style.display = 'none';
+          }
+          this.resizeTermsSelect();
+        }
+        
+        // Load customer information
+        if (data.customerName) {
+          const searchInput = document.querySelector('.client-search-input');
+          if (searchInput) {
+            searchInput.value = data.customerName;
+          } else {
+            document.getElementById('customerName').textContent = data.customerName;
+          }
+        }
+        if (data.customerAddress) document.getElementById('customerAddress').textContent = data.customerAddress;
+        if (data.customerCity) document.getElementById('customerCity').textContent = data.customerCity;
+        if (data.customerPhone) document.getElementById('customerPhone').textContent = data.customerPhone;
+        if (data.customerEmail) document.getElementById('customerEmail').textContent = data.customerEmail;
+        
+        // Load financial summary
+        if (data.subtotal) document.getElementById('subtotal').textContent = data.subtotal;
+        if (data.discount) document.getElementById('discount').textContent = data.discount;
+        if (data.delivery) document.getElementById('delivery').textContent = data.delivery;
+        if (data.tax) document.getElementById('tax').textContent = data.tax;
+        if (data.total) document.getElementById('total').textContent = data.total;
+        if (data.amountPaid) document.getElementById('amountPaid').textContent = data.amountPaid;
+        if (data.outstanding) document.getElementById('outstanding').textContent = data.outstanding;
+        
+        // Load payment information
+        if (data.reference) {
+          document.getElementById('reference').textContent = data.reference;
+        } else if (data.invoiceNo) {
+          // If no saved reference, sync to invoice number as default
+          this.syncReferenceToInvoiceNumber();
+        }
+        if (data.bankName) document.getElementById('bankName').textContent = data.bankName;
+        if (data.accountName) document.getElementById('accountName').textContent = data.accountName;
+        if (data.sortCode) document.getElementById('sortCode').textContent = data.sortCode;
+        if (data.account) document.getElementById('account').textContent = data.account;
+        
+        // Load items if they exist
+        if (data.items && data.items.length > 0) {
+          this.loadInvoiceItems(data.items);
+        }
+      }
+      
+      loadInvoiceItems(items) {
+        const tbody = document.querySelector('.items-table tbody');
+        if (!tbody) return;
+        
+        // Clear existing rows except the first one
+        const existingRows = tbody.querySelectorAll('tr');
+        for (let i = existingRows.length - 1; i > 0; i--) {
+          tbody.removeChild(existingRows[i]);
+        }
+        
+        // Update the first row
+        if (items.length > 0) {
+          this.populateRow(1, items[0]);
+        }
+        
+        // Add additional rows for remaining items
+        for (let i = 1; i < items.length; i++) {
+          this.addNewRow();
+          this.populateRow(i + 1, items[i]);
+        }
+        
+        // Update row numbers
+        this.updateRowNumbers();
+        this.calculateAmounts();
+      }
+      
+      populateRow(rowNumber, item) {
+        const row = document.getElementById(`row${rowNumber}`);
+        if (!row) return;
+        
+        // Set quantity
+        const qtyCell = row.querySelector('.qty');
+        if (qtyCell && item.qty) qtyCell.textContent = item.qty;
+        
+        // Set unit price
+        const unitPriceCell = row.querySelector('.unit-price');
+        if (unitPriceCell && item.unitPrice) {
+          unitPriceCell.textContent = item.unitPrice;
+          unitPriceCell.setAttribute('data-loaded-from-save', 'true');
+        }
+        
+        // Set amount
+        const amountCell = row.querySelector('.amount');
+        if (amountCell && item.amount) amountCell.textContent = item.amount;
+        
+        // Set date
+        const dateCell = row.querySelector('td:nth-child(6)');
+        if (dateCell && item.date) dateCell.textContent = item.date;
+        
+        // Set description
+        const select = row.querySelector('.description-select');
+        const input = row.querySelector('.description-input');
+        if (item.description) {
+          // Check if it's a predefined product
+          const product = this.data.products.find(p => p.name === item.description);
+          if (product && select) {
+            select.value = item.description;
+            select.style.display = 'block';
+            if (input) input.style.display = 'none';
+            this.updateItemImageDisplay(rowNumber, item.description);
+          } else {
+            // It's a custom entry
+            if (select) select.value = 'Enter New';
+            if (input) {
+              input.value = item.description;
+              input.style.display = 'block';
+              select.style.display = 'none';
+            }
+          }
+        }
+      }
+      
+    }
+    
+    // ========================================
+    // INITIALIZE APPLICATION
+    // ========================================
+    
+    // Global app instance
+    window.app = new StaticInvoiceApp();
+    
+    // Additional initialization when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🎉 Static Invoice System ready!');
+      
+      // Send initial size to parent window
+      sendSizeToParent();
+      
+      // Send size updates when content changes
+      const observer = new MutationObserver(() => {
+        sendSizeToParent();
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+      
+      // Send size on window resize
+      window.addEventListener('resize', () => {
+        sendSizeToParent();
+      });
+    });
+    
+    // Listen for size requests, cancel, and mode switch from parent (editor/index.html)
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'request-size') {
+        sendSizeToParent();
+      }
+      if (event.data && event.data.type === 'switch-mode' && window.app) {
+        window.app.switchMode(event.data.mode);
+      }
+      if (event.data && event.data.type === 'cancel-render' && window.app) {
+        window.app._cancelBatchRequested = true;
+      }
+      if (event.data && event.data.type === 'cancel-print' && window.app) {
+        window.app._cancelBatchRequested = true;
+      }
+    });
+    
+    function sendSizeToParent() {
+      try {
+        const width = Math.max(
+          document.body.scrollWidth,
+          document.body.offsetWidth,
+          document.documentElement.scrollWidth,
+          document.documentElement.offsetWidth
+        );
+        
+        const height = Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.scrollHeight,
+          document.documentElement.offsetHeight
+        );
+        
+        // Send size information to parent window
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'iframe-resize',
+            width: width,
+            height: height
+          }, '*');
+          
+          console.log(`📤 Sent iframe size to parent: ${width}x${height}`);
+        }
+      } catch (error) {
+        console.log('⚠️ Could not send size to parent:', error);
+      }
+    }
+  </script>
+
+</body>
+</html>
