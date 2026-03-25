@@ -1979,7 +1979,7 @@
         const addRowBtn = document.querySelector('.add-row-btn');
         if (addRowBtn) {
           addRowBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.addNewRow();
           });
         }
@@ -1987,7 +1987,7 @@
         // Add touch support for table action buttons
         document.addEventListener('touchend', (e) => {
           if (e.target.classList.contains('table-btn')) {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             e.target.click();
           }
         });
@@ -1996,7 +1996,7 @@
         let lastTouchEnd = 0;
         document.addEventListener('touchend', (e) => {
           const now = (new Date()).getTime();
-          if (now - lastTouchEnd <= 300) {
+          if (now - lastTouchEnd <= 300 && e.cancelable) {
             e.preventDefault();
           }
           lastTouchEnd = now;
@@ -3161,15 +3161,11 @@
       }
       
       updateAllDropdowns() {
-        console.log('🔄 Updating all dropdowns with global items:', this.globalItemsList);
-        
         const allSelects = document.querySelectorAll('.description-select');
-        console.log('📋 Found description selects:', allSelects.length);
-        
-        allSelects.forEach((select, index) => {
+
+        allSelects.forEach((select) => {
           const currentValue = select.value;
-          console.log(`📝 Select ${index + 1} current value:`, currentValue);
-          
+
           // Clear existing options except "Enter New"
           const enterNewOption = select.querySelector('option[value="Enter New"]');
           select.innerHTML = '';
@@ -3198,8 +3194,6 @@
           } else {
             select.value = this.globalItemsList[0] || 'Example Product';
           }
-          
-          console.log(`✅ Select ${index + 1} updated with ${select.options.length} options`);
         });
       }
       

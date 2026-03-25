@@ -460,16 +460,9 @@ body {
   pointer-events: auto;
 }
 
-/* During pinch: kill subframe transitions (template CSS uses many `transition: all`) + stabilize compositing */
-.canvas-overlay.shell-pinch-active {
-  will-change: transform;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-}
+/* During pinch: kill iframe width/height/box-shadow transitions only (will-change toggles often flicker on mobile GPUs) */
 .canvas-overlay.shell-pinch-active iframe {
   transition: none !important;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
 }
 
 /* ========================================

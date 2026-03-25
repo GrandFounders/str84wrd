@@ -439,7 +439,11 @@
       }
       if (!doc.querySelector('script[src*="page-overlay-elements"]')) {
         var poScript = doc.createElement('script');
-        poScript.src = '../js/page-overlay-elements.js';
+        try {
+          poScript.src = new URL('js/page-overlay-elements.js', window.location.href).href;
+        } catch (_) {
+          poScript.src = '../js/page-overlay-elements.js';
+        }
         doc.body.appendChild(poScript);
       }
       if (!doc.defaultView.makePageOverlayDraggable) {

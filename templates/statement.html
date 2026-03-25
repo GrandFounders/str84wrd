@@ -3252,15 +3252,11 @@
       }
       
       updateAllDropdowns() {
-        console.log("🔄 Updating all dropdowns with global items:", this.globalItemsList);
-        
         const allSelects = document.querySelectorAll(".description-select");
-        console.log("📋 Found description selects:", allSelects.length);
-        
-        allSelects.forEach((select, index) => {
+
+        allSelects.forEach((select) => {
           const currentValue = select.value;
-          console.log(`📝 Select ${index + 1} current value:`, currentValue);
-          
+
           // Clear existing options except "Enter New"
           const enterNewOption = select.querySelector("option[value=\"Enter New\"]");
           select.innerHTML = "";
@@ -3289,8 +3285,6 @@
           } else {
             select.value = this.globalItemsList[0] || "Example Product";
           }
-          
-          console.log(`✅ Select ${index + 1} updated with ${select.options.length} options`);
         });
       }
       

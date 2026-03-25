@@ -13,7 +13,12 @@
     // ========================================
     // CANVAS SHELL CONTROLS (parent page)
     // ========================================
-    
+
+    /** Avoid Chrome "Ignored attempt to cancel…" when the browser owns scrolling (non-cancelable touch). */
+    function shellPreventDefaultIfCancelable(ev) {
+      if (ev && ev.cancelable) ev.preventDefault();
+    }
+
     /**
      * Infinite canvas, mobile/chrome UI, Settings modal, postMessage to invoice iframe.
      * Invoice markup, line items, and totals live in templates/invoice.html only.
@@ -62,7 +67,22 @@
           width: 0,       // Viewport width
           height: 0       // Viewport height
         };
-        
+        this._workspaceGestureActive = false;
+        this._shellPinchActive = false;
+        this._shellPinchLoggedThisGesture = false;
+        /** Smoothed pinch centroid (parent client px) — cuts pan explosions when fingers drift while pinching. */
+        this._pinchFocalSmooth = null;
+        /** EMA of raw span/lastSpan — touch/trackpad reports swing 0.9↔1.1 each frame without this. */
+        this._pinchScaleEma = null;
+        this._shellDebugThrottles = Object.create(null);
+        /** Inertial pan (trackpad coast + touch flick), camera px per ~60fps frame. */
+        this._shellPanMomentumVel = { vx: 0, vy: 0 };
+        this._shellPanMomentumRaf = null;
+        this._shellPanMomFrameTs = null;
+        /** Last touch sample for flick velocity (client px + time). */
+        this._touchPanInertPrev = null;
+        this._touchPanInertEma = { vx: 0, vy: 0 };
+
         this.isPanning = false;
         this.lastPanX = 0;
         this.lastPanY = 0;
@@ -79,6 +99,14 @@
           
           this.addCanvasNavigation(canvas);
           this.updateCanvasTransform();
+          if (this.isShellCameraDebug()) {
+            console.log(
+              '%c[shell-camera] debug ON',
+              'color:#0ae;font-weight:bold',
+              '— pinch (100ms throttle), pan (200ms), clamp (immediate). Off: canvasShell.setShellCameraDebug(false)'
+            );
+            this.logShellDebugSnapshot('init');
+          }
           this.initIframeResizing();
           this.initSidebarFrameZoomBridge();
           
@@ -371,7 +399,7 @@
           startRight = pos.right;
           startTop = pos.top;
           startLeft = pos.left;
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
         };
 
         const drag = (e) => {
@@ -434,7 +462,7 @@
             drawer.style.bottom = 'auto';
             drawer.style.right = 'auto';
           }
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
         };
 
         const endDrag = () => {
@@ -500,7 +528,7 @@
           startTop = rect.top;
           startX = xy.x;
           startY = xy.y;
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
         };
         const drag = (e) => {
           if (!isDragging) return;
@@ -533,7 +561,7 @@
           startTop = newTop;
           startX = currentX;
           startY = currentY;
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
         };
         const endDrag = (e) => {
           if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
@@ -826,24 +854,45 @@
         });
       }
 
+      /**
+       * Resolve a site-root-relative path (e.g. js/foo.js) against the shell URL.
+       * Iframe-relative paths like ../js/ break when the child document is still about:blank.
+       */
+      shellAssetUrl(pathFromWebRoot) {
+        try {
+          return new URL(String(pathFromWebRoot || '').replace(/^\//, ''), window.location.href).href;
+        } catch (_) {
+          return pathFromWebRoot;
+        }
+      }
+
       injectOverlayLayer() {
         const iframe = document.getElementById('invoiceFrame');
         if (!iframe || !iframe.contentDocument) return;
         try {
           const doc = iframe.contentDocument;
+          let href = '';
+          try {
+            href = doc.URL || '';
+          } catch (_) {
+            return;
+          }
+          if (!href || href === 'about:blank' || href.startsWith('about:')) return;
+          if (!doc.body) return;
+
           if (doc.getElementById('overlay-container')) {
             return;
           }
           const script = doc.createElement('script');
-          script.src = '../js/overlay-layer.js';
-          script.onload = function() {
+          script.src = this.shellAssetUrl('js/overlay-layer.js');
+          script.onload = function () {
             if (window._drawModeActive) {
               iframe.contentWindow.postMessage({ type: 'draw-mode', enabled: true }, '*');
             }
           };
           doc.body.appendChild(script);
           const pageOverlayScript = doc.createElement('script');
-          pageOverlayScript.src = '../js/page-overlay-elements.js';
+          pageOverlayScript.src = this.shellAssetUrl('js/page-overlay-elements.js');
           doc.body.appendChild(pageOverlayScript);
         } catch (e) {
           console.warn('Overlay layer injection failed:', e);
@@ -864,9 +913,10 @@
           
           console.log(`📏 Iframe resized from message to: ${iframe.style.width} x ${iframe.style.height}`);
           
-          // On mobile, only adjust zoom if needed; do NOT re-center (prevents snapping after every content change)
-          if (this.isMobileDevice()) {
+          // On mobile, only adjust zoom if needed; skip while user is panning/pinching (avoids jump + flicker)
+          if (this.isMobileDevice() && !this._workspaceGestureActive) {
             setTimeout(() => {
+              if (this._workspaceGestureActive) return;
               const mobileZoom = this.calculateInitialMobileZoom();
               if (mobileZoom && mobileZoom < 1) {
                 this.camera.zoom = mobileZoom;
@@ -913,9 +963,10 @@
               
               console.log(`📏 Iframe resized to: ${iframe.style.width} x ${iframe.style.height}`);
               
-              // On mobile, only adjust zoom if needed; do NOT re-center (prevents snapping after every action)
-              if (this.isMobileDevice()) {
+              // On mobile, only adjust zoom if needed; skip during active touch gestures
+              if (this.isMobileDevice() && !this._workspaceGestureActive) {
                 setTimeout(() => {
+                  if (this._workspaceGestureActive) return;
                   const mobileZoom = this.calculateInitialMobileZoom();
                   if (mobileZoom && mobileZoom < 1) {
                     this.camera.zoom = mobileZoom;
@@ -971,6 +1022,7 @@
       }
 
       centerIframeInViewport() {
+        this.stopShellPanMomentum();
         const canvas = document.getElementById('infiniteCanvas');
         const iframe = document.getElementById('invoiceFrame');
         
@@ -1044,7 +1096,7 @@
           const deltaY = e.clientY - startY;
           this.camera.x = startCameraX + deltaX;
           this.camera.y = startCameraY + deltaY;
-          this.updateOverlayTransform();
+          this.updateCanvasTransform();
         };
 
         const onWindowMouseUp = () => {
@@ -1054,6 +1106,7 @@
         canvas.addEventListener('mousedown', (e) => {
           if (e.button !== 0 && e.button !== 1) return;
           e.preventDefault();
+          this.stopShellPanMomentum();
           isPanning = true;
           startX = e.clientX;
           startY = e.clientY;
@@ -1073,8 +1126,13 @@
         });
 
         canvas.addEventListener('touchstart', (e) => {
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
+          this.setWorkspaceGestureActive(true);
           touchState.active = true;
+          if (e.touches.length === 2) {
+            this.stopShellPanMomentum();
+            this._touchPanInertPrev = null;
+          }
           for (const touch of e.changedTouches) {
             touchState.touches.set(touch.identifier, {
               x: touch.clientX,
@@ -1084,11 +1142,14 @@
             });
           }
           if (e.touches.length === 1) {
-            const t = e.touches[0];
-            touchState.startCameraX = this.camera.x;
-            touchState.startCameraY = this.camera.y;
-            touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
-            canvas.classList.add('panning');
+            if (!window._drawModeActive) {
+              const t = e.touches[0];
+              touchState.startCameraX = this.camera.x;
+              touchState.startCameraY = this.camera.y;
+              touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
+              canvas.classList.add('panning');
+              this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
+            }
           } else if (e.touches.length === 2) {
             this.setWorkspacePinchActive(true);
             const t1 = e.touches[0];
@@ -1098,7 +1159,7 @@
         }, passiveFalse);
 
         canvas.addEventListener('touchmove', (e) => {
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
           if (!touchState.active) return;
 
           for (const touch of e.changedTouches) {
@@ -1110,14 +1171,28 @@
           }
 
           if (e.touches.length === 1) {
-            const t = e.touches[0];
-            const d = touchState.touches.get(t.identifier);
-            if (d) {
-              const deltaX = t.clientX - touchState.oneFingerStart.x;
-              const deltaY = t.clientY - touchState.oneFingerStart.y;
-              this.camera.x = touchState.startCameraX + deltaX;
-              this.camera.y = touchState.startCameraY + deltaY;
-              this.updateOverlayTransform();
+            if (!window._drawModeActive) {
+              const t = e.touches[0];
+              const d = touchState.touches.get(t.identifier);
+              if (d) {
+                const deltaX = t.clientX - touchState.oneFingerStart.x;
+                const deltaY = t.clientY - touchState.oneFingerStart.y;
+                // Match iframe path: scale pan by zoom on all touch devices (touchscreen laptops are not "mobile").
+                const div = this.mobilePanPixelDivisor();
+                this.camera.x = touchState.startCameraX + deltaX / div;
+                this.camera.y = touchState.startCameraY + deltaY / div;
+                this.touchPanInertiaSampleFromMove(t.clientX, t.clientY, div);
+                this.updateCanvasTransform();
+                if (this.isShellCameraDebug()) {
+                  this.logShellCameraThrottled('pan-canvas', 200, '1-finger pan (canvas)', {
+                    div,
+                    delta: { x: deltaX, y: deltaY },
+                    camera: { x: this.camera.x, y: this.camera.y, zoom: this.camera.zoom },
+                    workspaceGesture: this._workspaceGestureActive,
+                    shellPinch: this._shellPinchActive
+                  });
+                }
+              }
             }
           } else if (e.touches.length === 2) {
             const t1 = e.touches[0];
@@ -1134,7 +1209,8 @@
         }, passiveFalse);
 
         canvas.addEventListener('touchend', (e) => {
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
+          const wasOneFingerPan = e.touches.length === 0 && canvas.classList.contains('panning');
           for (const touch of e.changedTouches) {
             touchState.touches.delete(touch.identifier);
           }
@@ -1143,6 +1219,11 @@
             touchState.lastPinchDistance = 0;
             canvas.classList.remove('panning');
             this.setWorkspacePinchActive(false);
+            this.setWorkspaceGestureActive(false);
+            if (wasOneFingerPan) {
+              this.kickTouchPanInertiaIfFastEnough();
+            }
+            this._touchPanInertPrev = null;
           }
           if (e.touches.length === 1) {
             const t = e.touches[0];
@@ -1151,16 +1232,19 @@
             touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
             touchState.lastPinchDistance = 0;
             this.setWorkspacePinchActive(false);
+            this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
           }
         }, passiveFalse);
 
         canvas.addEventListener('touchcancel', (e) => {
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
           touchState.active = false;
           touchState.touches.clear();
           touchState.lastPinchDistance = 0;
           canvas.classList.remove('panning');
           this.setWorkspacePinchActive(false);
+          this.setWorkspaceGestureActive(false);
+          this.abortTouchPanInertiaSampling();
         }, passiveFalse);
 
         canvas.addEventListener('wheel', (e) => {
@@ -1189,6 +1273,7 @@
 
         if (hasCtrl) {
           e.preventDefault();
+          this.stopShellPanMomentum();
           const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
           this.camera.zoom = Math.max(0.1, Math.min(5, this.camera.zoom * zoomFactor));
           this.updateCanvasTransform();
@@ -1196,6 +1281,7 @@
         }
         if (hasAlt) {
           e.preventDefault();
+          this.stopShellPanMomentum();
           this.camera.x += -deltaX * 0.1;
           this.camera.y += -deltaY * 0.1;
           this.updateCanvasTransform();
@@ -1203,6 +1289,7 @@
         }
         if (hasShift) {
           e.preventDefault();
+          this.stopShellPanMomentum();
           this.camera.x += -deltaX * 0.05;
           this.camera.y += -deltaY * 0.05;
           this.updateCanvasTransform();
@@ -1221,6 +1308,7 @@
 
         if (isDiagonalSwipe) {
           e.preventDefault();
+          this.stopShellPanMomentum();
           const zoomFactor = deltaY > 0 ? 0.95 : 1.05;
           this.camera.zoom = Math.max(0.1, Math.min(5, this.camera.zoom * zoomFactor));
           this.updateCanvasTransform();
@@ -1240,6 +1328,7 @@
           }
           this.camera.x += panX;
           this.camera.y += panY;
+          this.impulseShellPanMomentumTrackpad(panX, panY);
           this.updateCanvasTransform();
         }
       }
@@ -1310,15 +1399,59 @@
             if (el.closest('input, textarea, select, button, a[href], label')) return false;
             if (el.closest('[contenteditable]:not([contenteditable="false"])')) return false;
             if (el.closest('.items-table tbody')) return false;
+            if (el.closest('.overlay-image, .page-overlay-wrapper')) return false;
+            if (el.closest('#draw-layer')) {
+              try {
+                if (iframe.contentWindow.parent && iframe.contentWindow.parent._drawModeActive) {
+                  return false;
+                }
+              } catch (_) {}
+            }
             return true;
           };
 
+          /** Padded: toolbar / rotate handles sit just outside the box. */
+          const bothTouchPointsInElementBounds = (root, e, padPx) => {
+            if (!root || !e.touches || e.touches.length !== 2) return false;
+            const br = root.getBoundingClientRect();
+            const p = padPx || 0;
+            const left = br.left - p;
+            const right = br.right + p;
+            const top = br.top - p;
+            const bottom = br.bottom + p;
+            const inside = (t) => {
+              const x = t.clientX;
+              const y = t.clientY;
+              return x >= left && x <= right && y >= top && y <= bottom;
+            };
+            return inside(e.touches[0]) && inside(e.touches[1]);
+          };
+
+          const shouldDeferPinchToSelectedGraphic = (e) => {
+            if (!e.touches || e.touches.length !== 2) return false;
+            const img = doc.querySelector('.overlay-image.selected:not(.locked)');
+            const page = doc.querySelector('.page-overlay-wrapper.selected:not(.locked)');
+            const root = img || page;
+            if (!root) return false;
+            return bothTouchPointsInElementBounds(root, e, 56);
+          };
+
           const cap = { capture: true, passive: false };
+          const isTrackpadLikeWheel = (e) =>
+            Math.abs(e.deltaY) < 200 &&
+            Math.abs(e.deltaX) < 200 &&
+            (Math.abs(e.deltaX) > 0 || Math.abs(e.deltaY) > 0);
           const onWheel = (e) => {
-            if (!(e.ctrlKey || e.metaKey)) return;
+            const hasShellMod = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+            if (hasShellMod) {
+              this.applyTrackpadCanvasGesture(e);
+              return;
+            }
+            if (!isTrackpadLikeWheel(e)) return;
+            if (!allowIframeShellPanTarget(e.target)) return;
             this.applyTrackpadCanvasGesture(e);
           };
-          const pinch = { lastSpan: 0 };
+          const pinch = { lastSpan: 0, deferredToGraphic: false };
           const pan = { active: false, startX: 0, startY: 0, camX: 0, camY: 0 };
           const parentShell = () =>
             iframe.contentWindow.parent &&
@@ -1326,6 +1459,7 @@
           const clearPinch = (e) => {
             if (!e.touches || e.touches.length < 2) {
               pinch.lastSpan = 0;
+              pinch.deferredToGraphic = false;
               const shell = parentShell();
               if (shell && typeof shell.setWorkspacePinchActive === 'function') {
                 shell.setWorkspacePinchActive(false);
@@ -1335,9 +1469,23 @@
           doc.addEventListener(
             'touchstart',
             (e) => {
+              const shellGesture = parentShell();
+              if (shellGesture && typeof shellGesture.setWorkspaceGestureActive === 'function') {
+                shellGesture.setWorkspaceGestureActive(true);
+              }
               if (e.touches.length === 2) {
                 pan.active = false;
-                e.preventDefault();
+                const shell2 = parentShell();
+                if (shell2 && typeof shell2.abortTouchPanInertiaSampling === 'function') {
+                  shell2.abortTouchPanInertiaSampling();
+                }
+                if (shouldDeferPinchToSelectedGraphic(e)) {
+                  pinch.deferredToGraphic = true;
+                  pinch.lastSpan = 0;
+                  return;
+                }
+                pinch.deferredToGraphic = false;
+                shellPreventDefaultIfCancelable(e);
                 const shell = parentShell();
                 if (shell && typeof shell.setWorkspacePinchActive === 'function') {
                   shell.setWorkspacePinchActive(true);
@@ -1356,6 +1504,9 @@
                   if (shell && shell.camera) {
                     pan.camX = shell.camera.x;
                     pan.camY = shell.camera.y;
+                    if (typeof shell.resetTouchPanInertiaTracking === 'function') {
+                      shell.resetTouchPanInertiaTracking(pan.startX, pan.startY);
+                    }
                   } else {
                     pan.active = false;
                   }
@@ -1370,7 +1521,8 @@
             'touchmove',
             (e) => {
               if (e.touches.length === 2) {
-                e.preventDefault();
+                if (pinch.deferredToGraphic) return;
+                shellPreventDefaultIfCancelable(e);
                 const t1 = e.touches[0];
                 const t2 = e.touches[1];
                 const span = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -1386,31 +1538,66 @@
                 return;
               }
               if (e.touches.length === 1 && pan.active) {
-                e.preventDefault();
+                shellPreventDefaultIfCancelable(e);
                 const shell = parentShell();
                 const t = e.touches[0];
                 if (shell && shell.camera) {
-                  shell.camera.x = pan.camX + (t.clientX - pan.startX);
-                  shell.camera.y = pan.camY + (t.clientY - pan.startY);
+                  const panDiv =
+                    typeof shell.mobilePanPixelDivisor === 'function'
+                      ? shell.mobilePanPixelDivisor()
+                      : Math.max(1, shell.camera.zoom || 1);
+                  shell.camera.x = pan.camX + (t.clientX - pan.startX) / panDiv;
+                  shell.camera.y = pan.camY + (t.clientY - pan.startY) / panDiv;
+                  if (typeof shell.touchPanInertiaSampleFromMove === 'function') {
+                    shell.touchPanInertiaSampleFromMove(t.clientX, t.clientY, panDiv);
+                  }
                   shell.updateCanvasTransform();
+                  if (shell.isShellCameraDebug && shell.isShellCameraDebug()) {
+                    shell.logShellCameraThrottled('pan-iframe', 200, '1-finger pan (iframe)', {
+                      panDiv,
+                      delta: { x: t.clientX - pan.startX, y: t.clientY - pan.startY },
+                      camera: {
+                        x: shell.camera.x,
+                        y: shell.camera.y,
+                        zoom: shell.camera.zoom
+                      }
+                    });
+                  }
                 }
               }
             },
             cap
           );
           const onTouchEndOrCancel = (e) => {
+            const hadShellPan = pan.active;
             clearPinch(e);
-            if (!e.touches || e.touches.length === 0) pan.active = false;
+            if (!e.touches || e.touches.length === 0) {
+              pan.active = false;
+              const sh = parentShell();
+              if (sh && typeof sh.setWorkspaceGestureActive === 'function') {
+                sh.setWorkspaceGestureActive(false);
+              }
+              if (hadShellPan && sh && typeof sh.kickTouchPanInertiaIfFastEnough === 'function') {
+                sh.kickTouchPanInertiaIfFastEnough();
+              }
+            }
           };
           doc.addEventListener('touchend', onTouchEndOrCancel, cap);
           doc.addEventListener('touchcancel', (e) => {
             clearPinch(e);
             pan.active = false;
+            const sh = parentShell();
+            if (sh && typeof sh.setWorkspaceGestureActive === 'function') {
+              sh.setWorkspaceGestureActive(false);
+            }
+            if (sh && typeof sh.abortTouchPanInertiaSampling === 'function') {
+              sh.abortTouchPanInertiaSampling();
+            }
           }, cap);
           doc.addEventListener('wheel', onWheel, cap);
           doc.addEventListener('keydown', (e) => this.applyShellKeyboardNavFromEvent(e, doc), cap);
           ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
-            doc.addEventListener(type, (e) => e.preventDefault(), cap);
+            doc.addEventListener(type, (e) => shellPreventDefaultIfCancelable(e), cap);
           });
         } catch (_) {
           /* cross-origin */
@@ -1450,19 +1637,19 @@
               el.addEventListener(
                 'touchstart',
                 (ev) => {
-                  if (ev.touches.length > 1) ev.preventDefault();
+                  if (ev.touches.length > 1) shellPreventDefaultIfCancelable(ev);
                 },
                 passiveFalse
               );
               el.addEventListener(
                 'touchmove',
                 (ev) => {
-                  if (ev.touches.length > 1) ev.preventDefault();
+                  if (ev.touches.length > 1) shellPreventDefaultIfCancelable(ev);
                 },
                 passiveFalse
               );
               ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
-                el.addEventListener(type, (ev) => ev.preventDefault(), passiveFalse);
+                el.addEventListener(type, (ev) => shellPreventDefaultIfCancelable(ev), passiveFalse);
               });
             });
           });
@@ -1483,14 +1670,14 @@
           if (!(e.touches && e.touches.length > 1)) return;
           const el = e.target;
           if (el && el.closest && el.closest('#infiniteCanvas')) return;
-          e.preventDefault();
+          shellPreventDefaultIfCancelable(e);
         };
         document.addEventListener('touchstart', blockTabMultiTouchZoom, { ...passiveFalse, capture: true });
         document.addEventListener('touchmove', blockTabMultiTouchZoom, { ...passiveFalse, capture: true });
 
         /* Safari: block page pinch-zoom; workspace zoom uses shell camera / canvas handlers only */
         ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
-          document.addEventListener(type, (e) => e.preventDefault(), passiveFalse);
+          document.addEventListener(type, (e) => shellPreventDefaultIfCancelable(e), passiveFalse);
         });
 
         document.addEventListener('keydown', (e) => {
@@ -1521,6 +1708,7 @@
       }
 
       nudgeCanvasWithArrowKey(key) {
+        this.stopShellPanMomentum();
         const zoomFactor = this.camera.zoom || 1;
         const step = 50 / zoomFactor;
         switch (key) {
@@ -1543,11 +1731,335 @@
       }
 
       /**
-       * During workspace pinch, strip transitions on the overlay/iframe and hint compositing — avoids template `transition: all` flashing under scale.
+       * During workspace pinch, strip transitions on the iframe — avoids template `transition: all` flashing under scale.
        */
       setWorkspacePinchActive(active) {
+        const on = !!active;
+        this._shellPinchActive = on;
+        this._pinchFocalSmooth = null;
+        this._pinchScaleEma = null;
         const overlay = document.getElementById('canvasOverlay');
-        if (overlay) overlay.classList.toggle('shell-pinch-active', !!active);
+        if (overlay) overlay.classList.toggle('shell-pinch-active', on);
+        if (this.isShellCameraDebug()) {
+          if (on && !this._shellPinchLoggedThisGesture) {
+            this._shellPinchLoggedThisGesture = true;
+            console.log(
+              '[shell-camera] pinch started (two fingers) — expect pinch step lines below'
+            );
+          }
+          if (!on) this._shellPinchLoggedThisGesture = false;
+        }
+      }
+
+      setWorkspaceGestureActive(active) {
+        this._workspaceGestureActive = !!active;
+      }
+
+      /** True if any shell-camera debug channel is on (see `readShellDebugFromEnv`). */
+      readShellDebugFromEnv() {
+        try {
+          const q = new URLSearchParams(window.location.search || '');
+          let v = (q.get('debugShell') || '').toLowerCase().trim();
+          if (v === '1' || v === 'true' || v === 'yes' || v === 'on') return true;
+          const rawHash = (window.location.hash || '').replace(/^#/, '').trim();
+          if (rawHash) {
+            const hashPair = rawHash.split(/[?&]/).find((p) => /^debugShell/i.test(p));
+            if (hashPair) {
+              const hv = hashPair.includes('=')
+                ? (hashPair.split('=')[1] || '1').toLowerCase().trim()
+                : '1';
+              if (hv === '' || hv === '1' || hv === 'true' || hv === 'yes' || hv === 'on')
+                return true;
+            }
+          }
+          if (typeof localStorage !== 'undefined') {
+            v = (localStorage.getItem('debugShell') || '').toLowerCase().trim();
+            if (v === '1' || v === 'true' || v === 'yes' || v === 'on') return true;
+          }
+        } catch (_) {}
+        return false;
+      }
+
+      /**
+       * Opt-in debug for pinch/pan/clamp logs:
+       * - URL `?debugShell=1` (or true/yes/on)
+       * - Hash `#debugShell` or `#debugShell=1` (works when query strings are stripped)
+       * - `localStorage.setItem('debugShell','1')` then reload
+       * - `window.DEBUG_SHELL_CAMERA = true` (also accepts `'1'`, `'true'`, `1`)
+       * - `canvasShell.setShellCameraDebug(true)`
+       * Turn off: `canvasShell.setShellCameraDebug(false)` or `window.DEBUG_SHELL_CAMERA = false`
+       */
+      isShellCameraDebug() {
+        if (window.DEBUG_SHELL_CAMERA === false) return false;
+        const w = window.DEBUG_SHELL_CAMERA;
+        if (w === true || w === 1) return true;
+        if (typeof w === 'string') {
+          const s = w.trim().toLowerCase();
+          if (s === '1' || s === 'true' || s === 'yes' || s === 'on') return true;
+        }
+        if (this._shellDebugEnvResolved === undefined) {
+          this._shellDebugEnvResolved = this.readShellDebugFromEnv();
+        }
+        return this._shellDebugEnvResolved;
+      }
+
+      setShellCameraDebug(on) {
+        window.DEBUG_SHELL_CAMERA = !!on;
+        try {
+          if (on) localStorage.setItem('debugShell', '1');
+          else localStorage.removeItem('debugShell');
+        } catch (_) {}
+        if (on) {
+          console.log(
+            '%c[shell-camera] debug ON',
+            'color:#0ae;font-weight:bold',
+            '— pinch logs go to this console (the TOP / index page). Not the invoice iframe DevTools window.'
+          );
+          console.log(
+            '[shell-camera] Now pinch with two fingers on the canvas or invoice; you should see "pinch started" then "pinch step" for each move.'
+          );
+          this.logShellDebugSnapshot('after enable');
+        } else {
+          console.log('[shell-camera] debug OFF');
+        }
+      }
+
+      /**
+       * Pinch step logging. Meaningful zoom/pan steps log every frame; no-ops at min/max zoom
+       * or identity steps are throttled so DevTools stays usable and we avoid extra work correlating to jank.
+       */
+      logShellCameraPinch(payload) {
+        if (!this.isShellCameraDebug()) return;
+        const noopPinch =
+          payload.blockedAtZoomLimit ||
+          (!payload.pinchPanApplied &&
+            payload.zBefore === payload.zAfter &&
+            Math.abs(payload.zoomFactor) <= 1e-6);
+        if (noopPinch) {
+          this.logShellCameraThrottled(
+            'pinch-noop',
+            500,
+            'pinch step (no zoom change — likely at min/max)',
+            payload
+          );
+          return;
+        }
+        console.log('[shell-camera] pinch step', payload);
+      }
+
+      logShellCameraThrottled(key, intervalMs, label, payload) {
+        if (!this.isShellCameraDebug()) return;
+        const t = performance.now();
+        const last = this._shellDebugThrottles[key] || 0;
+        if (t - last < intervalMs) return;
+        this._shellDebugThrottles[key] = t;
+        console.log(`[shell-camera] ${label}`, payload);
+      }
+
+      logShellDebugSnapshot(reason) {
+        if (!this.isShellCameraDebug()) return;
+        const iframe = document.getElementById('invoiceFrame');
+        const vv = window.visualViewport;
+        console.log(`[shell-camera] snapshot (${reason})`, {
+          camera: { ...this.camera },
+          visualViewport: vv
+            ? {
+                width: vv.width,
+                height: vv.height,
+                offsetLeft: vv.offsetLeft,
+                offsetTop: vv.offsetTop,
+                scale: vv.scale
+              }
+            : null,
+          inner: { w: window.innerWidth, h: window.innerHeight },
+          iframe: iframe
+            ? { offsetW: iframe.offsetWidth, offsetH: iframe.offsetHeight }
+            : null,
+          flags: {
+            workspaceGesture: this._workspaceGestureActive,
+            shellPinch: this._shellPinchActive
+          }
+        });
+      }
+
+      /** Layout/CSS pixel center of the visible viewport (helps when URL bar changes innerHeight). */
+      viewportCenter() {
+        const vv = window.visualViewport;
+        if (vv && vv.width > 0) {
+          return {
+            cx: vv.offsetLeft + vv.width / 2,
+            cy: vv.offsetTop + vv.height / 2
+          };
+        }
+        return { cx: window.innerWidth / 2, cy: window.innerHeight / 2 };
+      }
+
+      stopShellPanMomentum() {
+        if (this._shellPanMomentumRaf != null) {
+          cancelAnimationFrame(this._shellPanMomentumRaf);
+          this._shellPanMomentumRaf = null;
+        }
+        this._shellPanMomFrameTs = null;
+        if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
+        this._shellPanMomentumVel.vx = 0;
+        this._shellPanMomentumVel.vy = 0;
+      }
+
+      /** Touch cancelled / interrupted — no flick, clear sampling. */
+      abortTouchPanInertiaSampling() {
+        this.stopShellPanMomentum();
+        this._touchPanInertPrev = null;
+        if (this._touchPanInertEma) {
+          this._touchPanInertEma.vx = 0;
+          this._touchPanInertEma.vy = 0;
+        }
+      }
+
+      resetTouchPanInertiaTracking(clientX, clientY) {
+        this.stopShellPanMomentum();
+        const t = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+        this._touchPanInertPrev = { x: clientX, y: clientY, t };
+        if (!this._touchPanInertEma) this._touchPanInertEma = { vx: 0, vy: 0 };
+        this._touchPanInertEma.vx = 0;
+        this._touchPanInertEma.vy = 0;
+      }
+
+      touchPanInertiaSampleFromMove(clientX, clientY, panDiv) {
+        const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+        const p = this._touchPanInertPrev;
+        if (!p) {
+          this._touchPanInertPrev = { x: clientX, y: clientY, t: now };
+          return;
+        }
+        const dt = now - p.t;
+        if (dt <= 0 || dt > 100) {
+          this._touchPanInertPrev = { x: clientX, y: clientY, t: now };
+          return;
+        }
+        const dcx = (clientX - p.x) / panDiv;
+        const dcy = (clientY - p.y) / panDiv;
+        /** ~60fps frame equivalents (px/frame) for momentum tick */
+        const ivx = (dcx / dt) * 16.67;
+        const ivy = (dcy / dt) * 16.67;
+        if (!this._touchPanInertEma) this._touchPanInertEma = { vx: 0, vy: 0 };
+        const ema = 0.68;
+        this._touchPanInertEma.vx = this._touchPanInertEma.vx * ema + ivx * (1 - ema);
+        this._touchPanInertEma.vy = this._touchPanInertEma.vy * ema + ivy * (1 - ema);
+        this._touchPanInertPrev = { x: clientX, y: clientY, t: now };
+      }
+
+      kickTouchPanInertiaIfFastEnough() {
+        if (!this._touchPanInertEma) return;
+        const e = this._touchPanInertEma;
+        const sp = Math.hypot(e.vx, e.vy);
+        const minV = 0.52;
+        if (sp < minV) return;
+        if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
+        const boost = 1.06;
+        this._shellPanMomentumVel.vx += e.vx * boost;
+        this._shellPanMomentumVel.vy += e.vy * boost;
+        this._touchPanInertEma.vx = 0;
+        this._touchPanInertEma.vy = 0;
+        this._touchPanInertPrev = null;
+        this.ensureShellPanMomentumRaf();
+      }
+
+      /** Trackpad cardinal swipe: extra coast so rapid two-finger scrolls match OS-like inertia. */
+      impulseShellPanMomentumTrackpad(panX, panY) {
+        if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
+        const k = 0.017;
+        const carry = 0.86;
+        this._shellPanMomentumVel.vx = this._shellPanMomentumVel.vx * carry + panX * k;
+        this._shellPanMomentumVel.vy = this._shellPanMomentumVel.vy * carry + panY * k;
+        this.ensureShellPanMomentumRaf();
+      }
+
+      ensureShellPanMomentumRaf() {
+        if (this._shellPanMomentumRaf != null) return;
+        this._shellPanMomFrameTs = null;
+        this._shellPanMomentumRaf = requestAnimationFrame((ts) => {
+          this._shellPanMomentumRaf = null;
+          this.shellPanMomentumTick(ts);
+        });
+      }
+
+      shellPanMomentumTick(ts) {
+        if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
+        if (this._shellPanMomFrameTs == null) this._shellPanMomFrameTs = ts;
+        let dt = ts - this._shellPanMomFrameTs;
+        this._shellPanMomFrameTs = ts;
+        dt = Math.max(1, Math.min(dt, 32));
+        let vx = this._shellPanMomentumVel.vx;
+        let vy = this._shellPanMomentumVel.vy;
+        const scale = dt / 16.67;
+        this.camera.x += vx * scale;
+        this.camera.y += vy * scale;
+        const friction = Math.pow(0.912, scale);
+        vx *= friction;
+        vy *= friction;
+        this._shellPanMomentumVel.vx = vx;
+        this._shellPanMomentumVel.vy = vy;
+        this.updateCanvasTransform();
+        if (Math.hypot(vx, vy) < 0.075) {
+          this.stopShellPanMomentum();
+          return;
+        }
+        this._shellPanMomentumRaf = requestAnimationFrame((t) => this.shellPanMomentumTick(t));
+      }
+
+      /**
+       * One-finger **touch** pan: divide finger delta by this (canvas + iframe, all touch devices).
+       * Uses max(floor, z) so:
+       * - Zoomed in (z>1): divisor grows with z → calmer pan (avoids “runaway” vs screen pixels).
+       * - Zoomed out / near 1×: at least ~1.08 so pans are steadier than raw 1:1.
+       * Critical: **no branch at z===1** — the old `z>1 ? z : max(1.08,z*1.08)` jumped ~8% in
+       * sensitivity across 1× and felt erratic while pinching or working slightly zoomed.
+       */
+      mobilePanPixelDivisor() {
+        const z = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
+        const touchPanFloor = 1.08;
+        return Math.max(touchPanFloor, z);
+      }
+
+      /** Keep pan from drifting arbitrarily far on mobile (reduces “flies off screen”). */
+      clampCameraBounds() {
+        const z = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
+        const iframe = document.getElementById('invoiceFrame');
+        let iw = 800;
+        let ih = 1000;
+        if (iframe) {
+          iw = Math.max(iframe.offsetWidth || 400, 200);
+          ih = Math.max(iframe.offsetHeight || 500, 200);
+        }
+        const vv = window.visualViewport;
+        const vw =
+          vv && vv.width > 0 ? vv.width : window.innerWidth || 320;
+        const vh =
+          vv && vv.height > 0 ? vv.height : window.innerHeight || 480;
+        const scaledW = iw * z;
+        const scaledH = ih * z;
+        const slack = Math.min(vw, vh) * 0.5;
+        const maxX = scaledW * 0.5 + vw * 0.5 + slack;
+        const maxY = scaledH * 0.5 + vh * 0.5 + slack;
+        const x0 = this.camera.x;
+        const y0 = this.camera.y;
+        if (Number.isFinite(this.camera.x)) {
+          this.camera.x = Math.max(-maxX, Math.min(maxX, this.camera.x));
+        }
+        if (Number.isFinite(this.camera.y)) {
+          this.camera.y = Math.max(-maxY, Math.min(maxY, this.camera.y));
+        }
+        if (this.isShellCameraDebug() && (this.camera.x !== x0 || this.camera.y !== y0)) {
+          this.logShellCameraThrottled('clamp-bounds', 400, 'clamp applied', {
+            before: { x: x0, y: y0 },
+            after: { x: this.camera.x, y: this.camera.y },
+            bounds: { maxX, maxY },
+            z,
+            iframeCss: { iw, ih },
+            viewport: { vw, vh },
+            slack
+          });
+        }
       }
 
       /**
@@ -1556,12 +2068,90 @@
        */
       applyPinchGestureStep(relativeScale, centerClientX, centerClientY) {
         if (!(relativeScale > 0) || !Number.isFinite(relativeScale)) return;
-        const newZoom = this.camera.zoom * relativeScale;
-        this.camera.zoom = Math.max(0.1, Math.min(5, newZoom));
-        const zoomFactor = relativeScale - 1;
-        this.camera.x -= (centerClientX - window.innerWidth / 2) * zoomFactor;
-        this.camera.y -= (centerClientY - window.innerHeight / 2) * zoomFactor;
-        this.updateCanvasTransform();
+        this.stopShellPanMomentum();
+        // Raw ratio is extremely noisy; EMA + tight clamp stops alternating ±10% zoom (and pan) each frame.
+        const raw = Math.max(0.72, Math.min(1.35, relativeScale));
+        const beta = this.isMobileDevice() ? 0.48 : 0.4;
+        if (this._pinchScaleEma == null || !Number.isFinite(this._pinchScaleEma)) {
+          this._pinchScaleEma = raw;
+        } else {
+          this._pinchScaleEma += (raw - this._pinchScaleEma) * beta;
+        }
+        const lo = 0.92;
+        const hi = 1.08;
+        const safe = Math.max(lo, Math.min(hi, this._pinchScaleEma));
+        const zBefore = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
+        const zAfter = Math.max(0.1, Math.min(5, zBefore * safe));
+        this.camera.zoom = zAfter;
+        // Pan only by the zoom that actually applied — at min/max zoom, extra pinch must not drift the camera.
+        const zoomFactor = zAfter / zBefore - 1;
+        if (Math.abs(zoomFactor) > 1e-6) {
+          const { cx, cy } = this.viewportCenter();
+          if (!this._pinchFocalSmooth) {
+            this._pinchFocalSmooth = { x: centerClientX, y: centerClientY };
+          } else {
+            const alpha = this.isMobileDevice() ? 0.45 : 0.38;
+            this._pinchFocalSmooth.x += (centerClientX - this._pinchFocalSmooth.x) * alpha;
+            this._pinchFocalSmooth.y += (centerClientY - this._pinchFocalSmooth.y) * alpha;
+          }
+          const fx = this._pinchFocalSmooth.x;
+          const fy = this._pinchFocalSmooth.y;
+          let rawDx = (fx - cx) * zoomFactor;
+          let rawDy = (fy - cy) * zoomFactor;
+          // Already zoomed in: focal follow is more aggressive in screen space — ease it so pinch doesn’t “orbit” wildly.
+          if (zBefore > 1.35) {
+            const pinchPanEase = Math.min(1, Math.sqrt(1.35 / zBefore));
+            rawDx *= pinchPanEase;
+            rawDy *= pinchPanEase;
+          }
+          const vv = window.visualViewport;
+          const vw = vv && vv.width > 0 ? vv.width : window.innerWidth || 320;
+          const vh = vv && vv.height > 0 ? vv.height : window.innerHeight || 480;
+          const panCap = Math.min(vw, vh) * (this.isMobileDevice() ? 0.34 : 0.22);
+          const mag = Math.hypot(rawDx, rawDy);
+          if (mag > panCap && mag > 0) {
+            const s = panCap / mag;
+            rawDx *= s;
+            rawDy *= s;
+          }
+          this.camera.x -= rawDx;
+          this.camera.y -= rawDy;
+        }
+        const preClamp = { x: this.camera.x, y: this.camera.y, zoom: this.camera.zoom };
+        const pinchChangedCamera = Math.abs(zoomFactor) > 1e-6;
+        if (pinchChangedCamera) {
+          this.updateCanvasTransform();
+        }
+        this.logShellCameraPinch({
+          relativeScale,
+          scaleRawClamped: raw,
+          scaleEma: this._pinchScaleEma,
+          safe,
+          zBefore,
+          zAfter,
+          zoomFactor,
+          pinchPanApplied: pinchChangedCamera,
+          blockedAtZoomLimit:
+            Math.abs(zoomFactor) <= 1e-6 && Math.abs(safe - 1) > 0.001,
+          scaleBandClamped:
+            Math.abs(safe - this._pinchScaleEma) > 1e-6,
+          center: { x: centerClientX, y: centerClientY },
+          focalSmoothed: this._pinchFocalSmooth
+            ? { ...this._pinchFocalSmooth }
+            : null,
+          viewportCenter: this.viewportCenter(),
+          afterPinchBeforeClamp: preClamp,
+          afterClamp: pinchChangedCamera
+            ? {
+                x: this.camera.x,
+                y: this.camera.y,
+                zoom: this.camera.zoom
+              }
+            : preClamp,
+          clamped: pinchChangedCamera
+            ? preClamp.x !== this.camera.x || preClamp.y !== this.camera.y
+            : false
+        });
       }
 
       updateOverlayTransform() {
@@ -1573,6 +2163,7 @@
       }
 
       updateCanvasTransform() {
+        this.clampCameraBounds();
         this.updateOverlayTransform();
         // Redraw canvas with updated grid
         this.drawCanvas();
@@ -1585,6 +2176,7 @@
 
       // Zoom controls for the infinite canvas
       zoomIn() {
+        this.stopShellPanMomentum();
         this.camera.zoom = Math.min(5, this.camera.zoom + 0.2);
         this.updateCanvasTransform();
         console.log(`🔍 Camera zoom in: ${this.camera.zoom.toFixed(1)}x`);
@@ -1597,6 +2189,7 @@
       }
 
       resetZoom() {
+        this.stopShellPanMomentum();
         this.camera.zoom = 1;
         this.camera.x = 0;
         this.camera.y = 0;
@@ -2433,6 +3026,32 @@
     window.canvasShell = new CanvasShellControls();
     /** @deprecated Prefer window.canvasShell; kept for inline onclick="app.*" and older snippets */
     window.app = window.canvasShell;
+    window.enableShellCameraDebug = function enableShellCameraDebug() {
+      window.canvasShell.setShellCameraDebug(true);
+    };
+
+    (function shellDebugStartupHint() {
+      const shell = window.canvasShell;
+      if (
+        shell &&
+        typeof shell.isShellCameraDebug === 'function' &&
+        shell.isShellCameraDebug()
+      ) {
+        console.log(
+          '%c[shell-camera] debug ON',
+          'color:#0ae;font-weight:bold',
+          '(env/URL). Verbose pinch/pan/clamp logs active.'
+        );
+        return;
+      }
+      try {
+        if (sessionStorage.getItem('_shellCameraDebugHint') === '1') return;
+        sessionStorage.setItem('_shellCameraDebugHint', '1');
+      } catch (_) {}
+      console.log(
+        '[shell-camera] Verbose logs off. Enable: ?debugShell=1 | #debugShell | enableShellCameraDebug() | canvasShell.setShellCameraDebug(true)'
+      );
+    })();
 
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🎉 Static Invoice System ready!');

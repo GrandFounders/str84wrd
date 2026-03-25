@@ -694,6 +694,117 @@
   resizeDrawLayer();
   setupDrawing();
 
+  /** Two-finger pinch on a selected (unlocked) overlay image or page-overlay scales the graphic instead of the shell camera. */
+  let selectedGraphicPinch = null;
+
+  function getUnlockedSelectedGraphicRoot() {
+    const img = document.querySelector('.overlay-image.selected:not(.locked)');
+    const page = document.querySelector('.page-overlay-wrapper.selected:not(.locked)');
+    return img || page || null;
+  }
+
+  /** Use client coordinates so pinch still hits the graphic when event targets are wrong; pad for toolbar/handles. */
+  function bothTouchesInside(el, e) {
+    if (!el || !e.touches || e.touches.length < 2) return false;
+    const br = el.getBoundingClientRect();
+    const pad = 56;
+    const left = br.left - pad;
+    const right = br.right + pad;
+    const top = br.top - pad;
+    const bottom = br.bottom + pad;
+    const inside = function(t) {
+      var x = t.clientX;
+      var y = t.clientY;
+      return x >= left && x <= right && y >= top && y <= bottom;
+    };
+    return inside(e.touches[0]) && inside(e.touches[1]);
+  }
+
+  function onSelectedGraphicPinchStart(e) {
+    if (e.touches.length !== 2) return;
+    const el = getUnlockedSelectedGraphicRoot();
+    if (!el || !bothTouchesInside(el, e)) return;
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    const initialSpan = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    if (initialSpan < 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const baseW = parseFloat(el.style.width) || el.offsetWidth || MIN_IMAGE_SIZE;
+    const baseH = parseFloat(el.style.height) || el.offsetHeight || MIN_IMAGE_SIZE;
+    const baseLeft = parseFloat(el.style.left) || 0;
+    const baseTop = parseFloat(el.style.top) || 0;
+    let aspect = baseW / Math.max(baseH, 1);
+    if (el.dataset && el.dataset.aspectRatio) {
+      const ar = parseFloat(el.dataset.aspectRatio);
+      if (ar > 0 && Number.isFinite(ar)) aspect = ar;
+    }
+    selectedGraphicPinch = {
+      el: el,
+      initialSpan: initialSpan,
+      baseW: baseW,
+      baseH: baseH,
+      baseLeft: baseLeft,
+      baseTop: baseTop,
+      aspect: aspect
+    };
+  }
+
+  function applySelectedGraphicPinchSize(el, newW, newH, newLeft, newTop) {
+    el.style.left = newLeft + 'px';
+    el.style.top = newTop + 'px';
+    el.style.width = newW + 'px';
+    el.style.height = newH + 'px';
+    if (el.classList.contains('overlay-image')) {
+      const id = el.getAttribute('data-id');
+      if (id) {
+        const row = overlayImages.find(function(d) { return d.id === id; });
+        if (row) {
+          row.left = newLeft;
+          row.top = newTop;
+          row.width = newW;
+          row.height = newH;
+        }
+      }
+    }
+  }
+
+  function onSelectedGraphicPinchMove(e) {
+    if (!selectedGraphicPinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    const span = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const g = selectedGraphicPinch;
+    if (g.initialSpan < 1) return;
+    const scale = span / g.initialSpan;
+    const newW = Math.max(MIN_IMAGE_SIZE, g.baseW * scale);
+    const newH = Math.max(MIN_IMAGE_SIZE, newW / g.aspect);
+    const cx = g.baseLeft + g.baseW / 2;
+    const cy = g.baseTop + g.baseH / 2;
+    applySelectedGraphicPinchSize(g.el, newW, newH, cx - newW / 2, cy - newH / 2);
+  }
+
+  function endSelectedGraphicPinch() {
+    if (!selectedGraphicPinch) return;
+    selectedGraphicPinch = null;
+    try {
+      if (document.querySelector('.overlay-image.selected')) {
+        window.parent.postMessage({ type: 'overlay-images-changed', images: overlayImages }, '*');
+      }
+    } catch (err) {}
+  }
+
+  document.addEventListener('touchstart', onSelectedGraphicPinchStart, { capture: true, passive: false });
+  document.addEventListener('touchmove', onSelectedGraphicPinchMove, { capture: true, passive: false });
+  document.addEventListener('touchend', function(e) {
+    if (selectedGraphicPinch && (!e.touches || e.touches.length < 2)) endSelectedGraphicPinch();
+  }, { capture: true });
+  document.addEventListener('touchcancel', function() {
+    endSelectedGraphicPinch();
+  }, { capture: true });
+
   function deselectOverlayImages() {
     document.querySelectorAll('.overlay-image.selected').forEach(function(el) { el.classList.remove('selected'); });
   }
