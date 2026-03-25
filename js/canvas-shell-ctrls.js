@@ -1082,6 +1082,36 @@
           oneFingerStart: { x: 0, y: 0 }
         };
 
+        let canvasOneFingerPanRaf = null;
+        let pendingCanvasOneFingerPan = null;
+        const cancelCanvasOneFingerPanRaf = () => {
+          if (canvasOneFingerPanRaf != null) {
+            cancelAnimationFrame(canvasOneFingerPanRaf);
+            canvasOneFingerPanRaf = null;
+          }
+        };
+        const applyCanvasOneFingerPanFromPending = () => {
+          canvasOneFingerPanRaf = null;
+          const p = pendingCanvasOneFingerPan;
+          if (!p || !touchState.active) return;
+          const div = this.mobilePanPixelDivisor();
+          const deltaX = p.cx - touchState.oneFingerStart.x;
+          const deltaY = p.cy - touchState.oneFingerStart.y;
+          this._skipClampDuringShellTouchPan = true;
+          this.camera.x = touchState.startCameraX + deltaX / div;
+          this.camera.y = touchState.startCameraY + deltaY / div;
+          this.updateCanvasTransform();
+          if (this.isShellCameraDebug()) {
+            this.logShellCameraThrottled('pan-canvas', 200, '1-finger pan (canvas)', {
+              div,
+              delta: { x: deltaX, y: deltaY },
+              camera: { x: this.camera.x, y: this.camera.y, zoom: this.camera.zoom },
+              workspaceGesture: this._workspaceGestureActive,
+              shellPinch: this._shellPinchActive
+            });
+          }
+        };
+
         const endMousePan = () => {
           if (!isPanning) return;
           isPanning = false;
@@ -1132,6 +1162,8 @@
           this.setWorkspaceGestureActive(true);
           touchState.active = true;
           if (e.touches.length === 2) {
+            cancelCanvasOneFingerPanRaf();
+            pendingCanvasOneFingerPan = null;
             this.stopShellPanMomentum();
             this._touchPanInertPrev = null;
           }
@@ -1151,6 +1183,8 @@
               touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
               canvas.classList.add('panning');
               this._skipClampDuringShellTouchPan = true;
+              cancelCanvasOneFingerPanRaf();
+              pendingCanvasOneFingerPan = null;
               this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
             }
           } else if (e.touches.length === 2) {
@@ -1178,27 +1212,17 @@
               const t = e.touches[0];
               const d = touchState.touches.get(t.identifier);
               if (d) {
-                this._skipClampDuringShellTouchPan = true;
-                const deltaX = t.clientX - touchState.oneFingerStart.x;
-                const deltaY = t.clientY - touchState.oneFingerStart.y;
-                // Match iframe path: scale pan by zoom on all touch devices (touchscreen laptops are not "mobile").
+                pendingCanvasOneFingerPan = { cx: t.clientX, cy: t.clientY, id: t.identifier };
                 const div = this.mobilePanPixelDivisor();
-                this.camera.x = touchState.startCameraX + deltaX / div;
-                this.camera.y = touchState.startCameraY + deltaY / div;
                 this.touchPanInertiaSampleFromMove(t.clientX, t.clientY, div);
-                this.updateCanvasTransform();
-                if (this.isShellCameraDebug()) {
-                  this.logShellCameraThrottled('pan-canvas', 200, '1-finger pan (canvas)', {
-                    div,
-                    delta: { x: deltaX, y: deltaY },
-                    camera: { x: this.camera.x, y: this.camera.y, zoom: this.camera.zoom },
-                    workspaceGesture: this._workspaceGestureActive,
-                    shellPinch: this._shellPinchActive
-                  });
+                if (canvasOneFingerPanRaf == null) {
+                  canvasOneFingerPanRaf = requestAnimationFrame(applyCanvasOneFingerPanFromPending);
                 }
               }
             }
           } else if (e.touches.length === 2) {
+            cancelCanvasOneFingerPanRaf();
+            pendingCanvasOneFingerPan = null;
             const t1 = e.touches[0];
             const t2 = e.touches[1];
             const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
@@ -1215,6 +1239,19 @@
         canvas.addEventListener('touchend', (e) => {
           shellPreventDefaultIfCancelable(e);
           const wasOneFingerPan = e.touches.length === 0 && canvas.classList.contains('panning');
+          cancelCanvasOneFingerPanRaf();
+          if (wasOneFingerPan && e.changedTouches.length > 0) {
+            const ch = e.changedTouches[0];
+            const div = this.mobilePanPixelDivisor();
+            const deltaX = ch.clientX - touchState.oneFingerStart.x;
+            const deltaY = ch.clientY - touchState.oneFingerStart.y;
+            this._skipClampDuringShellTouchPan = true;
+            this.camera.x = touchState.startCameraX + deltaX / div;
+            this.camera.y = touchState.startCameraY + deltaY / div;
+            this.touchPanInertiaSampleFromMove(ch.clientX, ch.clientY, div);
+            this.updateCanvasTransform();
+          }
+          pendingCanvasOneFingerPan = null;
           for (const touch of e.changedTouches) {
             touchState.touches.delete(touch.identifier);
           }
@@ -1247,6 +1284,8 @@
 
         canvas.addEventListener('touchcancel', (e) => {
           shellPreventDefaultIfCancelable(e);
+          cancelCanvasOneFingerPanRaf();
+          pendingCanvasOneFingerPan = null;
           touchState.active = false;
           touchState.touches.clear();
           touchState.lastPinchDistance = 0;
@@ -1377,7 +1416,6 @@
           if (e.key === '0') {
             e.preventDefault();
             this.resetZoom();
-            this.centerIframeInViewport();
             return;
           }
           if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -1464,6 +1502,38 @@
           };
           const pinch = { lastSpan: 0, deferredToGraphic: false };
           const pan = { active: false, startX: 0, startY: 0, camX: 0, camY: 0 };
+          let iframeOneFingerPanRaf = null;
+          let pendingIframeOneFingerPan = null;
+          const cancelIframeOneFingerPanRaf = () => {
+            if (iframeOneFingerPanRaf != null) {
+              cancelAnimationFrame(iframeOneFingerPanRaf);
+              iframeOneFingerPanRaf = null;
+            }
+          };
+          const flushIframeOneFingerPan = () => {
+            const shell = parentShell();
+            const p = pendingIframeOneFingerPan;
+            if (!shell || !shell.camera || !p || !pan.active) return;
+            const panDiv =
+              typeof shell.mobilePanPixelDivisor === 'function'
+                ? shell.mobilePanPixelDivisor()
+                : Math.max(1, shell.camera.zoom || 1);
+            shell._skipClampDuringShellTouchPan = true;
+            shell.camera.x = pan.camX + (p.cx - pan.startX) / panDiv;
+            shell.camera.y = pan.camY + (p.cy - pan.startY) / panDiv;
+            shell.updateCanvasTransform();
+            if (shell.isShellCameraDebug && shell.isShellCameraDebug()) {
+              shell.logShellCameraThrottled('pan-iframe', 200, '1-finger pan (iframe)', {
+                panDiv,
+                delta: { x: p.cx - pan.startX, y: p.cy - pan.startY },
+                camera: { x: shell.camera.x, y: shell.camera.y, zoom: shell.camera.zoom }
+              });
+            }
+          };
+          const applyIframeOneFingerPanFromPending = () => {
+            iframeOneFingerPanRaf = null;
+            flushIframeOneFingerPan();
+          };
           const parentShell = () =>
             iframe.contentWindow.parent &&
             (iframe.contentWindow.parent.canvasShell || iframe.contentWindow.parent.app);
@@ -1485,6 +1555,8 @@
                 shellGesture.setWorkspaceGestureActive(true);
               }
               if (e.touches.length === 2) {
+                cancelIframeOneFingerPanRaf();
+                pendingIframeOneFingerPan = null;
                 pan.active = false;
                 const shell2 = parentShell();
                 if (shell2 && typeof shell2.abortTouchPanInertiaSampling === 'function') {
@@ -1533,6 +1605,8 @@
             'touchmove',
             (e) => {
               if (e.touches.length === 2) {
+                cancelIframeOneFingerPanRaf();
+                pendingIframeOneFingerPan = null;
                 if (pinch.deferredToGraphic) return;
                 shellPreventDefaultIfCancelable(e);
                 const t1 = e.touches[0];
@@ -1554,27 +1628,16 @@
                 const shell = parentShell();
                 const t = e.touches[0];
                 if (shell && shell.camera) {
-                  shell._skipClampDuringShellTouchPan = true;
                   const panDiv =
                     typeof shell.mobilePanPixelDivisor === 'function'
                       ? shell.mobilePanPixelDivisor()
                       : Math.max(1, shell.camera.zoom || 1);
-                  shell.camera.x = pan.camX + (t.clientX - pan.startX) / panDiv;
-                  shell.camera.y = pan.camY + (t.clientY - pan.startY) / panDiv;
                   if (typeof shell.touchPanInertiaSampleFromMove === 'function') {
                     shell.touchPanInertiaSampleFromMove(t.clientX, t.clientY, panDiv);
                   }
-                  shell.updateCanvasTransform();
-                  if (shell.isShellCameraDebug && shell.isShellCameraDebug()) {
-                    shell.logShellCameraThrottled('pan-iframe', 200, '1-finger pan (iframe)', {
-                      panDiv,
-                      delta: { x: t.clientX - pan.startX, y: t.clientY - pan.startY },
-                      camera: {
-                        x: shell.camera.x,
-                        y: shell.camera.y,
-                        zoom: shell.camera.zoom
-                      }
-                    });
+                  pendingIframeOneFingerPan = { cx: t.clientX, cy: t.clientY };
+                  if (iframeOneFingerPanRaf == null) {
+                    iframeOneFingerPanRaf = requestAnimationFrame(applyIframeOneFingerPanFromPending);
                   }
                 }
               }
@@ -1583,6 +1646,27 @@
           );
           const onTouchEndOrCancel = (e) => {
             const hadShellPan = pan.active;
+            cancelIframeOneFingerPanRaf();
+            if (
+              hadShellPan &&
+              pan.active &&
+              (!e.touches || e.touches.length === 0) &&
+              e.changedTouches &&
+              e.changedTouches.length > 0
+            ) {
+              const ch = e.changedTouches[0];
+              pendingIframeOneFingerPan = { cx: ch.clientX, cy: ch.clientY };
+              flushIframeOneFingerPan();
+              const sh0 = parentShell();
+              if (sh0 && typeof sh0.touchPanInertiaSampleFromMove === 'function') {
+                const panDiv0 =
+                  typeof sh0.mobilePanPixelDivisor === 'function'
+                    ? sh0.mobilePanPixelDivisor()
+                    : Math.max(1, sh0.camera.zoom || 1);
+                sh0.touchPanInertiaSampleFromMove(ch.clientX, ch.clientY, panDiv0);
+              }
+            }
+            pendingIframeOneFingerPan = null;
             clearPinch(e);
             if (!e.touches || e.touches.length === 0) {
               pan.active = false;
@@ -1603,6 +1687,8 @@
           };
           doc.addEventListener('touchend', onTouchEndOrCancel, cap);
           doc.addEventListener('touchcancel', (e) => {
+            cancelIframeOneFingerPanRaf();
+            pendingIframeOneFingerPan = null;
             clearPinch(e);
             pan.active = false;
             const sh = parentShell();
@@ -2033,15 +2119,21 @@
       }
 
       /**
-       * One-finger **touch** pan: divide finger delta by this (canvas + iframe, all touch devices).
-       * `clientX`/`clientY` are usually whole pixels; divisor = z makes each step ≈1/z world px when
-       * zoomed in → visible stairstep/jitter. Use a **sub-linear** curve in z (still monotonic, no jump at 1×).
+       * One-finger **touch** pan sensitivity vs shell zoom `z`.
+       * - **Below 100%:** divisor must scale **down** with z (not stay on a constant floor), otherwise pan feels
+       *   sluggish vs how much content is on screen.
+       * - **Above 100%:** sub-linear `pow(z,·)` softens integer touch steps (stairstep/jitter) vs raw divisor=z.
+       * - **At 100%:** both branches meet at `z·1.08` / `max(1.08, z^k)` → same baseline ~1.08 (no sensitivity jump).
        */
       mobilePanPixelDivisor() {
         const z = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
-        const touchPanFloor = 1.08;
-        const curved = Math.pow(z, 0.76);
-        return Math.max(touchPanFloor, curved);
+        const baseline = 1.08;
+        const minDiv = 0.72;
+        const zoomInGamma = 0.78;
+        if (z <= 1) {
+          return Math.max(minDiv, z * baseline);
+        }
+        return Math.max(baseline, Math.pow(z, zoomInGamma));
       }
 
       /** Keep pan from drifting arbitrarily far on mobile (reduces “flies off screen”). */
@@ -2223,10 +2315,8 @@
       resetZoom() {
         this.stopShellPanMomentum();
         this.camera.zoom = 1;
-        this.camera.x = 0;
-        this.camera.y = 0;
-        this.updateCanvasTransform();
-        console.log('🔍 Camera reset');
+        console.log('🔍 Camera reset — reframing invoice (same as Center View at 100%)');
+        this.centerIframeInViewport();
       }
 
       // Zoom menu toggle methods
