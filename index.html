@@ -1,460 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Str84wrD | Straight Forward Video Production | UK</title>
-  <meta name="description" content="Str84wrD (Straight Forward) – Premium video production based in the UK, specializing in high-end events, corporate productions, and cinematic storytelling." />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #0a0a0a url('assets/bgs/Html.png') no-repeat center center;
-      background-attachment: fixed;
-      background-size: cover;
-      position: relative;
-      min-height: 100vh;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(10, 10, 10, 0.7);
-      z-index: -1;
-      pointer-events: none;
-    }
-    .font-display { font-family: 'DM Serif Display', serif; }
-
-    /* ── Mobile slide-out menu ── */
-    .mobile-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.82);
-      z-index: 90;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .mobile-overlay.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .mobile-drawer {
-      position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      width: 280px;
-      max-width: 80vw;
-      background: #ffffff;
-      border-left: 1px solid rgba(0,0,0,0.08);
-      z-index: 100;
-      transform: translateX(100%);
-      transition: transform 0.35s cubic-bezier(.4,.0,.2,1);
-      display: flex;
-      flex-direction: column;
-      padding: 2rem 1.5rem;
-      overflow-y: auto;
-    }
-    .mobile-drawer.open {
-      transform: translateX(0);
-    }
-    .mobile-drawer a {
-      display: block;
-      padding: 0.875rem 0;
-      font-size: 1rem;
-      font-weight: 500;
-      color: rgba(0,0,0,0.7);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-      transition: color 0.2s ease;
-      text-decoration: none;
-    }
-    .mobile-drawer a:last-child { border-bottom: none; }
-    .mobile-drawer a:hover, .mobile-drawer a:active { color: #000000; }
-    .hamburger {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 5px;
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      border: none;
-      background: none;
-      padding: 0;
-    }
-    .hamburger span {
-      display: block;
-      width: 100%;
-      height: 2px;
-      background: rgba(255,255,255,0.7);
-      border-radius: 2px;
-      transition: all 0.3s ease;
-    }
-    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-    .hamburger.open span:nth-child(2) { opacity: 0; }
-    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-    /* Invoice-style color theme */
-    :root {
-      --inv-bg: #0a0a0a;
-      --inv-bg-elevated: #1a1a1a;
-      --inv-bg-card: #2a2a2a;
-      --inv-bg-hover: #3a3a3a;
-      --inv-text: #e5e5e5;
-      --inv-text-bright: #ffffff;
-      --inv-text-muted: #b3b3b3;
-      --inv-text-subtle: #999999;
-      --inv-border: rgba(255, 255, 255, 0.08);
-      --inv-border-strong: rgba(255, 255, 255, 0.12);
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static Invoice System</title>
+  <link rel="stylesheet" href="css/index.css">
+  
+  <!-- html2canvas for export (shell export capture) -->
+  <script src="js/html2canvas.min.js"></script>
+  <script src="js/global-storage.js"></script>
+  <!-- Shell JS: explore these first — bootstrap (global handlers) then InvoiceShellApp -->
+  <script defer src="js/invoice-shell-bootstrap.js"></script>
+  <script defer src="js/invoice-shell-app.js"></script>
 </head>
-<body class="text-[#e5e5e5]">
+<body class="edit-mode">
 
-  <!-- Header -->
-  <header class="border-b sticky top-0 z-50 border-[rgba(255,255,255,0.06)]" style="background:rgba(26,26,26,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
-    <div class="max-w-7xl mx-auto pl-3 sm:pl-4 pr-5 sm:pr-6 py-4 flex items-center justify-between">
-      <img src="assets/logos/Logo_3.png" alt="Str84wrD - Straight Forward" class="h-12 sm:h-14 flex-shrink-0" />
-      <nav class="hidden md:flex gap-8 font-medium text-sm tracking-wide uppercase text-[rgba(255,255,255,0.5)]">
-        <a href="#services" class="hover:text-[#ffffff] transition-colors duration-300">Services</a>
-        <a href="#portfolio" class="hover:text-[#ffffff] transition-colors duration-300">Portfolio</a>
-        <a href="#about" class="hover:text-[#ffffff] transition-colors duration-300">About</a>
-        <a href="#contact" class="hover:text-[#ffffff] transition-colors duration-300">Contact</a>
-      </nav>
-      <!-- Hamburger (mobile only) -->
-      <button class="hamburger md:hidden" id="menuToggle" aria-label="Menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Mobile slide-out drawer -->
   <div class="mobile-overlay" id="mobileOverlay"></div>
   <nav class="mobile-drawer" id="mobileDrawer">
-    <img src="assets/logos/Logo_1.png" alt="Str84wrD" class="h-14 w-auto mb-8" style="object-fit:contain;" />
-    <a href="#services" class="mobile-nav-link">Services</a>
-    <a href="#portfolio" class="mobile-nav-link">Portfolio</a>
-    <a href="#about" class="mobile-nav-link">About</a>
-    <a href="#contact" class="mobile-nav-link">Contact</a>
-    <a href="start-project.html" class="mobile-nav-link" style="margin-top:auto;color:#000000;font-weight:600;">Start Project</a>
+    <div class="sidebar-content">
+      <iframe
+        id="sidebarIframe"
+        src="menu/sidebar_mMenu.html"
+        title="Menu"
+        scrolling="auto"
+        onload="handleSidebarIframeLoad(this)"
+        onerror="handleSidebarIframeError(this)"
+      ></iframe>
+    </div>
+    <div id="sidebar-trigger-buttons" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none;" aria-hidden="true">
+      <button type="button" class="menu-item always-enabled" id="newInvoiceBtn" title="Create New Invoice"></button>
+      <button type="button" class="menu-item always-enabled" id="newReceiptBtn" title="Create New Receipt"></button>
+      <button type="button" class="menu-item always-enabled" id="exportBtn" title="New Statement"></button>
+      <button type="button" class="menu-item always-enabled" id="newSummaryBtn" title="Open Summary"></button>
+      <button type="button" class="menu-item always-enabled" id="newDocumentBtn" title="New Blank Document"></button>
+      <button type="button" class="menu-item mode-btn active" data-mode="edit"></button>
+      <button type="button" class="menu-item mode-btn" data-mode="preview"></button>
+      <button type="button" class="menu-item edit-mode-only" id="loadInvoiceBtnEdit"></button>
+      <button type="button" class="menu-item edit-mode-only" id="loadReceiptBtnEdit"></button>
+      <button type="button" class="menu-item edit-mode-only" id="loadStatementBtnEdit"></button>
+      <button type="button" class="menu-item edit-mode-only" id="newTransactionsBtn" title="View Transactions"></button>
+      <button type="button" class="menu-item edit-mode-only" id="dataManagementBtn"></button>
+      <button type="button" class="menu-item preview-mode-only hidden" id="saveBtn"></button>
+      <button type="button" class="menu-item preview-mode-only hidden" id="sendBtn"></button>
+      <input type="file" id="stampImageInput" accept="image/*" style="display:none" aria-hidden="true">
+      <input type="file" id="overlayImageInput" accept="image/*" style="display:none" aria-hidden="true">
+    </div>
   </nav>
 
-  <!-- Hero -->
-  <section class="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden">
-    <!-- Video Background -->
-    <div class="absolute inset-0 z-0">
-      <video 
-        id="heroVideo" 
-        class="w-full h-full object-cover" 
-        autoplay 
-        muted 
-        loop 
-        playsinline
-        poster=""
-      >
-        <source src="assets/hero/hero-slideshow.mp4" type="video/mp4">
-        <!-- Fallback gradient if video doesn't load -->
-        <div class="w-full h-full bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a]"></div>
-      </video>
-      <!-- Cinematic overlay -->
-      <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/90 via-[#0a0a0a]/75 to-[#0a0a0a]/90"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/60 via-transparent to-transparent"></div>
-    </div>
-    
-    <!-- Content -->
-    <div class="relative z-10 max-w-7xl mx-auto px-6 w-full pt-36 sm:pt-28 md:pt-0">
-      <div class="text-center">
-        <div class="inline-block mb-6">
-          <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">UK Video Production</span>
-        </div>
-        <h1 class="font-display text-6xl md:text-7xl lg:text-8xl font-black leading-tight mb-8 text-[#ffffff] drop-shadow-2xl">
-          Straight Forward<br/>
-          <span class="text-[#e5e5e5]">Video Production</span>
-        </h1>
-        <p class="mt-6 text-[#cccccc] text-xl md:text-2xl leading-relaxed max-w-3xl mx-auto font-light drop-shadow-lg">
-          Premium video production for high-end events, corporate experiences, and cinematic storytelling. 
-          <span class="text-[#ffffff] font-medium">Professional quality, delivered across the UK.</span>
-        </p>
-        <div class="mt-12 flex flex-wrap justify-center gap-6">
-          <a href="start-project.html" class="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#ffffff] border border-[rgba(255,255,255,0.1)] px-10 py-5 rounded-lg font-bold text-lg tracking-wide uppercase shadow-2xl transform transition hover:scale-105">
-            Start Your Project
-          </a>
-          <a href="#portfolio" class="border-2 border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.4)] bg-[rgba(42,42,42,0.6)] hover:bg-[rgba(42,42,42,0.8)] backdrop-blur-sm px-10 py-5 rounded-lg font-bold text-lg text-[#e5e5e5] tracking-wide uppercase transition">
-            View Our Work
-          </a>
-        </div>
-        <div class="mt-16 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <div class="text-center">
-            <div class="text-3xl font-bold text-[#ffffff] mb-2">500+</div>
-            <div class="text-[#999999] text-sm uppercase tracking-wide">Events Captured</div>
-          </div>
-          <div class="text-center">
-            <div class="text-3xl font-bold text-[#ffffff] mb-2">A-List</div>
-            <div class="text-[#999999] text-sm uppercase tracking-wide">Client Portfolio</div>
-          </div>
-          <div class="text-center">
-            <div class="text-3xl font-bold text-[#ffffff] mb-2">4K/8K</div>
-            <div class="text-[#999999] text-sm uppercase tracking-wide">Cinematic Quality</div>
-          </div>
-        </div>
+
+  <!-- Floating zoom bar (kept from original design) -->
+  <button class="zoom-hamburger always-enabled" id="zoomToggle" aria-label="Zoom Controls">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  
+  <div class="zoom-overlay" id="zoomOverlay"></div>
+  
+  <div class="zoom-drawer" id="zoomDrawer">
+    <div class="zoom-drawer-handle zoom-drawer-handle-top" id="zoomDrawerHandleTop"></div>
+    <div class="zoom-drawer-content">
+      <div class="zoom-controls">
+        <button type="button" class="zoom-btn" onclick="app.zoomIn()" title="Zoom In">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 5.333v5.334M5.333 8h5.334" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.333 11.333l2.667 2.667" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="zoom-btn" onclick="app.zoomOut()" title="Zoom Out">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5.333 8h5.334" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.333 11.333l2.667 2.667" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="zoom-btn" onclick="app.resetZoom()" title="Reset Zoom">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.333 11.333l2.667 2.667" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="zoom-btn" onclick="app.centerIframeInViewport()" title="Center View">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 2.667v2.666M8 10.667v2.666M2.667 8h2.666M10.667 8h2.666" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
-  </section>
+    <div class="zoom-drawer-handle zoom-drawer-handle-bottom" id="zoomDrawerHandleBottom"></div>
+  </div>
 
-  <!-- Services -->
-  <section id="services" class="py-32 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="text-center mb-20">
-        <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">What We Do</span>
-        <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-6">Production Services</h2>
-        <p class="text-[#999999] text-lg max-w-2xl mx-auto">Cinematic excellence for every occasion, from intimate gatherings to grand events across the UK</p>
-      </div>
+  <!-- Category shortcut bar (same size as zoom bar; scrollable like sidebar mode strip; double-click handles to close) -->
+  <div class="category-shortcut-drawer" id="categoryShortcutDrawer" aria-label="Category shortcut bar">
+    <div class="category-shortcut-handle category-shortcut-handle-left" id="categoryShortcutHandleLeft" title="Double-click to close"></div>
+    <div class="category-shortcut-viewport" id="categoryShortcutViewport">
+      <div class="category-shortcut-content" id="categoryShortcutContent"></div>
+    </div>
+    <div class="category-shortcut-handle category-shortcut-handle-right" id="categoryShortcutHandleRight" title="Double-click to close"></div>
+  </div>
 
-      <div class="grid md:grid-cols-3 gap-8">
-        <div class="group relative p-10 border border-[rgba(255,255,255,0.08)] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:border-[rgba(255,255,255,0.12)] transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-[#2a2a2a] rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="relative z-10">
-            <div class="text-4xl mb-6">🎬</div>
-            <h3 class="text-2xl font-bold text-[#ffffff] mb-4">Event Production</h3>
-            <p class="text-[#b3b3b3] leading-relaxed">Premium coverage for high-end events, galas, award ceremonies, and exclusive gatherings. Multi-camera setups with cinematic storytelling.</p>
-            <ul class="mt-6 space-y-2 text-sm text-[#999999]">
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Multi-camera coverage</li>
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Live streaming</li>
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Same-day edits</li>
-            </ul>
-          </div>
+  <!-- ========================================
+       INFINITE CANVAS CONTAINER
+       ======================================== -->
+  <div class="main-content">
+    <canvas id="infiniteCanvas" class="infinite-canvas"></canvas>
+    <div class="canvas-overlay" id="canvasOverlay">
+      <iframe id="invoiceFrame" src="templates/invoice.html" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <div class="render-progress-overlay" id="renderProgressOverlay">
+      <div class="render-progress-box">
+        <h3>Rendering invoices</h3>
+        <div class="render-progress-bar-wrap">
+          <div class="render-progress-bar" id="renderProgressBar"></div>
         </div>
-        <div class="group relative p-10 border border-[rgba(255,255,255,0.08)] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:border-[rgba(255,255,255,0.12)] transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-[#2a2a2a] rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="relative z-10">
-            <div class="text-4xl mb-6">🎥</div>
-            <h3 class="text-2xl font-bold text-[#ffffff] mb-4">Corporate Video</h3>
-            <p class="text-[#b3b3b3] leading-relaxed">Professional corporate productions, brand films, product launches, and executive communications. Polished, on-brand, and impactful.</p>
-            <ul class="mt-6 space-y-2 text-sm text-[#999999]">
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Brand storytelling</li>
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Product showcases</li>
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Executive interviews</li>
-            </ul>
-          </div>
-        </div>
-        <div class="group relative p-10 border border-[rgba(255,255,255,0.08)] rounded-2xl bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:border-[rgba(255,255,255,0.12)] transition-all duration-500 hover:shadow-2xl hover:shadow-black/40">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-[#2a2a2a] rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="relative z-10">
-            <div class="text-4xl mb-6">✨</div>
-            <h3 class="text-2xl font-bold text-[#ffffff] mb-4">Cinematic Content</h3>
-            <p class="text-[#b3b3b3] leading-relaxed">Artistic short films, music videos, fashion films, and narrative content. Where creativity meets technical excellence.</p>
-            <ul class="mt-6 space-y-2 text-sm text-[#999999]">
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Creative direction</li>
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Color grading</li>
-              <li class="flex items-center"><span class="text-[#e5e5e5] mr-2">▸</span> Post-production</li>
-            </ul>
-          </div>
-        </div>
+        <p class="render-progress-text" id="renderProgressText">0 / 0</p>
+        <button type="button" class="render-progress-cancel-btn" id="renderProgressCancelBtn">Cancel</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Portfolio/Why Us -->
-  <section id="portfolio" class="py-32 bg-[#0a0a0a]">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="grid md:grid-cols-2 gap-20 items-center">
-        <div>
-          <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">Why Str84wrD</span>
-          <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-8">Professional Excellence</h2>
-          <ul class="space-y-6 text-[#cccccc]">
-            <li class="flex items-start">
-              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
-              <div>
-                <span class="font-semibold text-[#ffffff]">A-List Equipment</span>
-                <p class="text-[#999999] text-sm mt-1">RED, ARRI, and Sony cinema cameras. Professional lighting and audio rigs.</p>
-              </div>
-            </li>
-            <li class="flex items-start">
-              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
-              <div>
-                <span class="font-semibold text-[#ffffff]">Industry Veterans</span>
-                <p class="text-[#999999] text-sm mt-1">Award-winning directors, DPs, and editors with decades of experience.</p>
-              </div>
-            </li>
-            <li class="flex items-start">
-              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
-              <div>
-                <span class="font-semibold text-[#ffffff]">Discreet & Professional</span>
-                <p class="text-[#999999] text-sm mt-1">Seamless execution that never disrupts your event or production.</p>
-              </div>
-            </li>
-            <li class="flex items-start">
-              <span class="text-[#e5e5e5] text-2xl mr-4">▸</span>
-              <div>
-                <span class="font-semibold text-[#ffffff]">End-to-End Service</span>
-                <p class="text-[#999999] text-sm mt-1">From pre-production planning to final delivery, we handle everything.</p>
-              </div>
-            </li>
-          </ul>
+  <!-- ========================================
+       DATA MANAGEMENT MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="dataModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Settings</h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="products">📦 Invoice Details</button>
+          <button class="tab-button" data-tab="clients">👥 Clients</button>
+          <button class="tab-button" data-tab="company">🏢 Company</button>
+          <button class="tab-button" data-tab="export">📤 Export</button>
         </div>
-        <div class="relative">
-          <div class="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] p-12 rounded-3xl border border-[rgba(255,255,255,0.08)] shadow-2xl">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-[#2a2a2a] rounded-full blur-3xl"></div>
-            <div class="relative z-10">
-              <p class="font-display text-3xl font-bold text-[#e5e5e5] mb-6 leading-relaxed">"Cinematic storytelling that elevates every moment."</p>
-              <p class="text-[#b3b3b3] text-lg">We don't just capture events—we craft visual narratives that resonate. Every frame is intentional, every edit purposeful.</p>
-              <div class="mt-8 pt-8 border-t border-[rgba(255,255,255,0.08)]">
-                <p class="text-[#ffffff] font-semibold">Trusted by</p>
-                <p class="text-[#999999] text-sm mt-2">Leading UK businesses, corporate clients, and premium events</p>
-              </div>
+        
+        <!-- Products Tab -->
+        <div class="tab-content active" id="products-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addProductBtn">
+              ➕ Add Product / Service
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Products or Services</h3>
+            <div class="data-list" id="productsList">
+              <!-- Products will be populated here -->
             </div>
           </div>
         </div>
+        
+        <!-- Clients Tab -->
+        <div class="tab-content" id="clients-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addClientBtn">
+              ➕ Add New Client
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Current Clients</h3>
+            <div class="data-list" id="clientsList">
+              <!-- Clients will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Company Tab -->
+        <div class="tab-content" id="company-tab">
+          <div class="data-section">
+            <h3>Company Information</h3>
+            <form id="companyForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Company Name</label>
+                  <input type="text" id="companyName" required>
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="text" id="companyPhone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Address</label>
+                  <input type="text" id="companyAddress">
+                </div>
+                <div class="form-group">
+                  <label>City & Postcode</label>
+                  <input type="text" id="companyCity">
+                </div>
+              </div>
+              <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="companyEmail">
+                </div>
+                <div class="form-group">
+                  <label>Company Number</label>
+                  <input type="text" id="companyNumber">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>VAT Number</label>
+                <input type="text" id="vatNumber">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Bank Name</label>
+                  <input type="text" id="companyBankName">
+                </div>
+                <div class="form-group">
+                  <label>Account Name</label>
+                  <input type="text" id="companyAccountName">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Sort Code</label>
+                  <input type="text" id="companySortCode">
+                </div>
+                <div class="form-group">
+                  <label>Account No</label>
+                  <input type="text" id="companyAccountNo">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Company Logo</label>
+                <div class="image-upload" id="logoUpload">
+                  <input type="file" id="logoFile" accept="image/*">
+                  <p>📁 Click to upload company logo</p>
+                  <div class="image-preview" id="logoPreview"></div>
+                </div>
+              </div>
+              <div class="text-center mt-20">
+                <button type="submit" class="btn btn-primary">💾 Save Company Info</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div class="tab-content" id="export-tab">
+          <div class="data-section">
+            <h3>Export data</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button type="button" class="btn btn-primary" onclick="app.invoiceAction('exportAllData')">💾 Export All Data</button>
+              <button type="button" class="btn btn-primary" onclick="app.invoiceAction('exportProducts')">📦 Export Products</button>
+              <button type="button" class="btn btn-primary" onclick="app.invoiceAction('exportClients')">👥 Export Clients</button>
+              <button type="button" class="btn btn-primary" onclick="app.invoiceAction('exportInvoices')">📚 Export Invoices</button>
+              <button type="button" class="btn import-btn" onclick="document.getElementById('settingsImportFileInput').click()">📥 Import Data</button>
+              <input type="file" id="settingsImportFileInput" accept=".json,application/json" style="display: none" onchange="if(this.files[0]) app.invoiceImportFile(this.files[0]); this.value='';">
+              <button type="button" class="btn btn-export" onclick="app.invoiceAction('renderInvoices')">📄 Render Invoices</button>
+              <button type="button" class="btn btn-export" onclick="app.invoiceAction('printInvoices')">🖨️ Print Invoices</button>
+            </div>
+          </div>
+          <div class="data-section data-section-accent" style="margin-top: 20px;">
+            <h3 class="data-section-accent-title">Invoice number counter</h3>
+            <p style="color: #666; margin-bottom: 12px;">Set the next invoice number: use the stepper, type a value, or reset to 1.</p>
+            <div class="counter-control-wrap">
+              <div class="counter-stepper">
+                <button type="button" id="counterStepperMinus" aria-label="Decrease">−</button>
+                <input type="number" id="counterInput" min="1" max="99999" step="1" value="1" aria-label="Next invoice number">
+                <button type="button" id="counterStepperPlus" aria-label="Increase">+</button>
+              </div>
+              <button type="button" class="counter-reset-btn" id="counterResetBtn">Reset to 1</button>
+            </div>
+          </div>
+          <div class="data-section data-section-danger" style="margin-top: 20px;">
+            <h3 class="data-section-danger-title">Clear all data</h3>
+            <p class="data-section-danger-desc">Remove all products, clients, company info, current invoice, archived invoices, and reset the invoice number counter. This cannot be undone.</p>
+            <button type="button" class="btn btn-danger" onclick="app.invoiceAction('clearAllData')">🗑️ Clear All Data</button>
+          </div>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- About -->
-  <section id="about" class="py-32 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]">
-    <div class="max-w-5xl mx-auto px-6 text-center">
-      <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">Our Story</span>
-      <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-8">About Str84wrD</h2>
-      <p class="text-[#cccccc] text-xl leading-relaxed mb-8">
-        Str84wrD (Straight Forward) is a UK-based video production company representing the pinnacle of event video production. 
-        We specialize in capturing the essence of high-end events with cinematic precision and artistic vision.
-      </p>
-      <p class="text-[#999999] text-lg leading-relaxed max-w-3xl mx-auto">
-        From exclusive galas to corporate launches, from premier events to intimate celebrations, 
-        we bring professional production values to every project. Our team combines 
-        technical excellence with creative storytelling, ensuring your event is immortalized in stunning 4K and 8K footage.
-      </p>
-      <div class="mt-12 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-        <div class="text-center p-6 border border-[rgba(255,255,255,0.08)] rounded-xl bg-[#1a1a1a]/80">
-          <div class="text-[#e5e5e5] text-4xl mb-4">🎯</div>
-          <h3 class="font-semibold text-[#ffffff] mb-2">Mission-Driven</h3>
-          <p class="text-[#999999] text-sm">Excellence in every frame</p>
+  <!-- ========================================
+       SELECT INVOICE FOR RECEIPT MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="receiptInvoiceListModal">
+    <div class="modal" style="max-width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h2 class="modal-title">Select invoice for receipt</h2>
+        <button class="modal-close always-enabled" id="closeReceiptInvoiceListModal" type="button">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+        <p style="color: #666; margin-bottom: 15px;">Choose an invoice to create a receipt. The receipt will be filled with the invoice details; you can then edit amounts and add payment info.</p>
+        <input type="text" id="receiptInvoiceSearchInput"
+          placeholder="Search by invoice number, customer name, email..."
+          style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px;" />
+        <div style="margin-bottom: 15px; color: #666; font-size: 14px;">
+          <span id="receiptInvoiceCount">0</span> invoice(s)
         </div>
-        <div class="text-center p-6 border border-[rgba(255,255,255,0.08)] rounded-xl bg-[#1a1a1a]/80">
-          <div class="text-[#e5e5e5] text-4xl mb-4">🌟</div>
-          <h3 class="font-semibold text-[#ffffff] mb-2">Award-Winning</h3>
-          <p class="text-[#999999] text-sm">Recognized industry leaders</p>
-        </div>
-        <div class="text-center p-6 border border-[rgba(255,255,255,0.08)] rounded-xl bg-[#1a1a1a]/80">
-          <div class="text-[#e5e5e5] text-4xl mb-4">💎</div>
-          <h3 class="font-semibold text-[#ffffff] mb-2">Premium Quality</h3>
-          <p class="text-[#999999] text-sm">Nothing less than perfection</p>
+        <div id="receiptInvoiceListContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        <div id="receiptInvoiceEmptyState" style="text-align: center; padding: 40px; color: #999; display: none;">
+          <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+          <h3 style="color: #666; margin-bottom: 10px;">No saved invoices</h3>
+          <p>Create and send an invoice first; it will appear here.</p>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Contact -->
-  <section id="contact" class="bg-[#0a0a0a] py-32 border-t border-[rgba(255,255,255,0.08)]">
-    <div class="max-w-5xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <span class="text-[#b3b3b3] text-sm font-semibold tracking-[0.3em] uppercase">Let's Create Something Special</span>
-        <h2 class="font-display text-5xl md:text-6xl font-bold text-[#ffffff] mt-4 mb-6">Contact Us</h2>
-        <p class="text-[#999999] text-lg max-w-2xl mx-auto">Tell us about your vision and we'll bring it to life with cinematic excellence.</p>
+  <!-- ========================================
+       SELECT INVOICES FOR STATEMENT MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="statementInvoiceListModal">
+    <div class="modal" style="max-width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h2 class="modal-title">Select invoices for statement</h2>
+        <button class="modal-close always-enabled" id="closeStatementInvoiceListModal" type="button">&times;</button>
       </div>
-
-      <form class="grid gap-6 max-w-2xl mx-auto">
-        <div class="grid md:grid-cols-2 gap-6">
-          <input 
-            type="text" 
-            placeholder="Full Name" 
-            class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
-          />
-          <input 
-            type="email" 
-            placeholder="Email Address" 
-            class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
-          />
+      <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+        <p style="color: #666; margin-bottom: 15px;">Select one or more invoices to include on the statement. Each selected invoice will appear as a line (Date, Ref, Charges). The statement will be generated and loaded into the statement template.</p>
+        <input type="text" id="statementInvoiceSearchInput"
+          placeholder="Search by invoice number, customer name, email..."
+          style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px;" />
+        <div style="margin-bottom: 15px; color: #666; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+          <span><span id="statementInvoiceCount">0</span> invoice(s)</span>
+          <label style="cursor: pointer;"><input type="checkbox" id="statementSelectAllCheckbox" /> Select all</label>
         </div>
-        <input 
-          type="text" 
-          placeholder="Event Type / Project Type" 
-          class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
-        />
-        <input 
-          type="text" 
-          placeholder="Event Date (if applicable)" 
-          class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors" 
-        />
-        <textarea 
-          placeholder="Tell us about your project, vision, and requirements..." 
-          rows="6" 
-          class="p-5 rounded-lg bg-[#2a2a2a] border border-[rgba(255,255,255,0.1)] text-[#e5e5e5] placeholder-[#999999] focus:border-[rgba(255,255,255,0.2)] focus:outline-none transition-colors resize-none"
-        ></textarea>
-        <button class="bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#ffffff] border border-[rgba(255,255,255,0.1)] py-5 rounded-lg font-bold text-lg tracking-wide uppercase shadow-xl transform transition hover:scale-105 mt-4">
-          Request Proposal
-        </button>
-      </form>
-      
-      <div class="mt-16 text-center">
-        <p class="text-[#808080] text-sm mb-4">Or reach us directly</p>
-        <div class="flex flex-wrap justify-center gap-8 text-[#b3b3b3]">
-          <a href="mailto:info@str84wrd.com" class="hover:text-[#ffffff] transition-colors">info@str84wrd.com</a>
-          <span class="text-[#2a2a2a]">|</span>
-          <a href="tel:+442012345678" class="hover:text-[#ffffff] transition-colors">+44 (0) 20 1234 5678</a>
+        <div id="statementInvoiceListContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        <div id="statementInvoiceEmptyState" style="text-align: center; padding: 40px; color: #999; display: none;">
+          <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+          <h3 style="color: #666; margin-bottom: 10px;">No saved invoices</h3>
+          <p>Create and send an invoice first; it will appear here.</p>
+        </div>
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="modal-close-btn always-enabled" id="cancelStatementInvoiceListBtn" style="padding: 10px 20px;">Cancel</button>
+          <button type="button" class="always-enabled" id="generateStatementBtn" style="padding: 10px 24px; background: #926E4C; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; pointer-events: auto;">Generate statement</button>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Footer -->
-  <footer class="bg-[#0a0a0a] border-t border-[rgba(255,255,255,0.08)] text-[#999999] py-12">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="grid md:grid-cols-4 gap-12 mb-12">
-        <div>
-          <img src="assets/logos/Logo_3.png" alt="Str84wrD - Straight Forward" class="h-14 mb-4 opacity-80" />
-          <p class="text-sm text-[#808080] leading-relaxed">UK's premier event video production company. Straight forward excellence, delivered.</p>
-        </div>
-        <div>
-          <h4 class="text-[#ffffff] font-semibold mb-4 uppercase text-sm tracking-wide">Services</h4>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#services" class="hover:text-[#ffffff] transition-colors">Event Production</a></li>
-            <li><a href="#services" class="hover:text-[#ffffff] transition-colors">Corporate Video</a></li>
-            <li><a href="#services" class="hover:text-[#ffffff] transition-colors">Cinematic Content</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-[#ffffff] font-semibold mb-4 uppercase text-sm tracking-wide">Company</h4>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#about" class="hover:text-[#ffffff] transition-colors">About Us</a></li>
-            <li><a href="#portfolio" class="hover:text-[#ffffff] transition-colors">Portfolio</a></li>
-            <li><a href="#contact" class="hover:text-[#ffffff] transition-colors">Contact</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-[#ffffff] font-semibold mb-4 uppercase text-sm tracking-wide">Connect</h4>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#" class="hover:text-[#ffffff] transition-colors">Instagram</a></li>
-            <li><a href="#" class="hover:text-[#ffffff] transition-colors">Vimeo</a></li>
-            <li><a href="#" class="hover:text-[#ffffff] transition-colors">LinkedIn</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="border-t border-[rgba(255,255,255,0.08)] pt-8 text-center text-sm text-[#808080]">
-        <p>© 2026 Str84wrD (Straight Forward). All rights reserved. | United Kingdom</p>
-      </div>
-    </div>
-  </footer>
-
-  <script>
-    (function(){
-      var toggle = document.getElementById('menuToggle');
-      var drawer = document.getElementById('mobileDrawer');
-      var overlay = document.getElementById('mobileOverlay');
-      function openMenu(){ toggle.classList.add('open'); drawer.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow='hidden'; }
-      function closeMenu(){ toggle.classList.remove('open'); drawer.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow=''; }
-      toggle.addEventListener('click', function(){ drawer.classList.contains('open') ? closeMenu() : openMenu(); });
-      overlay.addEventListener('click', closeMenu);
-      drawer.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', closeMenu); });
-    })();
-  </script>
 </body>
 </html>

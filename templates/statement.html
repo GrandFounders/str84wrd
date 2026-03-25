@@ -1,0 +1,3919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Account Statement</title>
+  
+  <!-- Global Storage Manager - project root so upgrade shares reference browser storage -->
+  <!-- Note: html2canvas removed - rendering is now handled by parent (index.html) -->
+  <script src="../js/global-storage.js"></script>
+  
+  <style>
+    /* Theme (match index.html) */
+    :root {
+      --gray-bg: #f8f6f3;
+      --gray-shade-1: #f2efe9;
+      --gray-shade-2: #ebe7e0;
+      --gray-border: #ddd8cf;
+      --gray-border-light: #e6e2db;
+      --gray-muted: #6b6560;
+      --gray-text: #4a4541;
+      --gray-text-bright: #2d2926;
+      --gray-surface: #eeebe5;
+      --accent-amber: #c17a2e;
+      --accent-orange: #c45c1a;
+      --accent-strip-bg: #f5ebe2;
+      --accent-strip-border: #d4b8a0;
+    }
+    /* Page Size: A4 Portrait (match invoice.html / Receipt.html) */
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+    html {
+      margin: 0;
+      padding: 0;
+    }
+    /* ========================================
+       BASE STYLES (From Original)
+       ======================================== */
+    body {
+      font-family: Arial, sans-serif;
+      background: white;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: auto;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      min-width: auto;
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* Mode-bar removed - now controlled by parent (index.html) */
+
+    /* ========================================
+       MAIN CONTENT AREA
+       ======================================== */
+    .main-content {
+      margin-top: 0px;
+      width: 210mm;
+      min-width: 800px;
+      display: flex;
+      justify-content: center;
+      padding: 0px;
+      transition: all 0.3s ease;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    /* Remove mode-bar related styles - no longer needed */
+
+    /* ========================================
+       INVOICE STYLES (Original + Enhancements)
+       ======================================== */
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: white;
+      padding: 0;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+    .header-banner {
+      background-color: #926E4C;
+      height: 60px;
+      width: 100%;
+    }
+
+    .invoice-wrapper {
+      padding: 1mm 10mm 0 10mm;
+      position: relative;
+    }
+
+    /* Let clicks pass through to overlays sent to back; keep inputs/buttons clickable */
+    .a4 > *:not(.page-overlay-wrapper) {
+      pointer-events: none;
+    }
+    .a4 > *:not(.page-overlay-wrapper) input,
+    .a4 > *:not(.page-overlay-wrapper) select,
+    .a4 > *:not(.page-overlay-wrapper) textarea,
+    .a4 > *:not(.page-overlay-wrapper) button,
+    .a4 > *:not(.page-overlay-wrapper) a,
+    .a4 > *:not(.page-overlay-wrapper) img,
+    .a4 > *:not(.page-overlay-wrapper) [contenteditable="true"] {
+      pointer-events: auto;
+    }
+
+    .top-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .branding {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 2;
+    }
+
+    .branding img {
+      width: 100px;
+      height: auto;
+      margin-top: -36px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 3;
+    }
+
+    .company-info {
+      margin-top: -6px;
+      margin-bottom: 15px;
+    }
+
+    .company-info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .invoice-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #926E4C;
+    }
+
+    .invoice-details {
+      text-align: right;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .invoice-details p {
+      margin: 5px 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .customer-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .bill-to, .ship-to {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .bill-to h3, .ship-to h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .bill-to p, .ship-to p {
+      margin: 3px 0;
+      font-size: 14px;
+    }
+
+    /* ========================================
+       TABLE STYLES
+       ======================================== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    th, td {
+      padding: 6px 5px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    th {
+      background-color: #2f3f46;
+      color: white;
+      font-weight: bold;
+    }
+
+    .items-table th:nth-child(1) { width: 12%; } /* Date */
+    .items-table th:nth-child(2) { width: 10%; } /* Ref */
+    .items-table th:nth-child(3) { width: 28%; } /* Description */
+    .items-table th:nth-child(4) { width: 15%; } /* Charges */
+    .items-table th:nth-child(5) { width: 15%; } /* Credits */
+    .items-table th:nth-child(6) { width: 15%; } /* Balance */
+    .items-table th:nth-child(7) { width: 5%; }  /* Actions */
+
+    .items-table td:nth-child(4),
+    .items-table td:nth-child(5),
+    .items-table td:nth-child(6) {
+      text-align: left;
+    }
+
+    /* ========================================
+       TABLE ACTION BUTTONS
+       ======================================== */
+    .actions-cell {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .table-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 0 2px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .table-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .table-btn-up {
+      background: #28a745;
+      color: white;
+    }
+
+    .table-btn-up:hover {
+      background: #218838;
+    }
+
+    .table-btn-down {
+      background: #007bff;
+      color: white;
+    }
+
+    .table-btn-down:hover {
+      background: #0056b3;
+    }
+
+    .table-btn-delete {
+      background: #dc3545;
+      color: white;
+      opacity: 0.7;
+    }
+
+    .table-btn-delete:hover {
+      background: #c82333;
+      opacity: 1;
+    }
+
+    .items-table tbody tr:hover .table-btn-delete {
+      opacity: 1;
+    }
+
+    .add-row-btn {
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .add-row-btn:hover {
+      background: #0056b3;
+    }
+
+    /* ========================================
+       MOBILE RESPONSIVENESS
+       ======================================== */
+    
+    /* Touch-specific improvements for mobile devices */
+    @media (hover: none) and (pointer: coarse) {
+      /* Mobile/tablet specific styles */
+      .add-row-btn {
+        min-height: 44px; /* iOS recommended touch target size */
+        min-width: 44px;
+        padding: 12px 20px;
+        font-size: 16px;
+        border-radius: 8px;
+      }
+      
+      .table-btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px;
+        font-size: 16px;
+      }
+      
+      .description-select,
+      .description-input {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 12px;
+      }
+      
+      /* Make contenteditable cells more touch-friendly */
+      [contenteditable] {
+        min-height: 44px;
+        padding: 8px;
+        font-size: 16px;
+      }
+    }
+    
+    /* Mobile-specific positioning for better accessibility */
+    @media (max-width: 768px) {
+      .add-row-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        left: auto;
+        transform: none;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        padding: 0;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      
+      .add-row-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+      }
+      
+      /* Ensure A4 page fits on mobile */
+      .a4 {
+        width: 100%;
+        max-width: 210mm;
+        margin: 0 auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      
+      /* Make table more mobile-friendly */
+      .items-table {
+        font-size: 14px;
+      }
+      
+      .items-table th,
+      .items-table td {
+        padding: 8px 4px;
+        font-size: 14px;
+      }
+      
+      /* Adjust column widths for mobile */
+      .items-table th:nth-child(1) { width: 15%; }  /* Date */
+      .items-table th:nth-child(2) { width: 10%; } /* Ref */
+      .items-table th:nth-child(3) { width: 25%; } /* Description */
+      .items-table th:nth-child(4) { width: 15%; } /* Charges */
+      .items-table th:nth-child(5) { width: 15%; } /* Credits */
+      .items-table th:nth-child(6) { width: 15%; } /* Balance */
+    }
+    
+    /* Very small screens */
+    @media (max-width: 480px) {
+      .add-row-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
+      
+      .items-table th,
+      .items-table td {
+        padding: 6px 2px;
+        font-size: 12px;
+      }
+      
+      .invoice-title {
+        font-size: 32px;
+      }
+      
+      .company-info p,
+      .bill-to p,
+      .ship-to p {
+        font-size: 13px;
+      }
+      
+      /* Mode-bar removed - controlled by parent */
+      
+      /* Modal: stay within iframe/viewport on mobile */
+      .modal-overlay {
+        padding: 12px;
+        box-sizing: border-box;
+      }
+      .modal {
+        width: 100% !important;
+        max-width: none !important;
+        max-height: min(88dvh, 88vh) !important;
+        margin: 0;
+        box-sizing: border-box;
+      }
+      .modal-body {
+        max-height: min(calc(88dvh - 80px), calc(88vh - 80px)) !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      .modal-header { padding: 14px 16px; flex-shrink: 0; }
+      .modal-title { font-size: 18px; }
+      .modal-close { width: 36px; height: 36px; font-size: 22px; }
+    }
+    
+    /* Landscape mobile orientation */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .add-row-btn {
+        bottom: 10px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+      }
+      
+      .a4 {
+        margin: 10px auto;
+      }
+    }
+
+    /* Table section - wrapper for table + add-row button (matches invoice layout) */
+    .table-section {
+      position: relative;
+      margin-bottom: 0;
+    }
+    
+    /* Table styling */
+    .items-table {
+      position: relative;
+      margin-bottom: 0;
+    }
+    
+    /* Table container for horizontal scrolling */
+    .table-container {
+      position: relative;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: none;
+      border-radius: 0;
+    }
+    
+    .table-container::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .table-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb {
+      background: #c0392b;
+      border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: #a93226;
+    }
+
+    /* ========================================
+       PRODUCT DISPLAY STYLES
+       ======================================== */
+    .item-with-image {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+    }
+    
+    .item-image {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 3px;
+    }
+    
+    .item-image:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      border-color: #007bff;
+    }
+    
+    .item-image.placeholder {
+      background: linear-gradient(135deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(225deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+                  linear-gradient(315deg, #e9ecef 25%, transparent 25%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .item-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ========================================
+       FORM CONTROLS
+       ======================================== */
+    .description-select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: white;
+      cursor: pointer;
+      box-sizing: border-box;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .description-select:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+    
+    .description-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: white;
+      box-sizing: border-box;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .items-table td:nth-child(3) {
+      padding: 0;
+    }
+
+    /* ========================================
+       CLIENT SEARCH STYLES
+       ======================================== */
+    .client-search-container {
+      position: relative;
+      display: inline-block;
+      flex: 1;
+      margin-left: 5px;
+    }
+    
+    .client-search-input {
+      width: 100%;
+      padding: 2px 4px;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+      color: inherit;
+      min-width: 200px;
+    }
+    
+    .client-autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: none;
+      min-width: 250px;
+    }
+    
+    .client-autocomplete-dropdown.show {
+      display: block;
+    }
+    
+    .client-autocomplete-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s;
+    }
+    
+    .client-autocomplete-item:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .client-autocomplete-item.add-new-client-item:hover {
+      background-color: #e3f2fd;
+    }
+    
+    .client-autocomplete-item.selected {
+      background-color: #007bff;
+      color: white;
+    }
+
+    /* ========================================
+       SUMMARY SECTION
+       ======================================== */
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 70px;
+    }
+
+    .summary-table {
+      width: 300px;
+      border-collapse: collapse;
+    }
+
+    .summary-table td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      font-size: 15px;
+    }
+
+    .summary-table td:first-child {
+      font-weight: bold;
+      background-color: #f8f9fa;
+      width: 60%;
+    }
+
+    .summary-table td:last-child {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .total-row td {
+      background-color: #926E4C !important;
+      color: white !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
+    }
+
+    .outstanding-row td {
+      background-color: #726e6e !important;
+      color: white !important;
+      font-weight: bold !important;
+    }
+    
+    .amount-paid-row td {
+      background-color: #ffeaa7 !important;
+      color: #856404 !important;
+      font-weight: bold !important;
+    }
+
+    .terms-section {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .payment-info, .terms-info {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .payment-info h3, .terms-info h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .payment-info p, .terms-info p {
+      margin: 3px 0;
+      font-size: 14px;
+    }
+
+    .footer-banner {
+      background-color: #926E4C;
+      height: 30px;
+      width: 100%;
+      margin-top: auto;
+    }
+
+    [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      padding: 2px;
+      min-width: 50px;
+    }
+
+    /* ========================================
+       DATA MANAGEMENT MODAL (theme match index.html)
+       ======================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20000;
+      backdrop-filter: blur(6px);
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--gray-shade-1);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.06);
+      border: 1px solid var(--gray-border);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      background: var(--gray-shade-3);
+      color: var(--gray-text-bright);
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--gray-border);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--gray-text);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(193, 122, 46, 0.12);
+      color: var(--accent-orange);
+    }
+
+    .modal-body {
+      padding: 0;
+      overflow-y: auto;
+      max-height: calc(80vh - 80px);
+      background: var(--gray-shade-1);
+    }
+
+    /* Modal: iframe-friendly on small viewports (when template runs inside iframe) */
+    @media (max-width: 768px) {
+      .modal-overlay {
+        padding: 12px;
+        box-sizing: border-box;
+      }
+      .modal {
+        width: 100% !important;
+        max-width: none !important;
+        max-height: min(88dvh, 88vh) !important;
+        margin: 0;
+        box-sizing: border-box;
+      }
+      .modal-body {
+        max-height: min(calc(88dvh - 80px), calc(88vh - 80px)) !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      .modal-header { padding: 14px 16px; flex-shrink: 0; }
+      .modal-title { font-size: 18px; }
+      .modal-close { width: 36px; height: 36px; font-size: 22px; }
+    }
+    @media (max-width: 480px) {
+      .modal-overlay { padding: 8px; }
+      .modal { max-height: min(92dvh, 92vh) !important; }
+      .modal-body { max-height: min(calc(92dvh - 72px), calc(92vh - 72px)) !important; }
+      .modal-title { font-size: 16px; }
+    }
+
+    /* ========================================
+       TABS SYSTEM (match sidebar mode-toggle strip)
+       ======================================== */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--accent-strip-border);
+      background: var(--accent-strip-bg);
+    }
+
+    .tab-button {
+      padding: 15px 25px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--gray-text);
+      transition: background 0.2s ease, color 0.2s ease;
+      position: relative;
+    }
+
+    .tab-button:hover {
+      color: var(--gray-text-bright);
+    }
+
+    .tab-button.active {
+      color: var(--accent-orange);
+      background: rgba(193, 122, 46, 0.18);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(196, 92, 26, 0.12);
+    }
+
+    .tab-button.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-orange);
+    }
+
+    .tab-content {
+      padding: 30px;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ========================================
+       DATA MANAGEMENT STYLES
+       ======================================== */
+    .data-section {
+      margin-bottom: 30px;
+    }
+
+    .data-section h3 {
+      margin: 0 0 15px 0;
+      color: var(--gray-text-bright);
+      font-size: 18px;
+      border-bottom: 2px solid var(--gray-border-light);
+      padding-bottom: 8px;
+    }
+
+    .data-list {
+      border: 1px solid var(--gray-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--gray-shade-1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.06);
+    }
+
+    .data-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid var(--gray-border-light);
+      transition: background 0.2s;
+    }
+
+    .data-item:last-child {
+      border-bottom: none;
+    }
+
+    .data-item:hover {
+      background: var(--gray-surface);
+    }
+
+    .data-item-info {
+      flex: 1;
+      margin-right: 15px;
+    }
+
+    .data-item-name {
+      font-weight: 600;
+      color: var(--gray-text-bright);
+      margin-bottom: 4px;
+    }
+
+    .data-item-details {
+      font-size: 14px;
+      color: var(--gray-muted);
+    }
+
+    .data-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-edit {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #45a049;
+    }
+
+    .btn-delete {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #da190b;
+    }
+
+    .add-new-section {
+      text-align: center;
+      padding: 20px;
+      border: 1px solid var(--accent-strip-border);
+      border-radius: 10px;
+      margin-bottom: 20px;
+      background: var(--accent-strip-bg);
+    }
+
+    .add-new-btn {
+      background: var(--gray-shade-2);
+      color: var(--accent-orange);
+      border: 1px solid var(--accent-strip-border);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 2px rgba(196, 92, 26, 0.08);
+    }
+
+    .add-new-btn:hover {
+      background: rgba(193, 122, 46, 0.12);
+      color: var(--accent-orange);
+      box-shadow: 0 1px 2px rgba(196, 92, 26, 0.12);
+    }
+
+    /* ========================================
+       FORM STYLES
+       ======================================== */
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      flex: 1;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: var(--gray-text-bright);
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--gray-border);
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+      background: var(--gray-bg);
+      color: var(--gray-text-bright);
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 0 2px rgba(196, 92, 26, 0.15);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .image-upload {
+      border: 2px dashed var(--gray-border);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .image-upload:hover {
+      border-color: var(--accent-orange);
+      background: var(--accent-strip-bg);
+    }
+
+    .image-upload input {
+      display: none;
+    }
+
+    .image-preview {
+      margin-top: 15px;
+    }
+
+    .image-preview img {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* ========================================
+       MODE SPECIFIC STYLES
+       ======================================== */
+    /* Edit Mode - Show all controls */
+    body.edit-mode .actions-cell,
+    body.edit-mode .add-row-btn,
+    body.edit-mode .items-table th:last-child {
+      display: table-cell;
+    }
+
+    body.edit-mode [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      pointer-events: auto;
+    }
+
+    body.edit-mode .description-select,
+    body.edit-mode .description-input,
+    body.edit-mode .client-search-input {
+      pointer-events: auto;
+    }
+
+    /* Ensure main-content returns to original position in edit mode */
+    body.edit-mode .main-content {
+      margin-top: 0px;
+      padding: 0px;
+    }
+
+    /* Preview Mode - Hide all edit controls and disable editing */
+    body.preview-mode .actions-cell,
+    body.preview-mode .add-row-btn,
+    body.preview-mode .items-table th:last-child,
+    body.preview-mode .items-table td:last-child {
+      display: none !important;
+    }
+
+    body.preview-mode [contenteditable] {
+      border-bottom: none !important;
+      outline: none !important;
+      pointer-events: none !important;
+      user-select: text;
+      cursor: default !important;
+    }
+
+    body.preview-mode .description-select,
+    body.preview-mode .description-input {
+      pointer-events: none !important;
+      border: none !important;
+      background: transparent !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      cursor: default !important;
+      color: #222 !important;
+      -webkit-text-fill-color: #222 !important;
+      opacity: 1 !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+    }
+
+    body.preview-mode .client-search-input {
+      pointer-events: none !important;
+      border: none !important;
+      background: transparent !important;
+      cursor: default !important;
+    }
+
+    body.preview-mode .client-autocomplete-dropdown {
+      display: none !important;
+      pointer-events: none !important;
+    }
+
+    /* Disable all interactive elements in preview mode except essential buttons; keep text clear and visible */
+    body.preview-mode select,
+    body.preview-mode input,
+    body.preview-mode textarea,
+    body.preview-mode button:not(.mode-btn):not(.preview-mode-only) {
+      pointer-events: none !important;
+      cursor: default !important;
+    }
+    body.preview-mode select,
+    body.preview-mode input[type="text"],
+    body.preview-mode textarea {
+      color: #222 !important;
+      -webkit-text-fill-color: #222 !important;
+      opacity: 1 !important;
+    }
+    
+    /* Ensure essential buttons remain clickable */
+    body.preview-mode .mode-btn,
+    body.preview-mode .preview-mode-only {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* Prevent text selection while maintaining readability */
+    body.preview-mode * {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+
+    /* Remove any hover or focus effects */
+    body.preview-mode *:hover,
+    body.preview-mode *:focus {
+      outline: none !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+    }
+
+    body.preview-mode .a4 {
+      box-shadow: none;
+    }
+
+    /* Ensure table borders are visible in preview mode */
+    body.preview-mode .items-table,
+    body.preview-mode .items-table th,
+    body.preview-mode .items-table td {
+      border: 1px solid #ddd !important;
+      border-collapse: collapse !important;
+    }
+
+    body.preview-mode .items-table tbody tr:last-child td {
+      border-bottom: 1px solid #ddd !important;
+    }
+
+    /* Disable editing of payment info and tax in preview mode */
+    body.preview-mode .payment-info span[contenteditable],
+    body.preview-mode #openingBalance[contenteditable] {
+      pointer-events: none !important;
+      border-bottom: none !important;
+      outline: none !important;
+      user-select: text;
+    }
+
+    body.preview-mode .main-content {
+      padding: 0;
+      margin-top: 0px;
+    }
+
+    /* Image/export capture: allow full text to show (no clipping) */
+    body.capture-exporting .items-table {
+      table-layout: auto !important;
+    }
+    body.capture-exporting .items-table tbody tr {
+      height: auto !important;
+      max-height: none !important;
+    }
+    body.capture-exporting .items-table th,
+    body.capture-exporting .items-table td {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    body.capture-exporting .items-table td > *,
+    body.capture-exporting .items-table td .item-with-image,
+    body.capture-exporting .items-table td .item-text {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    body.capture-exporting .items-table td .description-select,
+    body.capture-exporting .items-table td .description-input {
+      max-height: none !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+    body.capture-exporting .items-table td[contenteditable="true"] {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+
+    /* Ensure invoice list modal (Load statement) is always clickable */
+    #invoiceListModal button,
+    #invoiceListModal input,
+    #invoiceListModal select,
+    #invoiceListModal label {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+    #invoiceListModal input[type="text"],
+    #invoiceListModal input[type="search"] {
+      cursor: text;
+    }
+    
+  
+    /* ========================================
+       PRINT & EXPORT OPTIMIZATIONS
+       ======================================== */
+    @media print {
+      .main-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+      }
+      
+      .a4 {
+        box-shadow: none !important;
+        margin: 0 !important;
+      }
+      
+      body {
+        background: white !important;
+      }
+      
+      .actions-cell,
+      .add-row-btn,
+      .items-table th:last-child,
+      .items-table td:last-child {
+        display: none !important;
+      }
+      
+      .description-select,
+      .description-input {
+        border: none !important;
+        background: transparent !important;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+      
+      [contenteditable] {
+        border-bottom: none !important;
+      }
+    }
+
+  
+    /* ========================================
+       UTILITY CLASSES
+       ======================================== */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-20 {
+      margin-top: 20px;
+    }
+
+    .mb-20 {
+      margin-bottom: 20px;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Hide Ship To section */
+    .ship-to {
+      display: none !important;
+    }
+    
+    /* Additional professional styling */
+    .currency {
+      font-weight: bold;
+    }
+    
+    .contact-info {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .payment-logo {
+      width: 100px;
+      height: auto;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body class="edit-mode">
+
+  <!-- ========================================
+       MAIN INVOICE CONTENT
+       ======================================== -->
+  <div class="main-content">
+    <div class="a4" id="invoice">
+
+
+      <div class="header-banner"></div>
+      <div class="invoice-wrapper">
+        <!-- Top Section -->
+        <div class="top-section">
+          <div class="branding">
+            <img id="companyLogo" alt="Company Logo" src="../logos/invoLOGO.png">
+            <div class="company-info" id="companyInfo">
+              <p><strong>Your Company Name</strong></p>
+              <p>Your Company Address</p>
+              <p>Your City, Postcode</p>
+              <p>Phone: Your Phone Number</p>
+              <p>Email: your.email@company.com</p>
+              <p>Company Number: Your Company Number</p>
+              <p>VAT NO.: Your VAT Number</p>
+            </div>
+          </div>
+          <div class="invoice-details">
+            <div class="invoice-title" contenteditable="true">STATEMENT</div>
+            <p><span class="label">Statement No:</span> <span id="statementNo" contenteditable="true">00001</span></p>
+            <p><span class="label">Statement Date:</span> <span id="statementDate" contenteditable="true"></span></p>
+            <p><span class="label">Period:</span> <span id="period" contenteditable="true"></span></p>
+          </div>
+        </div>
+
+        <!-- Customer Section -->
+        <div class="customer-section">
+          <div class="bill-to">
+            <h3>Bill To:</h3>
+            <p><span class="label">Name:</span> <span id="customerName" contenteditable="true">Your Customer Name</span></p>
+            <p><span class="label">Address:</span> <span id="customerAddress" contenteditable="true">Your Customer Address</span></p>
+            <p><span class="label">City:</span> <span id="customerCity" contenteditable="true">Your Customer City</span></p>
+            <p><span class="label">Phone:</span> <span id="customerPhone" contenteditable="true">Your Customer Phone</span></p>
+            <p><span class="label">Email:</span> <span id="customerEmail" contenteditable="true">Your Customer Email</span></p>
+          </div>
+        </div>
+
+        <!-- Statement Transactions Table -->
+        <div class="table-section">
+        <div class="table-container">
+          <table class="items-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Ref</th>
+              <th>Description</th>
+              <th>Charges</th>
+              <th>Credits</th>
+              <th>Balance</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="row1">
+              <td id="date1" contenteditable="true"></td>
+              <td id="ref1" contenteditable="true"></td>
+              <td id="desc1">
+                <div class="item-text">
+                  <select id="descSelect1" class="description-select">
+                    <option value="Invoice">Invoice</option>
+                    <option value="Payment">Payment</option>
+                    <option value="Credit Note">Credit Note</option>
+                    <option value="Adjustment">Adjustment</option>
+                    <option value="Enter New">Enter New</option>
+                  </select>
+                  <input type="text" id="descInput1" class="description-input" value="Invoice" style="display: none;" contenteditable="true">
+                </div>
+              </td>
+              <td id="charges1" class="charges" contenteditable="true">£0.00</td>
+              <td id="credits1" class="credits" contenteditable="true">£0.00</td>
+              <td id="balance1" class="balance">£0.00</td>
+              <td class="actions-cell">
+                <button class="table-btn table-btn-up" data-action="move-up" data-row="1" title="Move Up">↑</button>
+                <button class="table-btn table-btn-down" data-action="move-down" data-row="1" title="Move Down">↓</button>
+                <button class="table-btn table-btn-delete" data-action="delete" data-row="1" title="Delete Row">×</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        
+        <!-- Add Row Button -->
+          <button class="add-row-btn" id="addRowBtn">+ Add New Row</button>
+        </div>
+
+        <!-- Summary and Payment Section -->
+        <div class="summary-section">
+          <div class="payment-info">
+            <h3>Payment Information</h3>
+            <p><span class="label">Reference:</span> <span id="reference">Your Reference</span></p>
+            <p><span class="label">Bank:</span> <span id="bankName" contenteditable="true">Your Bank Name</span></p>
+            <p><span class="label">Account Name:</span> <span id="accountName" contenteditable="true">Your Account Name</span></p>
+            <p><span class="label">Sort Code:</span> <span id="sortCode" contenteditable="true">Your Sort Code</span></p>
+            <p><span class="label">Account No:</span> <span id="account" contenteditable="true">Your Account Number</span></p>
+          </div>
+          <table class="summary-table">
+            <tbody>
+              <tr>
+                <td>Opening Balance:</td>
+                <td id="openingBalance" contenteditable="true">£0.00</td>
+              </tr>
+              <tr>
+                <td>Total Charges:</td>
+                <td id="totalCharges">£0.00</td>
+              </tr>
+              <tr>
+                <td>Total Credits:</td>
+                <td id="totalCredits">£0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td>Closing Balance:</td>
+                <td id="closingBalance">£0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="footer-banner">
+      <div class="branding-footer">
+        <p style="text-align: center; margin: 10px 0; font-size: 12px; color: #ffffff;">
+          Powered by <strong>GuaPxL</strong> - Account Statement
+        </p>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  <!-- Invoice/Statement List Modal (Load from storage) -->
+  <div class="modal-overlay" id="invoiceListModal" style="display: none;">
+    <div class="modal" style="max-width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h2 class="modal-title">📋 Saved Invoices & Statements</h2>
+        <button class="modal-close" id="closeInvoiceListModal">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+        <input type="text" id="invoiceSearchInput"
+          placeholder="🔍 Search by number, customer name, email, or phone..."
+          style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box;" />
+        <div style="margin: 10px 0 15px; color: #666; font-size: 14px;">
+          <span id="invoiceCount">0</span> document(s) found
+        </div>
+        <div id="invoiceListContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        <div id="emptyInvoiceState" style="text-align: center; padding: 40px; color: #999; display: none;">
+          <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+          <h3 style="color: #666; margin-bottom: 10px;">No saved documents</h3>
+          <p>Create an invoice or statement and click SEND to archive it here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       DATA MANAGEMENT MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="dataModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Settings</h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="products">📋 Transaction Types</button>
+          <button class="tab-button" data-tab="clients">👥 Clients</button>
+          <button class="tab-button" data-tab="company">🏢 Company</button>
+        </div>
+        
+        <!-- Products Tab -->
+        <div class="tab-content active" id="products-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addProductBtn">
+              ➕ Add Transaction Type
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Transaction Types</h3>
+            <div class="data-list" id="productsList">
+              <!-- Products will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Clients Tab -->
+        <div class="tab-content" id="clients-tab">
+          <div class="add-new-section">
+            <button class="add-new-btn" id="addClientBtn">
+              ➕ Add New Client
+            </button>
+          </div>
+          <div class="data-section">
+            <h3>Current Clients</h3>
+            <div class="data-list" id="clientsList">
+              <!-- Clients will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Company Tab -->
+        <div class="tab-content" id="company-tab">
+          <div class="data-section">
+            <h3>Company Information</h3>
+            <form id="companyForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Company Name</label>
+                  <input type="text" id="companyName" required>
+                </div>
+                <div class="form-group">
+                  <label>Phone</label>
+                  <input type="text" id="companyPhone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Address</label>
+                  <input type="text" id="companyAddress">
+                </div>
+                <div class="form-group">
+                  <label>City & Postcode</label>
+                  <input type="text" id="companyCity">
+                </div>
+              </div>
+              <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="companyEmail">
+                </div>
+                <div class="form-group">
+                  <label>Company Number</label>
+                  <input type="text" id="companyNumber">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>VAT Number</label>
+                <input type="text" id="vatNumber">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Bank Name</label>
+                  <input type="text" id="companyBankName">
+                </div>
+                <div class="form-group">
+                  <label>Account Name</label>
+                  <input type="text" id="companyAccountName">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Sort Code</label>
+                  <input type="text" id="companySortCode">
+                </div>
+                <div class="form-group">
+                  <label>Account No</label>
+                  <input type="text" id="companyAccount">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Company Logo</label>
+                <div class="image-upload" id="logoUpload">
+                  <input type="file" id="logoFile" accept="image/*">
+                  <p>📁 Click to upload company logo</p>
+                  <div class="image-preview" id="logoPreview"></div>
+                </div>
+              </div>
+              <div class="text-center mt-20">
+                <button type="submit" class="btn btn-primary">💾 Save Company Info</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       JAVASCRIPT IMPLEMENTATION
+       ======================================== -->
+  <script>
+    // ========================================
+    // STATIC DATA MANAGEMENT SYSTEM
+    // ========================================
+    
+    class StaticInvoiceApp {
+      constructor() {
+        this.currentMode = "edit";
+        this.data = {
+          products: [],
+          clients: [],
+          company: {},
+          settings: { currentMode: "edit", autoSave: true, defaultCurrency: "£" }
+        };
+        
+        // Global items list for shared dropdown management
+        this.globalItemsList = [];
+        this.autoSaveInterval = null;
+        
+        // Initialize the application
+        this.init();
+      }
+      
+      init() {
+        console.log("🚀 Initializing Account Statement...");
+        
+        // Load data from localStorage or set defaults
+        this.loadData();
+        
+        // Initialize UI components
+        this.initDataManagement();
+        this.initInvoiceControls();
+        this.initParentMessageListeners();
+        this.initButtonHandlers();
+        
+        // Update all dropdowns with global items list
+        this.updateAllDropdowns();
+        
+        // Update UI with loaded data
+        this.updateUI();
+        
+        // Load saved invoice data if it exists
+        this.loadSavedInvoice();
+        
+        this.initAutoSave();
+        
+        console.log("✅ Account Statement initialized successfully!");
+      }
+      
+      // ========================================
+      // DATA PERSISTENCE
+      // ========================================
+      
+      loadData() {
+        try {
+          // Load products
+          const savedProducts = localStorage.getItem("invoiceApp_products");
+          this.data.products = savedProducts ? JSON.parse(savedProducts) : this.getDefaultProducts();
+          
+          // Initialize global items list from products
+          this.globalItemsList = this.data.products.map(product => product.name);
+          
+          // Load clients
+          const savedClients = localStorage.getItem("invoiceApp_clients");
+          this.data.clients = savedClients ? JSON.parse(savedClients) : this.getDefaultClients();
+          
+          // Load company info
+          const savedCompany = localStorage.getItem("invoiceApp_company");
+          this.data.company = savedCompany ? JSON.parse(savedCompany) : this.getDefaultCompany();
+          
+          // Load settings
+          const savedSettings = localStorage.getItem("invoiceApp_settings");
+          this.data.settings = savedSettings ? JSON.parse(savedSettings) : { currentMode: "edit", autoSave: true, defaultCurrency: "£" };
+          
+          console.log("📁 Data loaded from localStorage");
+        } catch (error) {
+          console.error("Error loading data:", error);
+          this.data = {
+            products: this.getDefaultProducts(),
+            clients: this.getDefaultClients(),
+            company: this.getDefaultCompany(),
+            settings: { currentMode: "edit", autoSave: true, defaultCurrency: "£" }
+          };
+        }
+      }
+      
+      saveData() {
+        try {
+          localStorage.setItem("invoiceApp_products", JSON.stringify(this.data.products));
+          localStorage.setItem("invoiceApp_clients", JSON.stringify(this.data.clients));
+          localStorage.setItem("invoiceApp_company", JSON.stringify(this.data.company));
+          localStorage.setItem("invoiceApp_settings", JSON.stringify(this.data.settings));
+          console.log("💾 Data saved to localStorage");
+        } catch (error) {
+          console.error("Error saving data:", error);
+        }
+      }
+      
+      // ========================================
+      // DEFAULT DATA
+      // ========================================
+      
+      getDefaultProducts() {
+        return [
+          { id: 1, name: "Invoice", category: "transaction", price: 0 },
+          { id: 2, name: "Payment", category: "transaction", price: 0 },
+          { id: 3, name: "Credit Note", category: "transaction", price: 0 },
+          { id: 4, name: "Adjustment", category: "transaction", price: 0 }
+        ];
+      }
+      
+      getDefaultClients() {
+        return [
+          {
+            clientId: 1,
+            client: {
+              name: "John Smith",
+              address: "123 Main Street",
+              city: "London, E1 1AA",
+              phone: "+44 20 1234 5678",
+              email: "john.smith@email.com",
+              type: "Individual",
+              status: "active",
+              notes: "Regular customer, prefers morning deliveries"
+            }
+          },
+          {
+            clientId: 2,
+            client: {
+              name: "Sarah Johnson",
+              address: "456 High Road",
+              city: "Manchester, M1 1AA",
+              phone: "+44 161 123 4567",
+              email: "sarah.j@email.com",
+              type: "Company",
+              status: "active",
+              notes: "Business client, office hours only"
+            }
+          }
+        ];
+      }
+      
+      getDefaultCompany() {
+        return {
+          name: "Your Company Name",
+          address: "Your Company Address",
+          city: "Your City, Postcode",
+          phone: "Your Phone Number",
+          email: "your.email@company.com",
+          companyNumber: "Your Company Number",
+          vatNumber: "Your VAT Number",
+          bankName: "Your Bank Name",
+          accountName: "Your Account Name",
+          sortCode: "Your Sort Code",
+          account: "Your Account Number",
+          logo: null
+        };
+      }
+      
+      // ========================================
+      // BUTTON HANDLERS
+      // ========================================
+      
+      initButtonHandlers() {
+        // Add row button
+        const addRowBtn = document.getElementById("addRowBtn");
+        if (addRowBtn) {
+          addRowBtn.addEventListener("click", () => {
+            this.addNewRow();
+          });
+        }
+        
+        // Table action buttons (using event delegation)
+        document.addEventListener("click", (e) => {
+          const btn = e.target.closest(".table-btn");
+          if (!btn) return;
+          
+          const action = btn.getAttribute("data-action");
+          const rowNum = parseInt(btn.getAttribute("data-row"));
+          
+          if (!action || !rowNum) return;
+          
+          switch (action) {
+            case "move-up":
+              this.moveRowUp(rowNum);
+              break;
+            case "move-down":
+              this.moveRowDown(rowNum);
+              break;
+            case "delete":
+              this.deleteRow(rowNum);
+              break;
+          }
+        });
+      }
+      
+      // ========================================
+      // PARENT MESSAGE LISTENERS
+      // ========================================
+      
+      initParentMessageListeners() {
+        // Listen for messages from parent (index.html)
+        // Use a named function so we can ensure it's only added once
+        if (!this._messageListenerAdded) {
+          const messageHandler = (event) => {
+            // Only accept messages from the direct parent (ignore other windows/tabs)
+            if (event.source !== window.parent) return;
+            if (event.data && event.data.type) {
+              console.log(`📥 Received message from parent:`, event.data.type, event.data);
+              switch (event.data.type) {
+                case "switch-mode":
+                  console.log(`🔄 Switching to ${event.data.mode} mode...`);
+                  this.switchMode(event.data.mode);
+                  break;
+                case "save-invoice":
+                  this.saveInvoiceData();
+                  break;
+                case "send-invoice":
+                  // Legacy: send-invoice is now handled by parent (index.html)
+                  // Parent renders the iframe DOM directly using html2canvas
+                  console.log("📤 Send invoice requested - handled by parent");
+                  break;
+                case "render-invoice":
+                  // Rendering is now handled entirely by parent (index.html)
+                  // Invoice files only handle calculations and size reporting
+                  console.log("📤 Render invoice requested - handled by parent");
+                  break;
+                case "request-size":
+                  sendSizeToParent();
+                  break;
+                case "populate-statement-from-invoices":
+                  if (event.data.payload && typeof this.populateStatementFromInvoices === "function") {
+                    this.populateStatementFromInvoices(event.data.payload);
+                  }
+                  break;
+                case "invoice-action":
+                  const action = event.data.action;
+                  if (action === "showInvoiceList" && typeof this.showInvoiceList === "function") {
+                    this.showInvoiceList();
+                  } else if (action === "saveInvoice" || action === "sendInvoice") {
+                    try {
+                      if (action === "saveInvoice" && typeof this.saveInvoice === "function") {
+                        this.saveInvoice();
+                      } else if (action === "sendInvoice" && typeof this.sendInvoice === "function") {
+                        this.sendInvoice();
+                      }
+                      // saveAndArchiveInvoice() posts invoice-saved on success
+                    } catch (err) {
+                      console.warn("Statement save/send failed:", err);
+                      if (window.parent && window.parent !== window) {
+                        try { window.parent.postMessage({ type: "invoice-save-failed", documentType: "statement" }, "*"); } catch (e2) {}
+                      }
+                    }
+                  } else if (action && typeof this[action] === "function") {
+                    try {
+                      this[action]();
+                    } catch (err) {
+                      console.warn("Statement invoice-action failed:", action, err);
+                    }
+                  }
+                  break;
+              }
+            }
+          };
+          
+          window.addEventListener("message", messageHandler);
+          this._messageListenerAdded = true;
+          console.log('✅ Message listener initialized');
+        }
+        
+        // Send ready signal to parent (with retry to ensure it's received)
+        const sendReadySignal = () => {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+              type: 'iframe-ready',
+              source: 'test.html'
+            }, '*');
+            console.log('📤 Sent ready signal to parent');
+          }
+        };
+        
+        // Send immediately
+        sendReadySignal();
+        
+        // Also send after a short delay to ensure parent receives it
+        setTimeout(sendReadySignal, 100);
+        setTimeout(sendReadySignal, 500);
+        
+        // Set initial mode (default to edit)
+        this.switchMode(this.data.settings.currentMode || "edit");
+      }
+      
+      switchMode(mode) {
+        this.currentMode = mode;
+        this.data.settings.currentMode = mode;
+        
+        // Update body class
+        document.body.className = `${mode}-mode`;
+        
+        // Apply JavaScript-based editing restrictions for preview mode
+        if (mode === "preview") {
+          this.disableEditing();
+        } else {
+          this.enableEditing();
+        }
+        
+        // Force a reflow to ensure visual changes are applied
+        void document.body.offsetHeight;
+        
+        // Trigger a resize event to ensure layout updates
+        window.dispatchEvent(new Event('resize'));
+        
+        // Send size update to parent to ensure iframe resizes properly
+        sendSizeToParent();
+        
+        this.saveData();
+        console.log(`🔄 Switched to ${mode} mode`);
+      }
+      
+      // ========================================
+      // EDITING CONTROL METHODS
+      // ========================================
+      
+      disableEditing() {
+        // Disable all contenteditable elements (except inside modals)
+        document.querySelectorAll("[contenteditable]").forEach(el => {
+          if (el.closest(".modal-overlay")) return;
+          el.setAttribute("data-original-contenteditable", "true");
+          el.contentEditable = false;
+        });
+        
+        // Disable all input fields (except inside modals)
+        document.querySelectorAll("input, textarea, select").forEach(el => {
+          if (el.closest(".modal-overlay")) return;
+          el.setAttribute("data-original-disabled", el.disabled === true ? "true" : "false");
+          el.disabled = true;
+          el.readOnly = true;
+        });
+        
+        // Disable all buttons (except always-enabled and modal buttons)
+        document.querySelectorAll("button").forEach(el => {
+          if (el.closest(".modal-overlay")) return;
+          if (el.classList.contains("always-enabled")) return;
+          el.setAttribute("data-original-disabled", el.disabled === true ? "true" : "false");
+          el.disabled = true;
+        });
+        
+        console.log("🔒 Editing disabled in preview mode");
+      }
+      
+      enableEditing() {
+        // Ensure body is not stuck with preview-mode
+        document.body.classList.remove("preview-mode");
+        
+        // Restore contenteditable elements
+        document.querySelectorAll("[data-original-contenteditable]").forEach(el => {
+          el.contentEditable = true;
+          el.removeAttribute("data-original-contenteditable");
+        });
+        
+        // Restore input fields
+        document.querySelectorAll("input[data-original-disabled], textarea[data-original-disabled], select[data-original-disabled]").forEach(el => {
+          el.disabled = el.getAttribute("data-original-disabled") === "true";
+          if (el.tagName !== "SELECT") el.readOnly = false;
+          el.removeAttribute("data-original-disabled");
+        });
+        
+        // Restore buttons
+        document.querySelectorAll("button[data-original-disabled]").forEach(el => {
+          el.disabled = el.getAttribute("data-original-disabled") === "true";
+          el.removeAttribute("data-original-disabled");
+        });
+        
+        // Fallback: force-enable any still-disabled fields and buttons
+        document.querySelectorAll("[contenteditable]").forEach(el => {
+          if (el.contentEditable === "false" || el.contentEditable === false) el.contentEditable = true;
+        });
+        document.querySelectorAll("#invoice input, #invoice textarea, #invoice select, .modal-overlay input, .modal-overlay textarea, .modal-overlay select").forEach(el => {
+          if (el.disabled) el.disabled = false;
+          if (el.tagName !== "SELECT" && el.readOnly) el.readOnly = false;
+        });
+        document.querySelectorAll("#invoice button, .modal-overlay button").forEach(btn => {
+          if (btn.disabled) btn.disabled = false;
+        });
+        
+        console.log("🔓 Editing enabled in edit mode");
+      }
+      
+      // Event prevention methods removed - using CSS-based approach instead
+      
+      // ========================================
+      // DATA MANAGEMENT MODAL
+      // ========================================
+      
+      showDataManagement() {
+        const modal = document.getElementById("dataModal");
+        modal.classList.add("show");
+        this.populateDataModal();
+      }
+      
+      initDataManagement() {
+        // Data management button is now in parent (index.html)
+        // Only initialize modal if it exists (for backward compatibility)
+        const modal = document.getElementById("dataModal");
+        const closeBtn = document.getElementById("closeModal");
+        
+        if (!modal || !closeBtn) {
+          // Modal doesn't exist in iframe - data management is handled by parent
+          return;
+        }
+        
+        // Listen for data management messages from parent
+        window.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "open-data-management") {
+            this.showDataManagement();
+          }
+        });
+        
+        // Close modal
+        closeBtn.addEventListener("click", () => {
+          modal.classList.remove("show");
+          // Refresh invoice table when Settings modal is closed
+          this.updateAllItemPrices();
+          this.updateAllItemImages();
+        });
+        
+        // Close on overlay click
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            modal.classList.remove("show");
+            // Refresh invoice table when Settings modal is closed
+            this.updateAllItemPrices();
+            this.updateAllItemImages();
+          }
+        });
+        
+        // Tab switching
+        document.querySelectorAll(".tab-button").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            const tabId = e.target.dataset.tab;
+            this.switchTab(tabId);
+          });
+        });
+        
+        // Initialize forms
+        this.initProductForm();
+        this.initClientForm();
+        this.initCompanyForm();
+        
+        // Initialize mobile touch support
+        this.initMobileSupport();
+      }
+      
+      initMobileSupport() {
+        // Add touch support for the Add New Row button
+        const addRowBtn = document.querySelector(".add-row-btn");
+        if (addRowBtn) {
+          addRowBtn.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            this.addNewRow();
+          });
+        }
+        
+        // Add touch support for table action buttons
+        document.addEventListener("touchend", (e) => {
+          if (e.target.classList.contains("table-btn")) {
+            e.preventDefault();
+            e.target.click();
+          }
+        });
+        
+        // Prevent zoom on double tap for better mobile experience
+        let lastTouchEnd = 0;
+        document.addEventListener("touchend", (e) => {
+          const now = (new Date()).getTime();
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, false);
+        
+        console.log("📱 Mobile touch support initialized");
+      }
+      
+      switchTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll(".tab-button").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.tab === tabId);
+        });
+        
+        // Update tab content
+        document.querySelectorAll(".tab-content").forEach(content => {
+          content.classList.toggle("active", content.id === `${tabId}-tab`);
+        });
+        
+        // Refresh tab-specific content
+        if (tabId === "products") {
+          this.populateProductsList();
+        } else if (tabId === "clients") {
+          this.populateClientsList();
+        } else if (tabId === "company") {
+          this.populateCompanyForm();
+        }
+      }
+      
+      populateDataModal() {
+        this.populateProductsList();
+        this.populateClientsList();
+        this.populateCompanyForm();
+      }
+      
+      // ========================================
+      // PRODUCTS MANAGEMENT
+      // ========================================
+      
+      initProductForm() {
+        document.getElementById("addProductBtn").addEventListener("click", () => {
+          this.showProductForm();
+        });
+      }
+      
+      showProductForm(product = null) {
+        const isEdit = !!product;
+        const formHtml = `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Name *</label>
+              <input type="text" id="productName" value="${product?.name || ""}" required>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="productCategory">
+                <option value="product" ${product?.category === "product" ? "selected" : ""}>Product</option>
+                <option value="service" ${product?.category === "service" ? "selected" : ""}>Service</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Price (£)</label>
+              <input type="number" id="productPrice" step="0.01" value="${product?.price || "0.00"}" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Icon</label>
+              <input type="text" id="productIcon" value="${product?.icon || "📦"}" placeholder="📦">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="productDescription" placeholder="Item description...">${product?.description || ""}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Item Image</label>
+            <div class="image-upload" onclick="document.getElementById(\"productImageFile\").click()">
+              <input type="file" id="productImageFile" accept="image/*" style="display: none;">
+              <p>📁 Click to upload item image</p>
+              <div class="image-preview" id="productImagePreview">
+                ${product?.image ? `<img src="${(product.image || "").replace(/"/g, "&quot;")}" alt="Item">` : ""}
+              </div>
+            </div>
+          </div>
+          <div class="text-center mt-20">
+            <button type="button" class="btn btn-primary" onclick="app.saveProduct(${isEdit ? product.id : "null"})">
+              💾 ${isEdit ? "Update" : "Add"} Item
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="app.populateProductsList()">
+              ❌ Cancel
+            </button>
+          </div>
+        `;
+        
+        document.getElementById("productsList").innerHTML = formHtml;
+        
+        // Handle image upload
+        document.getElementById("productImageFile").addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById("productImagePreview").innerHTML = 
+                `<img src="${(e.target.result || "").replace(/"/g, "&quot;")}" alt="Product">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      saveProduct(editId = null) {
+        const name = document.getElementById("productName").value.trim();
+        const category = document.getElementById("productCategory").value;
+        const price = parseFloat(document.getElementById("productPrice").value) || 0.00;
+        const icon = document.getElementById("productIcon").value.trim() || "📦";
+        const description = document.getElementById("productDescription").value.trim();
+        const imagePreview = document.querySelector("#productImagePreview img");
+        const image = imagePreview ? imagePreview.src : null;
+        
+        if (!name) {
+          alert("Name is required!");
+          return;
+        }
+        
+        const productData = { name, category, price, icon, description, image };
+        
+        if (editId) {
+          // Update existing product
+          const index = this.data.products.findIndex(p => p.id === editId);
+          if (index !== -1) {
+            this.data.products[index] = { ...this.data.products[index], ...productData };
+          }
+        } else {
+          // Add new product
+          const newId = Math.max(...this.data.products.map(p => p.id), 0) + 1;
+          this.data.products.push({ id: newId, ...productData });
+        }
+        
+        this.saveData();
+        this.populateProductsList();
+        this.updateProductDropdowns();
+        
+        // Update global items list and refresh all dropdowns
+        this.globalItemsList = this.data.products.map(product => product.name);
+        this.updateAllDropdowns();
+        
+        this.updateAllItemPrices();
+        this.updateAllItemImages();
+        
+        console.log(`✅ Product ${editId ? "updated" : "added"}: ${name}`);
+      }
+      
+      deleteProduct(id) {
+        if (confirm("Are you sure you want to delete this product?")) {
+          this.data.products = this.data.products.filter(p => p.id !== id);
+          this.saveData();
+          this.populateProductsList();
+          this.updateProductDropdowns();
+        
+        // Update global items list and refresh all dropdowns
+        this.globalItemsList = this.data.products.map(product => product.name);
+        this.updateAllDropdowns();
+        
+        this.updateAllItemPrices();
+        this.updateAllItemImages();
+          console.log(`🗑️ Product deleted: ID ${id}`);
+        }
+      }
+      
+      populateProductsList() {
+        const container = document.getElementById("productsList");
+        if (this.data.products.length === 0) {
+          container.innerHTML = "<div class=\"text-center\" style=\"padding: 40px; color: #666;\">No products added yet.</div>";
+          return;
+        }
+        
+        const html = this.data.products.map(product => `
+          <div class="data-item">
+            <div class="data-item-info">
+              <div class="data-item-name">${product.icon} ${product.name}</div>
+              <div class="data-item-details">
+                ${product.category} • £${product.price.toFixed(2)} • ${product.description}
+              </div>
+            </div>
+            <div class="data-item-actions">
+              <button class="btn-sm btn-edit" onclick="app.showProductForm(${JSON.stringify(product).replace(/"/g, "&quot;").replace(/"/g, "&#39;")})">
+                ✏️ Edit
+              </button>
+              <button class="btn-sm btn-delete" onclick="app.deleteProduct(${product.id})">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `).join("");
+        
+        container.innerHTML = html;
+      }
+      
+      // ========================================
+      // CLIENTS MANAGEMENT  
+      // ========================================
+      
+      initClientForm() {
+        document.getElementById("addClientBtn").addEventListener("click", () => {
+          this.showClientForm();
+        });
+      }
+      
+      showClientForm(clientData = null) {
+        const isEdit = !!clientData;
+        const client = clientData?.client || {};
+        
+        const formHtml = `
+          <div class="form-row">
+            <div class="form-group">
+              <label>Client Name *</label>
+              <input type="text" id="clientName" value="${client.name || ""}" required>
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <select id="clientType">
+                <option value="Individual" ${client.type === "Individual" ? "selected" : ""}>Individual</option>
+                <option value="Company" ${client.type === "Company" ? "selected" : ""}>Company</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" id="clientAddress" value="${client.address || ""}">
+            </div>
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" id="clientCity" value="${client.city || ""}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" id="clientPhone" value="${client.phone || ""}">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="clientEmail" value="${client.email || ""}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="clientNotes" placeholder="Additional notes...">${client.notes || ""}</textarea>
+          </div>
+          <div class="text-center mt-20">
+            <button type="button" class="btn btn-primary" onclick="app.saveClient(${isEdit ? clientData.clientId : "null"})">
+              💾 ${isEdit ? "Update" : "Add"} Client
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="app.populateClientsList()">
+              ❌ Cancel
+            </button>
+          </div>
+        `;
+        
+        document.getElementById("clientsList").innerHTML = formHtml;
+      }
+      
+      saveClient(editId = null) {
+        const name = document.getElementById("clientName").value.trim();
+        const type = document.getElementById("clientType").value;
+        const address = document.getElementById("clientAddress").value.trim();
+        const city = document.getElementById("clientCity").value.trim();
+        const phone = document.getElementById("clientPhone").value.trim();
+        const email = document.getElementById("clientEmail").value.trim();
+        const notes = document.getElementById("clientNotes").value.trim();
+        
+        if (!name) {
+          alert("Client name is required!");
+          return;
+        }
+        
+        const clientData = {
+          client: { name, type, address, city, phone, email, notes, status: "active" }
+        };
+        
+        if (editId) {
+          // Update existing client
+          const index = this.data.clients.findIndex(c => c.clientId === editId);
+          if (index !== -1) {
+            this.data.clients[index] = { clientId: editId, ...clientData };
+          }
+        } else {
+          // Add new client
+          const newId = Math.max(...this.data.clients.map(c => c.clientId), 0) + 1;
+          this.data.clients.push({ clientId: newId, ...clientData });
+        }
+        
+        this.saveData();
+        this.populateClientsList();
+        this.updateClientSearch();
+        
+        console.log(`✅ Client ${editId ? "updated" : "added"}: ${name}`);
+      }
+      
+      deleteClient(id) {
+        if (confirm("Are you sure you want to delete this client?")) {
+          this.data.clients = this.data.clients.filter(c => c.clientId !== id);
+          this.saveData();
+          this.populateClientsList();
+          this.updateClientSearch();
+          console.log(`🗑️ Client deleted: ID ${id}`);
+        }
+      }
+      
+      populateClientsList() {
+        const container = document.getElementById("clientsList");
+        if (this.data.clients.length === 0) {
+          container.innerHTML = "<div class=\"text-center\" style=\"padding: 40px; color: #666;\">No clients added yet.</div>";
+          return;
+        }
+        
+        const html = this.data.clients.map(clientData => {
+          const client = clientData.client;
+          return `
+            <div class="data-item">
+              <div class="data-item-info">
+                <div class="data-item-name">👤 ${client.name}</div>
+                <div class="data-item-details">
+                  ${client.type} • ${client.address}, ${client.city} • ${client.phone} • ${client.email}
+                </div>
+              </div>
+              <div class="data-item-actions">
+                <button class="btn-sm btn-edit" onclick="app.showClientForm(${JSON.stringify(clientData).replace(/"/g, "&quot;").replace(/"/g, "&#39;")})">
+                  ✏️ Edit
+                </button>
+                <button class="btn-sm btn-delete" onclick="app.deleteClient(${clientData.clientId})">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+        
+        container.innerHTML = html;
+      }
+      
+      // ========================================
+      // COMPANY MANAGEMENT
+      // ========================================
+      
+      initCompanyForm() {
+        const form = document.getElementById("companyForm");
+        const logoUpload = document.getElementById("logoUpload");
+        const logoFile = document.getElementById("logoFile");
+        
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          this.saveCompanyInfo();
+        });
+        
+        logoUpload.addEventListener("click", () => {
+          logoFile.click();
+        });
+        
+        logoFile.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById("logoPreview").innerHTML = 
+                `<img src="${(e.target.result || "").replace(/"/g, "&quot;")}" alt="Company Logo">`;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      populateCompanyForm() {
+        document.getElementById("companyName").value = this.data.company.name || "";
+        document.getElementById("companyPhone").value = this.data.company.phone || "";
+        document.getElementById("companyAddress").value = this.data.company.address || "";
+        document.getElementById("companyCity").value = this.data.company.city || "";
+        document.getElementById("companyEmail").value = this.data.company.email || "";
+        document.getElementById("companyNumber").value = this.data.company.companyNumber || "";
+        document.getElementById("vatNumber").value = this.data.company.vatNumber || "";
+        document.getElementById("companyBankName").value = this.data.company.bankName || "";
+        document.getElementById("companyAccountName").value = this.data.company.accountName || "";
+        document.getElementById("companySortCode").value = this.data.company.sortCode || "";
+        document.getElementById("companyAccount").value = this.data.company.account || "";
+        
+        const logoPreview = document.getElementById("logoPreview");
+        if (this.data.company.logo) {
+          logoPreview.innerHTML = `<img src="${(this.data.company.logo || "").replace(/"/g, "&quot;")}" alt="Company Logo">`;
+        } else {
+          logoPreview.innerHTML = "";
+        }
+      }
+      
+      saveCompanyInfo() {
+        const logoPreview = document.querySelector("#logoPreview img");
+        
+        this.data.company = {
+          name: document.getElementById("companyName").value.trim(),
+          phone: document.getElementById("companyPhone").value.trim(),
+          address: document.getElementById("companyAddress").value.trim(),
+          city: document.getElementById("companyCity").value.trim(),
+          email: document.getElementById("companyEmail").value.trim(),
+          companyNumber: document.getElementById("companyNumber").value.trim(),
+          vatNumber: document.getElementById("vatNumber").value.trim(),
+          bankName: document.getElementById("companyBankName")?.value.trim() || this.data.company.bankName || "Your Bank Name",
+          accountName: document.getElementById("companyAccountName")?.value.trim() || this.data.company.accountName || "Your Account Name",
+          sortCode: document.getElementById("companySortCode")?.value.trim() || this.data.company.sortCode || "Your Sort Code",
+          account: document.getElementById("companyAccount")?.value.trim() || this.data.company.account || "Your Account Number",
+          logo: logoPreview ? logoPreview.src : this.data.company.logo
+        };
+        
+        this.saveData();
+        this.updateCompanyDisplay();
+        
+        alert("✅ Company information saved successfully!");
+        console.log("✅ Company information updated");
+      }
+      
+      // ========================================
+      // UI UPDATE METHODS
+      // ========================================
+      
+      updateUI() {
+        this.updateCompanyDisplay();
+        this.updateProductDropdowns();
+        this.updateClientSearch();
+        this.setCurrentDates();
+        this.calculateAmounts();
+        // Sync reference to statement number on initial load
+        this.syncReferenceToStatementNumber();
+      }
+      
+      updateCompanyDisplay() {
+        const company = this.data.company;
+        
+        // Update company info display
+        const companyInfo = document.getElementById("companyInfo");
+        companyInfo.innerHTML = `
+          <p><strong>${company.name || "Your Company Name"}</strong></p>
+          <p>${company.address || "Your Company Address"}</p>
+          <p>${company.city || "Your City, Postcode"}</p>
+          <p>Phone: ${company.phone || "Your Phone Number"}</p>
+          <p>Email: ${company.email || "your.email@company.com"}</p>
+          <p>Company Number: ${company.companyNumber || "Your Company Number"}</p>
+          <p>VAT NO.: ${company.vatNumber || "Your VAT Number"}</p>
+        `;
+        
+        // Update invoice payment section from company bank details
+        const bankNameEl = document.getElementById("bankName");
+        const accountNameEl = document.getElementById("accountName");
+        const sortCodeEl = document.getElementById("sortCode");
+        const accountEl = document.getElementById("account");
+        if (bankNameEl) bankNameEl.textContent = company.bankName || "Your Bank Name";
+        if (accountNameEl) accountNameEl.textContent = company.accountName || "Your Account Name";
+        if (sortCodeEl) sortCodeEl.textContent = company.sortCode || "Your Sort Code";
+        if (accountEl) accountEl.textContent = company.account || "Your Account Number";
+        
+        // Update company logo
+        const logoImg = document.getElementById("companyLogo");
+        if (company.logo) {
+          logoImg.src = company.logo;
+        }
+      }
+      
+      updateProductDropdowns() {
+        const selects = document.querySelectorAll(".description-select");
+        selects.forEach(select => {
+          const currentValue = select.value;
+          select.innerHTML = "";
+          
+          // Add products from data
+          this.data.products.forEach(product => {
+            const option = document.createElement("option");
+            option.value = product.name;
+            option.textContent = product.name;
+            select.appendChild(option);
+          });
+          
+          // Add "Enter New" option
+          const enterNewOption = document.createElement("option");
+          enterNewOption.value = "Enter New";
+          enterNewOption.textContent = "Enter New";
+          select.appendChild(enterNewOption);
+          
+          // Restore selection if it exists
+          if (Array.from(select.options).find(opt => opt.value === currentValue)) {
+            select.value = currentValue;
+          } else if (this.data.products.length > 0) {
+            select.value = this.data.products[0].name;
+          }
+        });
+        
+        // Update product images and prices
+        this.updateAllItemImages();
+        this.updateAllItemPrices();
+      }
+      
+      updateClientSearch() {
+        // Replace customer name field with search box
+        const customerNameCell = document.getElementById("customerName");
+        if (customerNameCell && !customerNameCell.querySelector(".client-search-container")) {
+          this.createClientSearchBox(customerNameCell);
+        }
+      }
+      
+      createClientSearchBox(cell) {
+        const searchContainer = document.createElement("div");
+        searchContainer.className = "client-search-container";
+        
+        const searchInput = document.createElement("input");
+        searchInput.type = "text";
+        searchInput.className = "client-search-input";
+        searchInput.placeholder = "Search clients or type manually...";
+        
+        const dropdown = document.createElement("div");
+        dropdown.className = "client-autocomplete-dropdown";
+        
+        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(dropdown);
+        
+        // Handle search
+        let searchTimeout;
+        searchInput.addEventListener("input", (e) => {
+          const query = e.target.value.trim();
+          clearTimeout(searchTimeout);
+          
+          if (!query) {
+            dropdown.classList.remove("show");
+            return;
+          }
+          
+          searchTimeout = setTimeout(() => {
+            this.performClientSearch(query, dropdown);
+          }, 200);
+        });
+        
+        // Handle selection
+        dropdown.addEventListener("click", (e) => {
+          const item = e.target.closest(".client-autocomplete-item");
+          if (item) {
+            if (item.classList.contains("add-new-client-item")) {
+              // Handle adding new client
+              const query = item.dataset.query;
+              this.addNewClientFromSearch(query);
+              dropdown.classList.remove("show");
+            } else {
+              // Handle selecting existing client
+              const clientData = JSON.parse(item.dataset.clientData);
+              this.selectClient(clientData);
+              dropdown.classList.remove("show");
+            }
+          }
+        });
+        
+        cell.innerHTML = "";
+        cell.appendChild(searchContainer);
+        cell.contentEditable = false;
+      }
+      
+      performClientSearch(query, dropdown) {
+        const results = this.data.clients.filter(clientData => {
+          const client = clientData.client;
+          const searchText = `${client.name} ${client.address}`.toLowerCase();
+          return searchText.includes(query.toLowerCase());
+        });
+        
+        if (results.length === 0) {
+          dropdown.innerHTML = `
+            <div class="client-autocomplete-item">No clients found</div>
+            <div class="client-autocomplete-item add-new-client-item" data-query="${query}">
+              <div class="client-name" style="color: #007bff; font-weight: 600;">➕ Add new client: "${query}"</div>
+              <div class="client-address" style="font-size: 12px; color: #666;">Click to create a new client</div>
+            </div>
+          `;
+        } else {
+          dropdown.innerHTML = results.slice(0, 10).map(clientData => {
+            const client = clientData.client;
+            return `
+              <div class="client-autocomplete-item" data-client-data='${JSON.stringify(clientData)}'>
+                <div class="client-name">${client.name}</div>
+                <div class="client-address">${client.address}, ${client.city}</div>
+              </div>
+            `;
+          }).join("");
+        }
+        
+        dropdown.classList.add("show");
+      }
+      
+      addNewClientFromSearch(query) {
+        // Match invoice.html: client management via modal removed
+        alert("Client management is not available. Please type the client details manually in the Bill To section.");
+      }
+      
+      selectClient(clientData) {
+        const client = clientData.client;
+        
+        // Update search input (match invoice.html)
+        const searchInput = document.querySelector(".client-search-input");
+        if (searchInput) {
+          searchInput.value = client.name;
+        }
+        
+        // Auto-fill other fields
+        const addressEl = document.getElementById("customerAddress");
+        const cityEl = document.getElementById("customerCity");
+        const phoneEl = document.getElementById("customerPhone");
+        const emailEl = document.getElementById("customerEmail");
+        
+        if (addressEl) addressEl.textContent = client.address || "";
+        if (cityEl) cityEl.textContent = client.city || "";
+        if (phoneEl) phoneEl.textContent = client.phone || "";
+        if (emailEl) emailEl.textContent = client.email || "";
+        
+        console.log(`✅ Selected client: ${client.name}`);
+      }
+      
+      // ========================================
+      // INVOICE FUNCTIONALITY
+      // ========================================
+      
+      initInvoiceControls() {
+        // Description dropdown handlers
+        document.querySelectorAll(".description-select").forEach(select => {
+          select.addEventListener("change", (e) => this.handleDescriptionChange(e.target));
+        });
+        
+        // Description input handlers
+        document.querySelectorAll(".description-input").forEach(input => {
+          input.addEventListener("blur", (e) => this.handleDescriptionInputBlur(e.target));
+        });
+        
+        // Auto-calculation handlers
+        document.querySelectorAll("[contenteditable]").forEach(cell => {
+          cell.addEventListener("blur", () => this.calculateAmounts());
+        });
+        
+        // Sync reference to invoice number when invoice number changes
+        const statementNo = document.getElementById("statementNo");
+        if (statementNo) {
+          statementNo.addEventListener("blur", () => {
+            this.syncReferenceToStatementNumber();
+          });
+          statementNo.addEventListener("input", () => {
+            this.syncReferenceToStatementNumber();
+          });
+        }
+        
+        // Prevent manual editing of reference field - it should always match statement number
+        const reference = document.getElementById("reference");
+        if (reference) {
+          reference.addEventListener("focus", (e) => {
+            // Sync before allowing any potential edit
+            this.syncReferenceToStatementNumber();
+          });
+          reference.addEventListener("blur", (e) => {
+            // Always sync back to statement number on blur
+            this.syncReferenceToStatementNumber();
+          });
+          reference.addEventListener("input", (e) => {
+            // Prevent manual changes - sync back immediately
+            this.syncReferenceToStatementNumber();
+          });
+        }
+      }
+      
+      // Open/New invoice buttons removed - controlled by parent (index.html)
+      
+      loadInvoice(filePath = null) {
+        /**
+         * Load invoice HTML files created by the app.
+         * Enhanced to accept file path parameter to bypass dialog.
+         * Matches case.html loadNewsletter() function exactly.
+         */
+        
+        if (filePath) {
+          // If file path is provided, load it directly
+          console.log("📁 Loading file from path:", filePath);
+          
+          // Set file path (matches case.html)
+          filePath = filePath;
+          this.currentFile = filePath;
+          
+          // Load the file content and process it
+          this.loadInvoiceContent(filePath);
+          return;
+        }
+        
+        // Original file dialog behavior (unchanged)
+        // Create file input (equivalent to QFileDialog.getOpenFileName)
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".html,.htm"; // Matches "HTML Files (*.html *.htm)"
+        
+        input.onchange = function(e) {
+          const file = e.target.files[0];
+          if (!file) {
+            return; // Equivalent to case.html: if not file: return
+          }
+          
+          // Set file path (matches case.html)
+          filePath = file.name;
+          this.currentFile = file.name;
+          
+          // Load the file content and process it
+          this.loadInvoiceContent(file);
+        }.bind(this);
+        
+        // Show file dialog (equivalent to QFileDialog with title "Open Invoice")
+        input.click();
+      }
+      
+      loadInvoiceContent(fileOrPath) {
+        /**
+         * Load and process file content (extracted from original loadInvoice logic)
+         */
+        try {
+          if (typeof fileOrPath === "string") {
+            // It"s a file path, try to fetch it
+            fetch(fileOrPath)
+              .then(response => response.text())
+              .then(invoiceHTML => {
+                this.processInvoiceContent(invoiceHTML);
+              })
+              .catch(error => {
+                console.error("❌ Failed to load file from path:", error);
+                this.showFileLoadError(fileOrPath, error.message);
+              });
+          } else {
+            // It"s a File object from dialog, use FileReader
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              const invoiceHTML = e.target.result;
+              this.processInvoiceContent(invoiceHTML);
+            }.bind(this);
+            reader.readAsText(fileOrPath);
+          }
+        } catch (error) {
+          console.error("❌ File loading error:", error);
+          this.showFileLoadError(fileOrPath, error.message);
+        }
+      }
+      
+      processInvoiceContent(invoiceHTML) {
+        /**
+         * Process the invoice content (matches case.html processNewsletterContent exactly)
+         */
+        // Send message to parent window to update iframe content
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: "load-invoice-html",
+            html: invoiceHTML,
+            filename: this.currentFile || "invoice.html"
+          }, "*");
+          
+          console.log("📂 Loaded invoice HTML into iframe:", this.currentFile || "unknown");
+        } else {
+          // If not in iframe, replace current document content
+          document.open();
+          document.write(invoiceHTML);
+          document.close();
+          
+          console.log("📂 Loaded invoice HTML:", this.currentFile || "unknown");
+        }
+      }
+      
+      showFileLoadError(filePath, errorMessage) {
+        /**
+         * Show error message when file loading fails
+         */
+        alert(`Failed to load file: ${filePath}\nError: ${errorMessage}\n\nThis may be due to browser security restrictions for local files.`);
+      }
+      
+      // New invoice button removed - controlled by parent (index.html)
+      
+      syncReferenceToStatementNumber() {
+        const statementNo = document.getElementById("statementNo");
+        const reference = document.getElementById("reference");
+        if (statementNo && reference) {
+          reference.textContent = statementNo.textContent.trim();
+        }
+      }
+      
+      resetNewInvoice() {
+        console.log("🆕 Resetting invoice to new...");
+        
+        // Switch to edit mode if in preview mode so user can edit the new invoice
+        if (this.currentMode === "preview") {
+          this.switchMode("edit");
+        }
+        
+        // Reset statement number - increment from current or set to 00001
+        const currentStatementNo = document.getElementById("statementNo");
+        if (currentStatementNo) {
+          const currentNo = currentStatementNo.textContent.trim();
+          if (/^\d+$/.test(currentNo)) {
+            const nextNumber = String(parseInt(currentNo) + 1).padStart(5, "0");
+            currentStatementNo.textContent = nextNumber;
+          } else {
+            currentStatementNo.textContent = "00001";
+          }
+          this.syncReferenceToStatementNumber();
+        }
+        
+        // Reset dates
+        const today = new Date();
+        const currentDate = today.toLocaleDateString("en-GB");
+        const periodEnd = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("en-GB");
+        
+        const statementDate = document.getElementById("statementDate");
+        const period = document.getElementById("period");
+        if (statementDate) statementDate.textContent = currentDate;
+        if (period) period.textContent = `${currentDate} - ${periodEnd}`;
+        
+        // Reset customer information
+        const customerName = document.getElementById("customerName");
+        const customerAddress = document.getElementById("customerAddress");
+        const customerCity = document.getElementById("customerCity");
+        const customerPhone = document.getElementById("customerPhone");
+        const customerEmail = document.getElementById("customerEmail");
+        
+        // Check if client search input exists
+        const clientSearchInput = document.querySelector(".client-search-input");
+        if (clientSearchInput) {
+          clientSearchInput.value = "";
+        } else if (customerName) {
+          customerName.textContent = "Your Customer Name";
+        }
+        
+        if (customerAddress) customerAddress.textContent = "Your Customer Address";
+        if (customerCity) customerCity.textContent = "Your Customer City";
+        if (customerPhone) customerPhone.textContent = "Your Customer Phone";
+        if (customerEmail) customerEmail.textContent = "Your Customer Email";
+        
+        // Reset items table - remove all rows except first, then reset first row
+        const tbody = document.querySelector(".items-table tbody");
+        if (tbody) {
+          const rows = tbody.querySelectorAll("tr");
+          // Remove all rows except the first one
+          for (let i = rows.length - 1; i > 0; i--) {
+            tbody.removeChild(rows[i]);
+          }
+          
+          // Reset first row to defaults
+          const firstRow = rows[0];
+          if (firstRow) {
+            const descSelect = firstRow.querySelector(".description-select");
+            const descInput = firstRow.querySelector(".description-input");
+            if (descSelect) {
+              descSelect.value = "Invoice";
+              descSelect.style.display = "block";
+              if (descInput) {
+                descInput.style.display = "none";
+                descInput.value = "";
+              }
+            }
+            
+            const chargesCell = firstRow.querySelector(".charges");
+            const creditsCell = firstRow.querySelector(".credits");
+            const balanceCell = firstRow.querySelector(".balance");
+            if (chargesCell) chargesCell.textContent = "£0.00";
+            if (creditsCell) creditsCell.textContent = "£0.00";
+            if (balanceCell) balanceCell.textContent = "£0.00";
+            
+            const dateCell = firstRow.querySelector("td:nth-child(1)");
+            if (dateCell) dateCell.textContent = currentDate;
+            
+            const refCell = firstRow.querySelector("td:nth-child(2)");
+            if (refCell) refCell.textContent = "";
+          }
+        }
+        
+        // Reset summary fields
+        const openingBalance = document.getElementById("openingBalance");
+        if (openingBalance) openingBalance.textContent = "£0.00";
+        
+        // Recalculate amounts
+        this.calculateAmounts();
+        
+        // Update row numbers
+        this.updateRowNumbers();
+        
+        console.log("✅ Statement reset to new successfully");
+      }
+      
+      addNewRow() {
+        const tbody = document.querySelector(".items-table tbody");
+        const existingRows = tbody.querySelectorAll("tr");
+        const newRowNumber = existingRows.length + 1;
+        
+        // Build options HTML from global items list
+        let optionsHTML = "";
+        this.globalItemsList.forEach(item => {
+          optionsHTML += `<option value="${item}">${item}</option>`;
+        });
+        optionsHTML += "<option value=\"Enter New\">Enter New</option>";
+        
+        const newRow = document.createElement("tr");
+        newRow.id = `row${newRowNumber}`;
+        newRow.innerHTML = `
+          <td id="date${newRowNumber}" contenteditable="true">${new Date().toLocaleDateString("en-GB")}</td>
+          <td id="ref${newRowNumber}" contenteditable="true"></td>
+          <td id="desc${newRowNumber}">
+            <div class="item-text">
+              <select id="descSelect${newRowNumber}" class="description-select">
+                ${optionsHTML}
+              </select>
+              <input type="text" id="descInput${newRowNumber}" class="description-input" style="display: none;">
+            </div>
+          </td>
+          <td id="charges${newRowNumber}" class="charges" contenteditable="true">£0.00</td>
+          <td id="credits${newRowNumber}" class="credits" contenteditable="true">£0.00</td>
+          <td id="balance${newRowNumber}" class="balance">£0.00</td>
+          <td class="actions-cell">
+            <button class="table-btn table-btn-up" data-action="move-up" data-row="${newRowNumber}" title="Move Up">↑</button>
+            <button class="table-btn table-btn-down" data-action="move-down" data-row="${newRowNumber}" title="Move Down">↓</button>
+            <button class="table-btn table-btn-delete" data-action="delete" data-row="${newRowNumber}" title="Delete Row">×</button>
+          </td>
+        `;
+        
+        tbody.appendChild(newRow);
+        
+        // Add event listeners for new row
+        const newSelect = newRow.querySelector(".description-select");
+        const newInput = newRow.querySelector(".description-input");
+        if (newSelect) {
+          newSelect.addEventListener("change", (e) => this.handleDescriptionChange(e.target));
+        }
+        if (newInput) {
+          newInput.addEventListener("blur", (e) => this.handleDescriptionInputBlur(e.target));
+        }
+        
+        const newEditableCells = newRow.querySelectorAll("[contenteditable]");
+        newEditableCells.forEach(cell => {
+          cell.addEventListener("blur", () => this.calculateAmounts());
+        });
+        
+        this.calculateAmounts();
+        console.log(`➕ Added new row ${newRowNumber}`);
+      }
+      
+      // ========================================
+      // ROW MANAGEMENT FUNCTIONS
+      // ========================================
+      
+      moveRowUp(rowNumber) {
+        const tbody = document.querySelector(".items-table tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const currentRowIndex = rows.findIndex(row => row.id === `row${rowNumber}`);
+        
+        if (currentRowIndex > 0) {
+          const currentRow = rows[currentRowIndex];
+          const previousRow = rows[currentRowIndex - 1];
+          
+          // Swap the rows
+          tbody.insertBefore(currentRow, previousRow);
+          
+          // Update row numbers and IDs
+          this.updateRowNumbers();
+          this.calculateAmounts();
+          
+          console.log(`⬆️ Moved row ${rowNumber} up`);
+        }
+      }
+      
+      moveRowDown(rowNumber) {
+        const tbody = document.querySelector(".items-table tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const currentRowIndex = rows.findIndex(row => row.id === `row${rowNumber}`);
+        
+        if (currentRowIndex < rows.length - 1) {
+          const currentRow = rows[currentRowIndex];
+          const nextRow = rows[currentRowIndex + 1];
+          
+          // Swap the rows
+          tbody.insertBefore(nextRow, currentRow);
+          
+          // Update row numbers and IDs
+          this.updateRowNumbers();
+          this.calculateAmounts();
+          
+          console.log(`⬇️ Moved row ${rowNumber} down`);
+        }
+      }
+      
+      deleteRow(rowNumber) {
+        const tbody = document.querySelector(".items-table tbody");
+        const rows = tbody.querySelectorAll("tr");
+        
+        if (rows.length > 1) {
+          const targetRow = document.getElementById(`row${rowNumber}`);
+          if (targetRow) {
+            tbody.removeChild(targetRow);
+            
+            // Update row numbers and IDs
+            this.updateRowNumbers();
+            this.calculateAmounts();
+            
+            console.log(`🗑️ Deleted row ${rowNumber}`);
+          }
+        } else {
+          alert("Cannot delete the last remaining row.");
+        }
+      }
+      
+      updateRowNumbers() {
+        const rows = document.querySelectorAll(".items-table tbody tr");
+        rows.forEach((row, index) => {
+          const newRowNumber = index + 1;
+          
+          // Update row ID
+          row.id = `row${newRowNumber}`;
+          
+          // Update all IDs to match new row number (Date, Ref, Description, Charges, Credits, Balance, Actions)
+          const dateCell = row.querySelector("td:nth-child(1)");
+          const refCell = row.querySelector("td:nth-child(2)");
+          const descCell = row.querySelector("td:nth-child(3)");
+          const chargesCell = row.querySelector("td:nth-child(4)");
+          const creditsCell = row.querySelector("td:nth-child(5)");
+          const balanceCell = row.querySelector("td:nth-child(6)");
+          
+          if (dateCell) dateCell.id = `date${newRowNumber}`;
+          if (refCell) refCell.id = `ref${newRowNumber}`;
+          if (descCell) descCell.id = `desc${newRowNumber}`;
+          if (chargesCell) chargesCell.id = `charges${newRowNumber}`;
+          if (creditsCell) creditsCell.id = `credits${newRowNumber}`;
+          if (balanceCell) balanceCell.id = `balance${newRowNumber}`;
+          
+          // Update description select and input IDs
+          const descSelect = row.querySelector(".description-select");
+          const descInput = row.querySelector(".description-input");
+          if (descSelect) descSelect.id = `descSelect${newRowNumber}`;
+          if (descInput) descInput.id = `descInput${newRowNumber}`;
+          
+          // Update row control buttons
+          const upBtn = row.querySelector(".table-btn-up");
+          const downBtn = row.querySelector(".table-btn-down");
+          const deleteBtn = row.querySelector(".table-btn-delete");
+
+          if (upBtn) {
+            upBtn.setAttribute("data-action", "move-up");
+            upBtn.setAttribute("data-row", newRowNumber.toString());
+          }
+          if (downBtn) {
+            downBtn.setAttribute("data-action", "move-down");
+            downBtn.setAttribute("data-row", newRowNumber.toString());
+          }
+          if (deleteBtn) {
+            deleteBtn.setAttribute("data-action", "delete");
+            deleteBtn.setAttribute("data-row", newRowNumber.toString());
+          }
+        });
+      }
+      
+      handleDescriptionChange(selectElement) {
+        const row = selectElement.closest("tr");
+        const inputField = row.querySelector(".description-input");
+        const selectedValue = selectElement.value;
+        
+        if (selectedValue === "Enter New") {
+          selectElement.style.display = "none";
+          inputField.style.display = "block";
+          inputField.value = "";
+          inputField.placeholder = "Enter description...";
+          setTimeout(() => inputField.focus(), 100);
+        } else {
+          inputField.value = selectedValue;
+          inputField.style.display = "none";
+          selectElement.style.display = "block";
+        }
+        this.calculateAmounts();
+      }
+      
+      handleDescriptionInputBlur(inputElement) {
+        const row = inputElement.closest("tr");
+        const selectField = row.querySelector(".description-select");
+        const inputValue = inputElement.value.trim();
+        
+        if (inputValue) {
+          this.addToGlobalItemsList(inputValue);
+          selectField.value = inputValue;
+          inputElement.style.display = "none";
+          selectField.style.display = "block";
+        } else {
+          inputElement.value = "Invoice";
+          selectField.value = "Invoice";
+          inputElement.style.display = "none";
+          selectField.style.display = "block";
+        }
+        this.calculateAmounts();
+      }
+      
+      addToGlobalItemsList(itemName) {
+        if (!this.globalItemsList.includes(itemName)) {
+          this.globalItemsList.push(itemName);
+          this.updateAllDropdowns();
+          console.log("✅ Added to global items:", itemName);
+          console.log("Global items list:", this.globalItemsList);
+        }
+      }
+      
+      updateAllDropdowns() {
+        console.log("🔄 Updating all dropdowns with global items:", this.globalItemsList);
+        
+        const allSelects = document.querySelectorAll(".description-select");
+        console.log("📋 Found description selects:", allSelects.length);
+        
+        allSelects.forEach((select, index) => {
+          const currentValue = select.value;
+          console.log(`📝 Select ${index + 1} current value:`, currentValue);
+          
+          // Clear existing options except "Enter New"
+          const enterNewOption = select.querySelector("option[value=\"Enter New\"]");
+          select.innerHTML = "";
+          
+          // Add all global items
+          this.globalItemsList.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item;
+            option.textContent = item;
+            select.appendChild(option);
+          });
+          
+          // Add "Enter New" at the bottom
+          if (enterNewOption) {
+            select.appendChild(enterNewOption);
+          } else {
+            const newEnterNewOption = document.createElement("option");
+            newEnterNewOption.value = "Enter New";
+            newEnterNewOption.textContent = "Enter New";
+            select.appendChild(newEnterNewOption);
+          }
+          
+          // Restore selection if it still exists
+          if (this.globalItemsList.includes(currentValue) || currentValue === "Enter New") {
+            select.value = currentValue;
+          } else {
+            select.value = this.globalItemsList[0] || "Example Product";
+          }
+          
+          console.log(`✅ Select ${index + 1} updated with ${select.options.length} options`);
+        });
+      }
+      
+      updateAllItemImages() {
+        // Statement format - no product images; just recalculate
+        this.calculateAmounts();
+      }
+      
+      updateAllItemPrices() {
+        // Statement format - no unit prices; just recalculate
+        this.calculateAmounts();
+      }
+      
+      calculateAmounts() {
+        const rows = document.querySelectorAll(".items-table tbody tr");
+        const openingBalanceEl = document.getElementById("openingBalance");
+        const openingBalance = parseFloat(openingBalanceEl?.textContent.replace(/[£,]/g, "")) || 0;
+        
+        let runningBalance = openingBalance;
+        let totalCharges = 0;
+        let totalCredits = 0;
+        
+        rows.forEach(row => {
+          const chargesCell = row.querySelector(".charges");
+          const creditsCell = row.querySelector(".credits");
+          const balanceCell = row.querySelector(".balance");
+          
+          if (chargesCell && creditsCell && balanceCell) {
+            const charges = parseFloat(chargesCell.textContent.replace(/[£,]/g, "")) || 0;
+            const credits = parseFloat(creditsCell.textContent.replace(/[£,]/g, "")) || 0;
+            
+            totalCharges += charges;
+            totalCredits += credits;
+            runningBalance = runningBalance + charges - credits;
+            
+            balanceCell.textContent = `£${runningBalance.toFixed(2)}`;
+            
+            // Format editable cells with £ if missing
+            if (!chargesCell.textContent.includes("£")) chargesCell.textContent = `£${charges.toFixed(2)}`;
+            if (!creditsCell.textContent.includes("£")) creditsCell.textContent = `£${credits.toFixed(2)}`;
+          }
+        });
+        
+        const totalChargesEl = document.getElementById("totalCharges");
+        const totalCreditsEl = document.getElementById("totalCredits");
+        const closingBalanceEl = document.getElementById("closingBalance");
+        
+        if (totalChargesEl) totalChargesEl.textContent = `£${totalCharges.toFixed(2)}`;
+        if (totalCreditsEl) totalCreditsEl.textContent = `£${totalCredits.toFixed(2)}`;
+        if (closingBalanceEl) closingBalanceEl.textContent = `£${runningBalance.toFixed(2)}`;
+        if (openingBalanceEl && !openingBalanceEl.textContent.includes("£")) {
+          openingBalanceEl.textContent = `£${openingBalance.toFixed(2)}`;
+        }
+      }
+      
+      setCurrentDates() {
+        const today = new Date();
+        const currentDate = today.toLocaleDateString("en-GB");
+        const periodEnd = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("en-GB");
+        
+        const statementDate = document.getElementById("statementDate");
+        const period = document.getElementById("period");
+        if (statementDate && !statementDate.textContent.trim()) {
+          statementDate.textContent = currentDate;
+        }
+        if (period && !period.textContent.trim()) {
+          period.textContent = `${currentDate} - ${periodEnd}`;
+        }
+        
+        const dateCells = document.querySelectorAll(".items-table tbody tr td:nth-child(1)");
+        dateCells.forEach(cell => {
+          if (cell && !cell.textContent.trim()) {
+            cell.textContent = currentDate;
+          }
+        });
+      }
+      
+      
+      // Save functionality now triggered by parent messages
+      
+      // Export functionality now triggered by parent messages
+      
+      // Rendering is now handled entirely by parent (index.html)
+      // Invoice files (test.html) only handle:
+      // - Calculations
+      // - Size reporting (via sendSizeToParent)
+      // - Mode switching (preview/edit)
+      // - Data saving
+      
+      async convertImagesToDataURLs(element) {
+        const images = element.querySelectorAll("img");
+        const promises = Array.from(images).map(img => {
+          return new Promise((resolve) => {
+            if (img.src && !img.src.startsWith("data:")) {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              
+              img.onload = () => {
+                try {
+                  ctx.drawImage(img, 0, 0);
+                  img.src = canvas.toDataURL("image/png");
+                  resolve();
+                } catch (e) {
+                  console.warn("Could not convert image to data URL:", e);
+                  resolve();
+                }
+              };
+              
+              img.onerror = () => {
+                console.warn("Image load error, skipping conversion");
+                resolve();
+              };
+              
+              // If image is already loaded
+              if (img.complete) {
+                img.onload();
+              }
+            } else {
+              resolve();
+            }
+          });
+        });
+        
+        await Promise.all(promises);
+      }
+      
+      saveInvoiceData() {
+        // Save all current statement data (uses same storage key for compatibility)
+        const statementData = {
+          statementNo: document.getElementById("statementNo").textContent,
+          statementDate: document.getElementById("statementDate").textContent,
+          period: document.getElementById("period").textContent,
+          customerName: document.querySelector(".client-search-input")?.value || document.getElementById("customerName")?.textContent,
+          customerAddress: document.getElementById("customerAddress").textContent,
+          customerCity: document.getElementById("customerCity").textContent,
+          customerPhone: document.getElementById("customerPhone").textContent,
+          customerEmail: document.getElementById("customerEmail").textContent,
+          items: this.getCurrentItems(),
+          openingBalance: document.getElementById("openingBalance")?.textContent || "£0.00",
+          totalCharges: document.getElementById("totalCharges")?.textContent || "£0.00",
+          totalCredits: document.getElementById("totalCredits")?.textContent || "£0.00",
+          closingBalance: document.getElementById("closingBalance")?.textContent || "£0.00",
+          // Payment Information
+          reference: document.getElementById("reference")?.textContent,
+          bankName: document.getElementById("bankName").textContent,
+          accountName: document.getElementById("accountName").textContent,
+          sortCode: document.getElementById("sortCode").textContent,
+          account: document.getElementById("account").textContent,
+          lastSaved: new Date().toISOString()
+        };
+        
+        // Use GlobalStorage (same key for compatibility with parent)
+        GlobalStorage.saveInvoiceData(statementData);
+        
+        // Notify parent that save is complete
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: "invoice-saved",
+            success: true
+          }, "*");
+        }
+        
+        console.log("💾 Invoice data saved to global storage");
+      }
+      
+      /** Save = archive only */
+      saveInvoice() {
+        this.saveAndArchiveInvoice(false);
+      }
+      
+      /** Send = archive + capture + download PNG (like invoice) */
+      async sendInvoice() {
+        this.saveAndArchiveInvoice(false);
+        const page = document.getElementById("invoice");
+        if (!page) {
+          alert("Statement element not found. Please refresh and try again.");
+          return;
+        }
+        const originalMode = this.currentMode;
+        try {
+          this.switchMode("preview");
+          await new Promise((r) => setTimeout(r, 200));
+          const a4Width = 794;
+          const exportHeight = Math.max(page.scrollHeight || 1123, 1123);
+          const { dataUrl, filename } = await this.requestParentCapture(a4Width, exportHeight);
+          const link = document.createElement("a");
+          link.download = filename;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch (err) {
+          console.error("Statement send failed:", err);
+          alert(err.message || "Send failed. Please try again.");
+        } finally {
+          this.switchMode(originalMode);
+        }
+      }
+      
+      requestParentCapture(a4Width, exportHeight) {
+        return new Promise((resolve, reject) => {
+          const requestId = "capture-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+          let settled = false;
+          const done = (err, result) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener("message", handler);
+            clearTimeout(tid);
+            if (err) reject(err);
+            else resolve(result);
+          };
+          const handler = (e) => {
+            if (!e.data || e.data.type !== "parent-capture-result" || e.data.requestId !== requestId) return;
+            if (e.data.error) done(new Error(e.data.error));
+            else done(null, { dataUrl: e.data.dataUrl, filename: e.data.filename || "statement.png" });
+          };
+          window.addEventListener("message", handler);
+          window.parent.postMessage({ type: "parent-capture-export", requestId, a4Width, exportHeight }, "*");
+          const tid = setTimeout(() => done(new Error("Export timed out")), 60000);
+        });
+      }
+      
+      saveAndArchiveInvoice(clearAfter = false) {
+        const currentData = GlobalStorage.getInvoiceData();
+        const statementData = {
+          documentType: "statement",
+          statementNo: document.getElementById("statementNo").textContent,
+          statementDate: document.getElementById("statementDate").textContent,
+          period: document.getElementById("period").textContent,
+          customerName: document.querySelector(".client-search-input")?.value || document.getElementById("customerName")?.textContent,
+          customerAddress: document.getElementById("customerAddress").textContent,
+          customerCity: document.getElementById("customerCity").textContent,
+          customerPhone: document.getElementById("customerPhone").textContent,
+          customerEmail: document.getElementById("customerEmail").textContent,
+          items: this.getCurrentItems(),
+          openingBalance: document.getElementById("openingBalance")?.textContent || "£0.00",
+          totalCharges: document.getElementById("totalCharges")?.textContent || "£0.00",
+          totalCredits: document.getElementById("totalCredits")?.textContent || "£0.00",
+          closingBalance: document.getElementById("closingBalance")?.textContent || "£0.00",
+          reference: document.getElementById("reference")?.textContent,
+          bankName: document.getElementById("bankName").textContent,
+          accountName: document.getElementById("accountName").textContent,
+          sortCode: document.getElementById("sortCode").textContent,
+          account: document.getElementById("account").textContent,
+          lastSaved: new Date().toISOString()
+        };
+        if (currentData && (currentData.id || currentData.originalId)) {
+          statementData.id = currentData.id || currentData.originalId;
+          statementData.createdAt = currentData.createdAt;
+        }
+        const success = GlobalStorage.saveAndArchiveInvoice(statementData);
+        if (success) {
+          console.log("📚 Statement archived successfully");
+          GlobalStorage.advanceStatementNumberIfUsed(statementData.statementNo);
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: "invoice-saved", documentType: "statement" }, "*");
+            }
+          } catch (e) { console.warn("Statement: could not notify parent", e); }
+        } else if (window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage({ type: "invoice-save-failed", documentType: "statement" }, "*");
+          } catch (e) {}
+        }
+        return success;
+      }
+      
+      initAutoSave() {
+        if (this.autoSaveInterval) {
+          clearInterval(this.autoSaveInterval);
+          this.autoSaveInterval = null;
+        }
+        if (this.data.settings.autoSave === false) {
+          console.log("⏱️ Statement auto-save disabled in settings");
+          return;
+        }
+        this.autoSaveInterval = setInterval(() => {
+          const statementNo = document.getElementById("statementNo")?.textContent?.trim();
+          if (!statementNo || statementNo === "00000") return;
+          this.saveInvoiceData();
+        }, 30000);
+        console.log("⏱️ Statement auto-save initialized (every 30 seconds)");
+      }
+      
+      getCurrentItems() {
+        const items = [];
+        const rows = document.querySelectorAll(".items-table tbody tr");
+        
+        rows.forEach((row, index) => {
+          const date = row.querySelector("td:nth-child(1)")?.textContent || "";
+          const ref = row.querySelector("td:nth-child(2)")?.textContent || "";
+          const select = row.querySelector(".description-select");
+          const input = row.querySelector(".description-input");
+          const description = select?.style.display === "none" ? input?.value : select?.value;
+          const charges = row.querySelector(".charges")?.textContent || "£0.00";
+          const credits = row.querySelector(".credits")?.textContent || "£0.00";
+          const balance = row.querySelector(".balance")?.textContent || "£0.00";
+          
+          items.push({
+            rowNumber: index + 1,
+            description: description || "",
+            ref: ref,
+            charges: charges,
+            credits: credits,
+            balance: balance,
+            date: date
+          });
+        });
+        
+        return items;
+      }
+      
+      loadSavedInvoice() {
+        try {
+          const invoiceData = GlobalStorage.getInvoiceData();
+          if (invoiceData) {
+            this.populateInvoiceFromData(invoiceData);
+            console.log("📂 Loaded saved statement data from global storage");
+          } else {
+            const nextNum = GlobalStorage.getNextStatementNumber();
+            const formatted = GlobalStorage.formatStatementNumber(nextNum);
+            const statementNoEl = document.getElementById("statementNo");
+            if (statementNoEl) {
+              statementNoEl.textContent = formatted;
+              this.syncReferenceToStatementNumber();
+            }
+            console.log(`📋 No saved draft — displaying next statement number: ${formatted}`);
+          }
+        } catch (error) {
+          console.error("Error loading saved statement from global storage:", error);
+        }
+      }
+      
+      populateStatementFromInvoices(payload) {
+        if (!payload) return;
+        this.populateInvoiceFromData(payload);
+        this.calculateAmounts();
+      }
+      
+      populateInvoiceFromData(data) {
+        // Load header - use statement number from statement counter when loading invoice data
+        const statementNo = document.getElementById("statementNo");
+        if (statementNo) {
+          if (data.statementNo) {
+            statementNo.textContent = data.statementNo;
+          } else {
+            // Data is from invoice - use statement counter, not invoice number
+            statementNo.textContent = GlobalStorage.formatStatementNumber(GlobalStorage.getNextStatementNumber());
+          }
+          this.syncReferenceToStatementNumber();
+        }
+        if (data.statementDate) document.getElementById("statementDate").textContent = data.statementDate;
+        else if (data.invoiceDate) document.getElementById("statementDate").textContent = data.invoiceDate;
+        if (data.period) document.getElementById("period").textContent = data.period;
+        else if (data.dueDate) document.getElementById("period").textContent = data.dueDate;
+        
+        // Load customer information
+        if (data.customerName) {
+          const searchInput = document.querySelector(".client-search-input");
+          if (searchInput) searchInput.value = data.customerName;
+          else document.getElementById("customerName").textContent = data.customerName;
+        }
+        if (data.customerAddress) document.getElementById("customerAddress").textContent = data.customerAddress;
+        if (data.customerCity) document.getElementById("customerCity").textContent = data.customerCity;
+        if (data.customerPhone) document.getElementById("customerPhone").textContent = data.customerPhone;
+        if (data.customerEmail) document.getElementById("customerEmail").textContent = data.customerEmail;
+        
+        // Load financial summary - statement format
+        if (data.openingBalance) document.getElementById("openingBalance").textContent = data.openingBalance;
+        if (data.totalCharges) document.getElementById("totalCharges").textContent = data.totalCharges;
+        if (data.totalCredits) document.getElementById("totalCredits").textContent = data.totalCredits;
+        if (data.closingBalance) document.getElementById("closingBalance").textContent = data.closingBalance;
+        
+        // Load payment information
+        if (data.reference) {
+          document.getElementById("reference").textContent = data.reference;
+        } else if (data.statementNo || data.invoiceNo) {
+          this.syncReferenceToStatementNumber();
+        }
+        if (data.bankName) document.getElementById("bankName").textContent = data.bankName;
+        if (data.accountName) document.getElementById("accountName").textContent = data.accountName;
+        if (data.sortCode) document.getElementById("sortCode").textContent = data.sortCode;
+        if (data.account) document.getElementById("account").textContent = data.account;
+        
+        if (data.items && data.items.length > 0) {
+          this.loadInvoiceItems(data.items);
+        }
+      }
+      
+      loadInvoiceItems(items) {
+        const tbody = document.querySelector(".items-table tbody");
+        if (!tbody) return;
+        
+        // Clear existing rows except the first one
+        const existingRows = tbody.querySelectorAll("tr");
+        for (let i = existingRows.length - 1; i > 0; i--) {
+          tbody.removeChild(existingRows[i]);
+        }
+        
+        // Update the first row
+        if (items.length > 0) {
+          this.populateRow(1, items[0]);
+        }
+        
+        // Add additional rows for remaining items
+        for (let i = 1; i < items.length; i++) {
+          this.addNewRow();
+          this.populateRow(i + 1, items[i]);
+        }
+        
+        // Update row numbers
+        this.updateRowNumbers();
+        this.calculateAmounts();
+      }
+      
+      showInvoiceList() {
+        const modal = document.getElementById("invoiceListModal");
+        if (!modal) return;
+        modal.style.display = "flex";
+        this.renderInvoiceList();
+        setTimeout(() => {
+          const searchInput = document.getElementById("invoiceSearchInput");
+          if (searchInput) searchInput.focus();
+        }, 100);
+        const closeBtn = document.getElementById("closeInvoiceListModal");
+        if (closeBtn && !closeBtn._wired) {
+          closeBtn._wired = true;
+          closeBtn.addEventListener("click", () => this.hideInvoiceList());
+        }
+        const searchInput = document.getElementById("invoiceSearchInput");
+        if (searchInput && !searchInput._wired) {
+          searchInput._wired = true;
+          searchInput.addEventListener("input", () => this.filterInvoices(searchInput.value));
+        }
+        modal.addEventListener("click", (e) => {
+          if (e.target.id === "invoiceListModal") this.hideInvoiceList();
+        });
+      }
+      
+      hideInvoiceList() {
+        const modal = document.getElementById("invoiceListModal");
+        if (modal) modal.style.display = "none";
+        const searchInput = document.getElementById("invoiceSearchInput");
+        if (searchInput) searchInput.value = "";
+      }
+      
+      filterInvoices(query) {
+        const filtered = GlobalStorage.searchSavedInvoices(query);
+        this.renderInvoiceList(filtered);
+      }
+      
+      renderInvoiceList(invoices = null) {
+        if (!invoices) invoices = GlobalStorage.getAllSavedInvoices();
+        invoices.sort((a, b) => {
+          const dateA = new Date(a.archivedAt || a.createdAt || a.lastSaved || 0);
+          const dateB = new Date(b.archivedAt || b.createdAt || b.lastSaved || 0);
+          return dateB - dateA;
+        });
+        const countEl = document.getElementById("invoiceCount");
+        const container = document.getElementById("invoiceListContainer");
+        const emptyState = document.getElementById("emptyInvoiceState");
+        if (!container) return;
+        if (countEl) countEl.textContent = invoices.length;
+        container.innerHTML = "";
+        if (invoices.length === 0) {
+          if (emptyState) emptyState.style.display = "block";
+          return;
+        }
+        if (emptyState) emptyState.style.display = "none";
+        invoices.forEach(inv => {
+          const card = document.createElement("div");
+          card.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;";
+          const archiveDate = inv.archivedAt ? new Date(inv.archivedAt).toLocaleDateString() : "N/A";
+          const total = inv.closingBalance || inv.total || "£0.00";
+          card.innerHTML = `
+            <div style="flex: 1;">
+              <div style="font-weight: bold; font-size: 16px; color: #333;">${inv.statementNo || inv.invoiceNo || "N/A"}</div>
+              <div style="color: #666; font-size: 14px;">${inv.customerName || "No customer"}</div>
+              <div style="color: #999; font-size: 12px;">Archived: ${archiveDate}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-weight: bold;">${total}</span>
+              <button onclick="window.app.editInvoice('${inv.id}')" style="padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer;">✏️ Edit</button>
+              <button onclick="window.app.deleteInvoice('${inv.id}')" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">🗑️ Delete</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+      
+      editInvoice(invoiceId) {
+        if (!confirm("Load this document? Any unsaved changes will be lost.")) return;
+        const success = GlobalStorage.loadInvoiceForEditing(invoiceId);
+        if (success) {
+          this.hideInvoiceList();
+          this.loadSavedInvoice();
+          this.switchMode("preview");
+        } else {
+          alert("Failed to load document.");
+        }
+      }
+      
+      deleteInvoice(invoiceId) {
+        if (!confirm("Delete this document? This cannot be undone.")) return;
+        const success = GlobalStorage.deleteSavedInvoice(invoiceId);
+        if (success) {
+          const q = document.getElementById("invoiceSearchInput")?.value || "";
+          this.renderInvoiceList(q ? GlobalStorage.searchSavedInvoices(q) : null);
+        }
+      }
+      
+      populateRow(rowNumber, item) {
+        const row = document.getElementById(`row${rowNumber}`);
+        if (!row) return;
+        
+        const dateCell = row.querySelector("td:nth-child(1)");
+        if (dateCell && item.date) dateCell.textContent = item.date;
+        
+        const refCell = row.querySelector("td:nth-child(2)");
+        if (refCell && item.ref) refCell.textContent = item.ref;
+        
+        const chargesCell = row.querySelector(".charges");
+        const creditsCell = row.querySelector(".credits");
+        const balanceCell = row.querySelector(".balance");
+        // Support both statement format (charges/credits) and legacy invoice format (amount)
+        const charges = item.charges || (item.amount ? item.amount : "£0.00");
+        const credits = item.credits || "£0.00";
+        if (chargesCell) chargesCell.textContent = charges;
+        if (creditsCell) creditsCell.textContent = credits;
+        if (balanceCell && item.balance) balanceCell.textContent = item.balance;
+        
+        const select = row.querySelector(".description-select");
+        const input = row.querySelector(".description-input");
+        if (item.description) {
+          if (this.globalItemsList.includes(item.description) && select) {
+            select.value = item.description;
+            select.style.display = "block";
+            if (input) input.style.display = "none";
+          } else {
+            if (select) select.value = "Enter New";
+            if (input) {
+              input.value = item.description;
+              input.style.display = "block";
+              select.style.display = "none";
+            }
+          }
+        }
+      }
+      
+    }
+    
+    // ========================================
+    // SIZE REPORTING TO PARENT (must be before app init so switchMode/messageHandler can call it)
+    // ========================================
+    let _lastSentWidth = 0, _lastSentHeight = 0;
+    let _sendSizeDebounce = null;
+    const A4_WIDTH = 800, A4_HEIGHT = 1131;
+    function sendSizeToParent() {
+      if (_sendSizeDebounce) clearTimeout(_sendSizeDebounce);
+      _sendSizeDebounce = setTimeout(() => {
+        _sendSizeDebounce = null;
+        try {
+          const page = document.getElementById('invoice');
+          let width, height;
+          if (page) {
+            width = Math.round(Math.max(page.scrollWidth, page.offsetWidth));
+            height = Math.round(Math.max(page.scrollHeight, page.offsetHeight));
+          } else {
+            width = A4_WIDTH;
+            height = A4_HEIGHT;
+          }
+          width = Math.max(400, Math.min(width, 1200));
+          height = Math.max(500, Math.min(height, 5000));
+          if (width === _lastSentWidth && height === _lastSentHeight) return;
+          _lastSentWidth = width;
+          _lastSentHeight = height;
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: "iframe-resize", width, height }, "*");
+            console.log(`📤 Sent iframe size to parent: ${width}x${height}`);
+          }
+        } catch (error) {
+          console.log("⚠️ Could not send size to parent:", error);
+        }
+      }, 100);
+    }
+    
+    // ========================================
+    // INITIALIZE APPLICATION
+    // ========================================
+    
+    // Global app instance
+    window.app = new StaticInvoiceApp();
+    
+    // Additional initialization when DOM is ready
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("🎉 Account Statement ready!");
+      
+      // Send initial size to parent window
+      sendSizeToParent();
+      
+      // Send size updates when content changes (exclude overlay - it triggers its own resize loop)
+      const observer = new MutationObserver((mutations) => {
+        const fromOverlay = mutations.some(m => {
+          const el = m.target;
+          return el && (el.id === 'overlay-container' || el.id === 'overlay-images-container' || el.id === 'draw-layer' || el.closest?.('#overlay-container') || el.closest?.('#overlay-images-container') || el.closest?.('.page-overlay-wrapper') || el.closest?.('.overlay-image'));
+        });
+        if (!fromOverlay) sendSizeToParent();
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+      
+      // Don't send on window resize - parent controls iframe size
+    });
+    
+    // request-size is handled only in initParentMessageListeners() to avoid duplicate size requests
+  </script>
+
+</body>
+</html>

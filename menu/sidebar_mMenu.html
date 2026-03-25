@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Invoice Menu</title>
+    <style>
+        :root {
+            --gray-bg: #f8f6f3;
+            --gray-shade-1: #f2efe9;
+            --gray-shade-2: #ebe7e0;
+            --gray-shade-3: #e4dfd7;
+            --gray-surface: #eeebe5;
+            --gray-border: #ddd8cf;
+            --gray-border-light: #e6e2db;
+            --gray-muted: #6b6560;
+            --gray-text: #4a4541;
+            --gray-text-bright: #2d2926;
+            --icon-muted: #7a7169;
+            --accent-amber: #c17a2e;
+            --accent-amber-light: #e8b88a;
+            --accent-orange: #c45c1a;
+            --accent-red: #b84a2a;
+            --accent-strip-bg: #f5ebe2;
+            --accent-strip-border: #d4b8a0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--gray-bg);
+            color: var(--gray-text-bright);
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .toolbox-sidebar {
+            min-width: 200px;
+            max-width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .mode-toggle-viewport {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            margin: 12px 0 16px;
+            border-radius: 12px;
+            border: 1px solid var(--accent-strip-border);
+            background: var(--accent-strip-bg);
+            touch-action: pan-x;
+        }
+
+        .mode-toggle-viewport::-webkit-scrollbar {
+            display: none;
+        }
+
+        .mode-toggle-inner {
+            display: flex;
+            width: max-content;
+        }
+
+        .mode-toggle-strip {
+            display: flex;
+            flex-shrink: 0;
+            padding: 4px;
+        }
+
+        .mode-toggle-strip .mode-btn {
+            flex: 0 0 auto;
+            min-width: 72px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 14px;
+            min-height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--gray-text);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease, color 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .mode-toggle-strip .mode-btn.active {
+            background: rgba(193, 122, 46, 0.18);
+            color: var(--accent-orange);
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(196, 92, 26, 0.12);
+        }
+
+        .mode-toggle-strip .mode-btn:active {
+            opacity: 0.9;
+        }
+
+        .mode-toggle-strip .mode-btn.mode-btn-action {
+            color: var(--gray-text);
+        }
+
+        .mode-toggle-strip .mode-btn.mode-btn-action:not(.active):hover {
+            color: var(--accent-orange);
+        }
+
+        .mode-toggle-strip .mode-btn:hover {
+            color: var(--gray-text-bright);
+        }
+
+        .categories-container {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: none;
+            padding: 0 12px 32px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            touch-action: pan-y;
+        }
+
+        .categories-container::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+
+        .categories-inner {
+            display: block;
+        }
+
+        .categories-content {
+            display: block;
+        }
+
+        .category-widget {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--gray-shade-1);
+            border: 1px solid var(--gray-border);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), 0 4px 14px rgba(0, 0, 0, 0.06);
+        }
+
+        .category-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--gray-muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 14px 12px;
+            min-height: 44px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: color 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            background: var(--gray-shade-3);
+            border-radius: 10px 10px 0 0;
+            border-bottom: 1px solid var(--gray-border);
+        }
+
+        .category-label:hover {
+            color: var(--gray-text-bright);
+        }
+
+        .category-label:active {
+            color: var(--gray-text-bright);
+        }
+
+        .category-label .arrow {
+            font-size: 10px;
+            opacity: 0.8;
+        }
+
+        .category-label .category-name {
+            flex: 1;
+        }
+
+        .category-pin {
+            margin-left: auto;
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-muted);
+            font-size: 14px;
+            line-height: 1;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .category-pin:hover {
+            color: var(--accent-orange);
+            background: rgba(193, 122, 46, 0.12);
+        }
+
+        .category-pin:active {
+            opacity: 0.9;
+        }
+
+        .category-pin .category-pin-icon {
+            display: block;
+            width: 14px;
+            height: 14px;
+            color: var(--accent-amber);
+        }
+        .category-pin:hover .category-pin-icon {
+            color: var(--accent-orange);
+        }
+
+        .buttons-container {
+            margin-top: 0;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .buttons-container.show {
+            display: block;
+            opacity: 1;
+        }
+
+        .buttons-grid {
+            display: flex;
+            flex-direction: column;
+            padding: 0 0 4px 0;
+        }
+
+        .toolbox-button {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--gray-border-light);
+            color: var(--gray-text-bright);
+            border-radius: 0;
+            padding: 14px 16px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.3;
+            transition: background 0.2s ease, color 0.2s ease;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            min-height: 48px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .buttons-grid .toolbox-button:last-child {
+            border-bottom: none;
+        }
+
+        .toolbox-button:hover {
+            background: rgba(193, 122, 46, 0.06);
+        }
+
+        .toolbox-button:active {
+            background: rgba(193, 122, 46, 0.1);
+        }
+
+        .toolbox-button .icon {
+            font-size: 18px;
+            flex-shrink: 0;
+            width: 26px;
+            text-align: center;
+            color: var(--accent-amber);
+            font-weight: 600;
+            line-height: 1;
+            -webkit-text-stroke: 0.35px currentColor;
+        }
+
+        .toolbox-button:hover .icon,
+        .toolbox-button:active .icon {
+            color: var(--accent-orange);
+        }
+
+        .toolbox-button .text {
+            flex: 1;
+        }
+
+        .toolbox-button.mode-btn.active {
+            background: rgba(193, 122, 46, 0.12);
+            color: var(--accent-orange);
+        }
+
+        .toolbox-button.mode-btn.active .icon {
+            color: inherit;
+        }
+
+        .mode-toggle-strip .mode-btn .icon-symbol {
+            color: var(--accent-amber);
+            font-size: 1.05em;
+            font-weight: 600;
+            line-height: 1;
+            -webkit-text-stroke: 0.3px currentColor;
+        }
+
+        .mode-toggle-strip .mode-btn.active .icon-symbol {
+            color: var(--accent-orange);
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbox-sidebar">
+        <div class="categories-container" id="categoriesContainer">
+            <div class="categories-content" id="categoriesContent">
+            <div class="mode-toggle-viewport" id="modeToggleViewport">
+                <div class="mode-toggle-inner">
+                    <div class="mode-toggle-strip" id="modeToggleStrip">
+                        <button type="button" class="mode-btn active" data-action="setMode" data-mode="edit"><span class="icon-symbol">✎</span> Edit</button>
+                        <button type="button" class="mode-btn" data-action="setMode" data-mode="preview"><span class="icon-symbol">○</span> Preview</button>
+                        <button type="button" class="mode-btn" data-action="invoke" data-id="saveBtn"><span class="icon-symbol">✓</span> Save</button>
+                        <button type="button" class="mode-btn mode-btn-action" data-action="send"><span class="icon-symbol">↗</span> Send</button>
+                        <button type="button" class="mode-btn" data-action="print"><span class="icon-symbol">⎙</span> Print</button>
+                        <button type="button" class="mode-btn mode-btn-pin" data-action="openCategoryShortcut" data-category="Mode" title="Pin to floating toolbar"><span class="icon-symbol">📌</span> Pin</button>
+                    </div>
+                </div>
+            </div>
+            <div class="category-widget" data-category="New">
+                <div class="category-label" data-expanded="true"><span class="arrow">▼</span><span class="category-name">New</span><button type="button" class="category-pin" data-category="New" aria-label="Pin to canvas"><span class="category-pin-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span></button></div>
+                <div class="buttons-container show">
+                    <div class="buttons-grid">
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="newInvoiceBtn"><span class="icon">□</span><span class="text">Invoice</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="newReceiptBtn"><span class="icon">≡</span><span class="text">Receipt</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="exportBtn"><span class="icon">↓</span><span class="text">Statement</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="newSummaryBtn"><span class="icon">Σ</span><span class="text">Summary</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="newOrderListBtn"><span class="icon">☰</span><span class="text">Order List</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="newDocumentBtn"><span class="icon">⎘</span><span class="text">Document</span></button>
+                    </div>
+                </div>
+            </div>
+            <div class="category-widget" data-category="Document">
+                <div class="category-label" data-expanded="true"><span class="arrow">▼</span><span class="category-name">Document</span><button type="button" class="category-pin" data-category="Document" aria-label="Pin to canvas"><span class="category-pin-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span></button></div>
+                <div class="buttons-container show">
+                    <div class="buttons-grid">
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="loadInvoiceBtnEdit"><span class="icon">⊞</span><span class="text">Load Invoice</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="loadReceiptBtnEdit"><span class="icon">⊞</span><span class="text">Load Receipt</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="loadStatementBtnEdit"><span class="icon">⊞</span><span class="text">Load Statement</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="newTransactionsBtn"><span class="icon">⊞</span><span class="text">View Transactions</span></button>
+                    </div>
+                </div>
+            </div>
+            <div class="category-widget" data-category="Settings">
+                <div class="category-label" data-expanded="true"><span class="arrow">▼</span><span class="category-name">Settings</span><button type="button" class="category-pin" data-category="Settings" aria-label="Pin to canvas"><span class="category-pin-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span></button></div>
+                <div class="buttons-container show">
+                    <div class="buttons-grid">
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="dataManagementBtn"><span class="icon">⚙</span><span class="text">Setup</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="dataManagementBtn"><span class="icon">◇</span><span class="text">Themes</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="dataManagementBtn"><span class="icon">ℹ</span><span class="text">About</span></button>
+                        <button type="button" class="toolbox-button" data-action="invoke" data-id="dataManagementBtn"><span class="icon">?</span><span class="text">Help</span></button>
+                    </div>
+                </div>
+            </div>
+            <div class="category-widget" data-category="Tools">
+                <div class="category-label" data-expanded="true"><span class="arrow">▼</span><span class="category-name">Tools</span><button type="button" class="category-pin" data-category="Tools" aria-label="Pin to canvas"><span class="category-pin-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span></button></div>
+                <div class="buttons-container show">
+                    <div class="buttons-grid">
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="rectangle"><span class="icon">▭</span><span class="text">Rectangle</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="circle"><span class="icon">●</span><span class="text">Circle</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="ellipse"><span class="icon">⬭</span><span class="text">Ellipse</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="triangle"><span class="icon">▲</span><span class="text">Triangle</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="line"><span class="icon">—</span><span class="text">Line</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="text"><span class="icon">T</span><span class="text">Text</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="stamp"><span class="icon">▣</span><span class="text">Stamp / Image</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="overlayImage"><span class="icon">🖼</span><span class="text">Add Image Overlay</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="draw"><span class="icon">✎</span><span class="text">Draw</span></button>
+                        <button type="button" class="toolbox-button" data-action="addToPage" data-type="eraser"><span class="icon">⌫</span><span class="text">Eraser</span></button>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            function send(msg) {
+                var payload = { source: 'sidebar-invoice', ...msg };
+                try {
+                    var target = window.parent;
+                    if (target && target !== window) {
+                        target.postMessage(payload, '*');
+                        return;
+                    }
+                    if (window.top && window.top !== window) {
+                        window.top.postMessage(payload, '*');
+                    }
+                } catch (e) {
+                    console.error('Sidebar postMessage failed:', e);
+                }
+            }
+            function setupInfiniteScroll() {
+                var container = document.getElementById('categoriesContainer');
+                var content = document.getElementById('categoriesContent');
+                if (!container || !content) return;
+                var clone = content.cloneNode(true);
+                clone.id = '';
+                clone.removeAttribute('id');
+                var inner = document.createElement('div');
+                inner.className = 'categories-inner';
+                inner.appendChild(content);
+                inner.appendChild(clone);
+                container.innerHTML = '';
+                container.appendChild(inner);
+                var segmentHeight = content.offsetHeight;
+                var rafId = null;
+                function checkBoundary() {
+                    var st = container.scrollTop;
+                    if (segmentHeight <= 0) return;
+                    if (st >= segmentHeight) {
+                        container.scrollTop = st - segmentHeight;
+                    } else if (st <= 0) {
+                        container.scrollTop = st + segmentHeight;
+                    }
+                }
+                container.addEventListener('scroll', function() {
+                    if (rafId !== null) cancelAnimationFrame(rafId);
+                    rafId = requestAnimationFrame(function() {
+                        rafId = null;
+                        checkBoundary();
+                    });
+                }, { passive: true });
+            }
+            function setupModeToggleScroll(container) {
+                if (!container) return;
+                container.querySelectorAll('.mode-toggle-viewport').forEach(function(viewport) {
+                    var inner = viewport.querySelector('.mode-toggle-inner');
+                    var strip = viewport.querySelector('.mode-toggle-strip');
+                    if (!inner || !strip) return;
+                    var stripClone = strip.cloneNode(true);
+                    stripClone.removeAttribute('id');
+                    stripClone.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+                    inner.appendChild(stripClone);
+                    var segmentWidth = strip.offsetWidth;
+                    var rafId = null;
+                    function checkBoundary() {
+                        var sl = viewport.scrollLeft;
+                        if (segmentWidth <= 0) return;
+                        if (sl >= segmentWidth) {
+                            viewport.scrollLeft = sl - segmentWidth;
+                        } else if (sl <= 0) {
+                            viewport.scrollLeft = sl + segmentWidth;
+                        }
+                    }
+                    viewport.addEventListener('scroll', function() {
+                        if (rafId !== null) cancelAnimationFrame(rafId);
+                        rafId = requestAnimationFrame(function() {
+                            rafId = null;
+                            checkBoundary();
+                        });
+                    }, { passive: true });
+                });
+            }
+            function setupCategoryLabels() {
+                document.querySelectorAll('.category-label').forEach(function(label) {
+                    label.addEventListener('click', function(e) {
+                        if (e.target.closest('.category-pin')) return;
+                        var expanded = this.getAttribute('data-expanded') !== 'true';
+                        this.querySelector('.arrow').textContent = expanded ? '▼' : '▶';
+                        this.setAttribute('data-expanded', expanded);
+                        var container = this.closest('.category-widget').querySelector('.buttons-container');
+                        if (expanded) {
+                            container.style.display = 'block';
+                            container.style.opacity = '0';
+                            requestAnimationFrame(function() { container.style.opacity = '1'; });
+                        } else {
+                            container.style.opacity = '0';
+                            setTimeout(function() { container.style.display = 'none'; }, 300);
+                        }
+                    });
+                });
+            }
+            function setupCategoryPins() {
+                document.querySelectorAll('.category-pin').forEach(function(btn) {
+                    var clickTimer = null;
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var category = this.getAttribute('data-category');
+                        if (!category) return;
+                        if (clickTimer) clearTimeout(clickTimer);
+                        clickTimer = setTimeout(function() {
+                            clickTimer = null;
+                            send({ action: 'openCategoryShortcut', category: category });
+                        }, 250);
+                    });
+                    btn.addEventListener('dblclick', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (clickTimer) {
+                            clearTimeout(clickTimer);
+                            clickTimer = null;
+                        }
+                        var category = this.getAttribute('data-category');
+                        if (category) send({ action: 'openCategoryShortcut', category: category });
+                        send({ action: 'closeSidebar' });
+                    });
+                });
+            }
+            function setModeActive(mode) {
+                document.querySelectorAll('.mode-btn').forEach(function(b) {
+                    b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+                });
+            }
+            function setupButtons() {
+                document.querySelectorAll('.toolbox-button').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var action = this.getAttribute('data-action');
+                        var id = this.getAttribute('data-id');
+                        var mode = this.getAttribute('data-mode');
+                        var type = this.getAttribute('data-type');
+                        if (action === 'invoke' && id) {
+                            send({ action: 'invoke', id: id });
+                        } else if (action === 'setMode' && mode) {
+                            setModeActive(mode);
+                            send({ action: 'setMode', mode: mode });
+                        } else if (action === 'print') {
+                            send({ action: 'print' });
+                        } else if (action === 'addToPage' && type) {
+                            send({ action: 'addToPage', type: type });
+                        } else if (['zoomIn','zoomOut','resetZoom','center'].indexOf(action) >= 0) {
+                            send({ action: action });
+                        }
+                    });
+                });
+                document.querySelectorAll('.mode-toggle-strip .mode-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var action = this.getAttribute('data-action');
+                        var mode = this.getAttribute('data-mode');
+                        var id = this.getAttribute('data-id');
+                        var category = this.getAttribute('data-category');
+                        if (action === 'openCategoryShortcut' && category) {
+                            send({ action: 'openCategoryShortcut', category: category });
+                        } else if (action === 'send') {
+                            send({ action: 'send' });
+                        } else if (action === 'print') {
+                            send({ action: 'print' });
+                        } else if (action === 'invoke' && id) {
+                            send({ action: 'invoke', id: id });
+                        } else if (mode) {
+                            setModeActive(mode);
+                            send({ action: 'setMode', mode: mode });
+                        }
+                    });
+                });
+            }
+            function setupKeyboardNav() {
+                document.querySelectorAll('.category-label').forEach(function(label) {
+                    label.setAttribute('tabindex', '0');
+                    label.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+                    });
+                });
+                document.querySelectorAll('.toolbox-button').forEach(function(btn) {
+                    btn.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+                    });
+                });
+            }
+            function init() {
+                setupInfiniteScroll();
+                setupModeToggleScroll(document.getElementById('categoriesContainer'));
+                setupCategoryLabels();
+                setupCategoryPins();
+                setupButtons();
+                setupKeyboardNav();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+            window.addEventListener('message', function(e) {
+                if (e.data && e.data.source === 'parent-invoice') {
+                    if (e.data.action === 'setMode') {
+                        setModeActive(e.data.mode);
+                    } else if (e.data.action === 'drawMode') {
+                        document.querySelectorAll('.toolbox-button[data-type="draw"]').forEach(function(b) {
+                            b.classList.toggle('active', !!e.data.enabled);
+                        });
+                    }
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

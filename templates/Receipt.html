@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Receipt</title>
+  <!-- Global Storage Manager - project root so upgrade shares reference browser storage -->
+  <script src="../js/global-storage.js"></script>
+  <style>
+    /* Page Size: A4 Portrait (match invoice.html / statement.html) */
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+    html {
+      margin: 0;
+      padding: 0;
+    }
+    /* ========================================
+       BASE STYLES (match invoice.html exactly for iframe/size)
+       ======================================== */
+    body {
+      font-family: Arial, sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: auto;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      min-width: auto;
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* ========================================
+       MAIN CONTENT AREA (exact dimensions as invoice)
+       ======================================== */
+    .main-content {
+      margin-top: 0;
+      width: 210mm;
+      min-width: 800px;
+      display: flex;
+      justify-content: center;
+      padding: 0px;
+      transition: all 0.3s ease;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ========================================
+       A4 PAGE (exact size as invoice: 210mm x 297mm, min 800px)
+       ======================================== */
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: white;
+      padding: 0;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+
+    .header-banner {
+      background-color: #926E4C;
+      height: 60px;
+      width: 100%;
+    }
+
+    .invoice-wrapper {
+      padding: 1mm 10mm 0 10mm;
+      position: relative;
+    }
+
+    /* Let clicks pass through to overlays sent to back; keep inputs/buttons clickable */
+    .a4 > *:not(.page-overlay-wrapper) {
+      pointer-events: none;
+    }
+    .a4 > *:not(.page-overlay-wrapper) input,
+    .a4 > *:not(.page-overlay-wrapper) select,
+    .a4 > *:not(.page-overlay-wrapper) textarea,
+    .a4 > *:not(.page-overlay-wrapper) button,
+    .a4 > *:not(.page-overlay-wrapper) a,
+    .a4 > *:not(.page-overlay-wrapper) img,
+    .a4 > *:not(.page-overlay-wrapper) [contenteditable="true"] {
+      pointer-events: auto;
+    }
+
+    .top-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .branding {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 2;
+    }
+
+    .branding img {
+      width: 100px;
+      height: auto;
+      margin-top: -36px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 3;
+    }
+
+    .company-info {
+      margin-top: -6px;
+      margin-bottom: 15px;
+    }
+
+    .company-info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .statement-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #926E4C;
+    }
+
+    .statement-details {
+      text-align: right;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .statement-details p {
+      margin: 5px 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .customer-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .bill-to, .ship-to, .account-summary {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .bill-to h3, .ship-to h3, .account-summary h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .bill-to p, .ship-to p, .account-summary p {
+      margin: 3px 0;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    th, td {
+      padding: 6px 5px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    th {
+      background-color: #2f3f46;
+      color: white;
+      font-weight: bold;
+    }
+
+    .items-table th:nth-child(1) { width: 12%; } /* Date */
+    .items-table th:nth-child(2) { width: 8%; }  /* Ref */
+    .items-table th:nth-child(3) { width: 35%; } /* Description */
+    .items-table th:nth-child(4) { width: 10%; } /* Qty */
+    .items-table th:nth-child(5) { width: 15%; } /* Unit Price */
+    .items-table th:nth-child(6) { width: 20%; } /* Amount */
+
+    .items-table td:nth-child(4),
+    .items-table td:nth-child(5),
+    .items-table td:nth-child(6) {
+      text-align: right;
+    }
+
+
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .summary-table {
+      width: 300px;
+      border-collapse: collapse;
+    }
+
+    .summary-table td {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    .summary-table td:first-child {
+      font-weight: bold;
+      background-color: #f8f9fa;
+      width: 60%;
+    }
+
+    .summary-table td:last-child {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .total-section {
+      margin-top: 15px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .total-table {
+      width: 50%;
+      border-collapse: collapse;
+    }
+
+    .total-table td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    .total-table td:first-child {
+      font-weight: bold;
+      background-color: #f8f9fa;
+      width: 60%;
+    }
+
+    .total-table td:last-child {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .total-row td {
+      background-color: #926E4C !important;
+      color: white !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
+    }
+
+    .outstanding-row td {
+      background-color: #d4edda !important; /* Medium light green - more visible */
+      color: #155724 !important;
+      font-weight: bold !important;
+    }
+    
+    /* Amount Paid styling */
+    .amount-paid-row td {
+      background-color: #ffeaa7 !important; /* Medium light orange - more visible */
+      color: #856404 !important;
+      font-weight: bold !important;
+    }
+
+    /* Summary table row styling - exact same as Wanis StateMent 1.html */
+    .summary-table tr:nth-child(1) td {
+      background-color: #e3f2fd !important; /* Light blue for Subtotal */
+      color: #1565c0 !important;
+      font-weight: bold !important;
+    }
+
+    .summary-table tr:nth-child(2) td {
+      background-color: #fff3e0 !important; /* Light orange for Total */
+      color: #ef6c00 !important;
+      font-weight: bold !important;
+    }
+
+    .summary-table tr:nth-child(3) td {
+      background-color: #e8f5e8 !important; /* Light green for Amount Paid */
+      color: #2e7d32 !important;
+      font-weight: bold !important;
+    }
+
+    .summary-table tr:nth-child(4) td {
+      background-color: #f3e5f5 !important; /* Light purple for Outstanding */
+      color: #7b1fa2 !important;
+      font-weight: bold !important;
+    }
+
+    .terms-section {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .payment-info, .terms-info {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .payment-info h3, .terms-info h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .payment-info p, .terms-info p {
+      margin: 3px 0;
+      font-size: 14px;
+    }
+
+    .footer-banner {
+      background-color: #926E4C;
+      height: 30px;
+      width: 100%;
+      margin-top: auto;
+    }
+
+    [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      padding: 2px;
+      min-width: 50px;
+    }
+
+    /* Edit/Preview mode (match invoice/statement) */
+    body.edit-mode [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      pointer-events: auto;
+    }
+    body.preview-mode [contenteditable] {
+      border-bottom: none !important;
+      outline: none !important;
+      pointer-events: none !important;
+      user-select: text;
+      cursor: default !important;
+    }
+    body.preview-mode input,
+    body.preview-mode select,
+    body.preview-mode textarea,
+    body.preview-mode button:not(.always-enabled) {
+      pointer-events: none !important;
+      cursor: default !important;
+    }
+    body.preview-mode select,
+    body.preview-mode input[type="text"],
+    body.preview-mode textarea {
+      color: #222 !important;
+      -webkit-text-fill-color: #222 !important;
+      opacity: 1 !important;
+    }
+    body.preview-mode .always-enabled {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* Image/export capture: allow full text to show (no clipping) */
+    body.capture-exporting .items-table {
+      table-layout: auto !important;
+    }
+    body.capture-exporting .items-table tbody tr {
+      height: auto !important;
+      max-height: none !important;
+    }
+    body.capture-exporting .items-table th,
+    body.capture-exporting .items-table td {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    body.capture-exporting .items-table td[contenteditable="true"] {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+
+    .currency {
+      font-weight: bold;
+    }
+
+    /* Match invoice/statement: A4 fits on mobile */
+    @media (max-width: 768px) {
+      .a4 {
+        width: 100%;
+        max-width: 210mm;
+        margin: 0 auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      .items-table {
+        font-size: 14px;
+      }
+      .items-table th,
+      .items-table td {
+        padding: 8px 4px;
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .items-table th,
+      .items-table td {
+        padding: 6px 2px;
+        font-size: 12px;
+      }
+      .statement-title {
+        font-size: 32px;
+      }
+      .company-info p,
+      .bill-to p,
+      .ship-to p,
+      .account-summary p {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 768px) and (orientation: landscape) {
+      .a4 {
+        margin: 10px auto;
+      }
+    }
+
+    @media print {
+      .main-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+      }
+      .a4 {
+        box-shadow: none !important;
+        margin: 0 !important;
+      }
+      body {
+        background: white !important;
+      }
+    }
+  </style>
+</head>
+<body class="edit-mode">
+<div class="main-content">
+<div class="a4" id="receipt">
+<div class="header-banner"></div>
+<div class="invoice-wrapper">
+<!-- Top Section -->
+<div class="top-section">
+<div class="branding">
+<img id="companyLogo" alt="Company Logo" src="../logos/invoLOGO.png">
+<div class="company-info" id="companyInfo">
+<p><strong>Your Company Name</strong></p>
+<p>Your Company Address</p>
+<p>Your City, Postcode</p>
+<p>Phone: Your Phone Number</p>
+<p>Email: your.email@company.com</p>
+<p>Company Number: Your Company Number</p>
+<p>VAT NO.: Your VAT Number</p>
+</div>
+</div>
+<div class="statement-details">
+<div class="statement-title" contenteditable="true">RECEIPT</div>
+<p><span class="label">Receipt No:</span> <span contenteditable="true" id="receiptNo">00001</span></p>
+<p><span class="label">Receipt Date:</span> <span contenteditable="true" id="receiptDate"></span></p>
+<p><span class="label">Period:</span> <span contenteditable="true" id="statementPeriod"></span></p>
+<p><span class="label">Previous Balance:</span> <span contenteditable="true" id="previousBalance">£0.00</span></p>
+</div>
+</div>
+<!-- Customer Section -->
+<div class="customer-section">
+<div class="bill-to">
+<h3>Bill To:</h3>
+<p><span class="label">Name:</span> <span contenteditable="true" id="customerName">Your Customer Name</span></p>
+<p><span class="label">Address:</span> <span contenteditable="true" id="customerAddress">Your Customer Address</span></p>
+<p><span class="label">City:</span> <span contenteditable="true" id="customerCity">Your Customer City</span></p>
+<p><span class="label">Phone:</span> <span contenteditable="true" id="customerPhone">Your Customer Phone</span></p>
+<p><span class="label">Email:</span> <span contenteditable="true" id="customerEmail">Your Customer Email</span></p>
+</div>
+</div>
+<!-- Statement Transactions Table -->
+<table class="items-table">
+<thead>
+<tr>
+<th>Date</th>
+<th>Ref</th>
+<th>Description</th>
+<th>Qty</th>
+<th>Unit Price</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody contenteditable="true">
+<tr>
+<td id="date1" contenteditable="true"></td>
+<td id="ref1" contenteditable="true"></td>
+<td id="desc1" contenteditable="true"></td>
+<td class="qty" id="qty1" contenteditable="true">0</td>
+<td class="unit-price" id="unitPrice1" contenteditable="true">£0.00</td>
+<td class="amount" id="amount1">£0.00</td>
+</tr>
+</tbody>
+</table>
+<!-- Summary and Payment Section -->
+<div class="summary-section">
+<div class="payment-info">
+<h3>Payment Information</h3>
+<p><span class="label">Reference:</span> <span id="reference" contenteditable="true">Your Reference</span></p>
+<p><span class="label">Bank:</span> <span id="bankName" contenteditable="true">Your Bank Name</span></p>
+<p><span class="label">Account Name:</span> <span id="accountName" contenteditable="true">Your Account Name</span></p>
+<p><span class="label">Sort Code:</span> <span id="sortCode" contenteditable="true">Your Sort Code</span></p>
+<p><span class="label">Account No:</span> <span id="account" contenteditable="true">Your Account Number</span></p>
+</div>
+<table class="summary-table">
+<tbody>
+<tr>
+<td>Subtotal:</td>
+<td id="subtotal">£0.00</td>
+</tr>
+<tr class="total-row">
+<td>Total:</td>
+<td id="total">£0.00</td>
+</tr>
+<tr class="amount-paid-row">
+<td>Amount Paid:</td>
+<td id="amountPaid" contenteditable="true">£0.00</td>
+</tr>
+<tr class="outstanding-row">
+<td>Outstanding:</td>
+<td id="outstanding">£0.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Receipt Footer -->
+<div class="total-section">
+<table class="total-table">
+<tbody>
+<tr class="total-row">
+<td>Outstanding Balance:</td>
+<td id="outstandingBalance">£0.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="footer-banner">
+<div class="branding-footer">
+<p style="text-align: center; margin: 10px 0; font-size: 12px; color: #ffffff;">
+Powered by <strong>GuaPxL</strong> - Professional Receipt
+</p>
+</div>
+</div>
+</div>
+<script>
+    function formatCurrency(num) {
+      if (num === null || num === undefined || isNaN(num)) return '£0.00';
+      const n = Number(num);
+      return '£' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function parseNum(val) {
+      if (val === null || val === undefined) return 0;
+      const s = String(val).replace(/[£,\s]/g, '');
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    // Auto-calculate amounts when quantities or prices change
+    function calculateAmounts() {
+      const rows = document.querySelectorAll('.items-table tbody tr');
+      let subtotal = 0;
+
+      rows.forEach((row) => {
+        const qtyCell = row.querySelector('.qty');
+        const unitPriceCell = row.querySelector('.unit-price');
+        const amountCell = row.querySelector('.amount');
+
+        if (qtyCell && unitPriceCell && amountCell) {
+          const qty = parseNum(qtyCell.textContent);
+          const unitPrice = parseNum(unitPriceCell.textContent);
+          const amount = qty * unitPrice;
+          amountCell.textContent = formatCurrency(amount);
+          subtotal += amount;
+        }
+      });
+
+      const amountPaidEl = document.getElementById('amountPaid');
+      const amountPaid = amountPaidEl ? parseNum(amountPaidEl.textContent) : 0;
+      const total = subtotal;
+      const outstanding = Math.max(0, total - amountPaid);
+
+      const subtotalEl = document.getElementById('subtotal');
+      const totalEl = document.getElementById('total');
+      const outstandingEl = document.getElementById('outstanding');
+      const outstandingBalanceEl = document.getElementById('outstandingBalance');
+      if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+      if (totalEl) totalEl.textContent = formatCurrency(total);
+      if (outstandingEl) outstandingEl.textContent = formatCurrency(outstanding);
+      if (outstandingBalanceEl) outstandingBalanceEl.textContent = formatCurrency(outstanding);
+    }
+
+    // ========================================
+    // Iframe size (match invoice.html – parent uses this to avoid cutoff)
+    // ========================================
+    let _lastSentWidth = 0, _lastSentHeight = 0;
+    let _sendSizeDebounce = null;
+    const A4_WIDTH = 800, A4_HEIGHT = 1131;
+    function sendSizeToParent() {
+      if (_sendSizeDebounce) clearTimeout(_sendSizeDebounce);
+      _sendSizeDebounce = setTimeout(() => {
+        _sendSizeDebounce = null;
+        try {
+          const page = document.getElementById('receipt');
+          let width, height;
+          if (page) {
+            width = Math.round(Math.max(page.scrollWidth, page.offsetWidth));
+            height = Math.round(Math.max(page.scrollHeight, page.offsetHeight));
+          } else {
+            width = A4_WIDTH;
+            height = A4_HEIGHT;
+          }
+          width = Math.max(400, Math.min(width, 1200));
+          height = Math.max(500, Math.min(height, 5000));
+          if (width === _lastSentWidth && height === _lastSentHeight) return;
+          _lastSentWidth = width;
+          _lastSentHeight = height;
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'iframe-resize', width, height }, '*');
+          }
+        } catch (e) {
+          console.warn('Receipt: could not send size to parent', e);
+        }
+      }, 100);
+    }
+
+    function attachCalculationListeners() {
+      // Match invoice.html: attach blur to ALL contenteditable so Outstanding/Total section update
+      document.querySelectorAll('[contenteditable="true"]').forEach(function(cell) {
+        if (!cell._receiptCalcBound) {
+          cell._receiptCalcBound = true;
+          cell.addEventListener('blur', function() {
+            calculateAmounts();
+          });
+        }
+      });
+      // Amount Paid: also update on input/keyup for live Outstanding & Outstanding Balance (contenteditable can be unreliable with input only)
+      const amountPaidEl = document.getElementById('amountPaid');
+      if (amountPaidEl && !amountPaidEl._receiptAmountBound) {
+        amountPaidEl._receiptAmountBound = true;
+        amountPaidEl.addEventListener('input', calculateAmounts);
+        amountPaidEl.addEventListener('keyup', calculateAmounts);
+        amountPaidEl.addEventListener('blur', function() {
+          if (amountPaidEl.textContent.trim() !== '') {
+            amountPaidEl.textContent = formatCurrency(parseNum(amountPaidEl.textContent));
+          }
+          calculateAmounts();
+        });
+      }
+    }
+
+    // Apply branding (company name, address, logo) from same localStorage as main app
+    function applyBrandingFromStorage() {
+      try {
+        var raw = localStorage.getItem('invoiceApp_company');
+        var company = raw ? JSON.parse(raw) : null;
+        if (!company) return;
+
+        var companyInfo = document.getElementById('companyInfo');
+        if (companyInfo) {
+          companyInfo.innerHTML =
+            '<p><strong>' + (company.name || 'Your Company Name') + '</strong></p>' +
+            '<p>' + (company.address || 'Your Company Address') + '</p>' +
+            '<p>' + (company.city || 'Your City, Postcode') + '</p>' +
+            '<p>Phone: ' + (company.phone || 'Your Phone Number') + '</p>' +
+            '<p>Email: ' + (company.email || 'your.email@company.com') + '</p>' +
+            '<p>Company Number: ' + (company.companyNumber || 'Your Company Number') + '</p>' +
+            '<p>VAT NO.: ' + (company.vatNumber || 'Your VAT Number') + '</p>';
+        }
+
+        var logoImg = document.getElementById('companyLogo');
+        if (logoImg && company.logo) {
+          logoImg.src = company.logo;
+        }
+
+        var bankNameEl = document.getElementById('bankName');
+        var accountNameEl = document.getElementById('accountName');
+        var sortCodeEl = document.getElementById('sortCode');
+        var accountEl = document.getElementById('account');
+        if (bankNameEl) bankNameEl.textContent = company.bankName || 'Your Bank Name';
+        if (accountNameEl) accountNameEl.textContent = company.accountName || 'Your Account Name';
+        if (sortCodeEl) sortCodeEl.textContent = company.sortCode || 'Your Sort Code';
+        if (accountEl) accountEl.textContent = company.account || 'Your Account Number';
+      } catch (e) {
+        console.warn('Receipt: applyBrandingFromStorage error', e);
+      }
+    }
+
+    // Add event listeners for auto-calculation and iframe resize
+    document.addEventListener('DOMContentLoaded', function() {
+      applyBrandingFromStorage();
+      attachCalculationListeners();
+      calculateAmounts();
+      sendSizeToParent();
+      const observer = new MutationObserver(function(mutations) {
+        const fromOverlay = mutations.some(function(m) {
+          var el = m.target;
+          return el && (el.id === 'overlay-container' || el.id === 'overlay-images-container' || el.id === 'draw-layer' || (el.closest && (el.closest('#overlay-container') || el.closest('#overlay-images-container') || el.closest('.page-overlay-wrapper') || el.closest('.overlay-image'))));
+        });
+        if (!fromOverlay) sendSizeToParent();
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+      // Don't send on window resize - parent controls iframe size
+    });
+
+    function getReceiptData() {
+      var rows = document.querySelectorAll('.items-table tbody tr');
+      var items = [];
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var dateCell = row.querySelector('td:nth-child(1)');
+        var refCell = row.querySelector('td:nth-child(2)');
+        var descCell = row.querySelector('td:nth-child(3)');
+        var qtyCell = row.querySelector('.qty');
+        var unitPriceCell = row.querySelector('.unit-price');
+        var amountCell = row.querySelector('.amount');
+        items.push({
+          date: dateCell ? dateCell.textContent : '',
+          ref: refCell ? refCell.textContent : '',
+          description: descCell ? descCell.textContent : '',
+          qty: qtyCell ? qtyCell.textContent : '0',
+          unitPrice: unitPriceCell ? unitPriceCell.textContent : '£0.00',
+          amount: amountCell ? amountCell.textContent : '£0.00'
+        });
+      }
+      var receiptNoEl = document.getElementById('receiptNo');
+      var statementNo = receiptNoEl ? receiptNoEl.textContent : '';
+      return {
+        documentType: 'receipt',
+        sourceInvoiceId: window.__receiptSourceInvoiceId || '',
+        statementNo: statementNo,
+        receiptNo: statementNo,
+        invoiceDate: document.getElementById('receiptDate') ? document.getElementById('receiptDate').textContent : '',
+        period: document.getElementById('statementPeriod') ? document.getElementById('statementPeriod').textContent : '',
+        previousBalance: document.getElementById('previousBalance') ? document.getElementById('previousBalance').textContent : '£0.00',
+        customerName: document.getElementById('customerName') ? document.getElementById('customerName').textContent : '',
+        customerAddress: document.getElementById('customerAddress') ? document.getElementById('customerAddress').textContent : '',
+        customerCity: document.getElementById('customerCity') ? document.getElementById('customerCity').textContent : '',
+        customerPhone: document.getElementById('customerPhone') ? document.getElementById('customerPhone').textContent : '',
+        customerEmail: document.getElementById('customerEmail') ? document.getElementById('customerEmail').textContent : '',
+        items: items,
+        reference: document.getElementById('reference') ? document.getElementById('reference').textContent : '',
+        bankName: document.getElementById('bankName') ? document.getElementById('bankName').textContent : '',
+        accountName: document.getElementById('accountName') ? document.getElementById('accountName').textContent : '',
+        sortCode: document.getElementById('sortCode') ? document.getElementById('sortCode').textContent : '',
+        account: document.getElementById('account') ? document.getElementById('account').textContent : '',
+        subtotal: document.getElementById('subtotal') ? document.getElementById('subtotal').textContent : '£0.00',
+        total: document.getElementById('total') ? document.getElementById('total').textContent : '£0.00',
+        amountPaid: document.getElementById('amountPaid') ? document.getElementById('amountPaid').textContent : '£0.00',
+        outstanding: document.getElementById('outstanding') ? document.getElementById('outstanding').textContent : '£0.00',
+        lastSaved: new Date().toISOString()
+      };
+    }
+
+    function updateSourceInvoiceFromReceipt(receiptData) {
+      if (typeof GlobalStorage === 'undefined' || !receiptData) return true;
+      var sourceId = receiptData.sourceInvoiceId || window.__receiptSourceInvoiceId || '';
+      if (!sourceId) return true;
+      var all = GlobalStorage.getAllSavedInvoices();
+      if (!Array.isArray(all) || all.length === 0) return true;
+      var source = all.find(function(doc) {
+        var isInvoice = !doc || !doc.documentType || doc.documentType === 'invoice';
+        return isInvoice && (doc.id === sourceId || doc.originalId === sourceId);
+      });
+      if (!source) return true;
+
+      var totalNum = parseNum(source.total);
+      var paidNum = parseNum(receiptData.amountPaid);
+      var normalizedPaid = Math.max(0, Math.min(totalNum, paidNum));
+      var normalizedOutstanding = Math.max(0, totalNum - normalizedPaid);
+      var updatedInvoice = {
+        ...source,
+        amountPaid: formatCurrency(normalizedPaid),
+        outstanding: formatCurrency(normalizedOutstanding),
+        lastSaved: new Date().toISOString()
+      };
+      return GlobalStorage.saveAndArchiveInvoice(updatedInvoice);
+    }
+
+    function saveAndArchiveReceipt() {
+      if (typeof GlobalStorage === 'undefined') return false;
+      var data = getReceiptData();
+      var success = GlobalStorage.saveAndArchiveInvoice(data);
+      if (success) {
+        success = updateSourceInvoiceFromReceipt(data);
+      }
+      if (success) {
+        GlobalStorage.advanceStatementNumberIfUsed(data.statementNo || data.receiptNo);
+      }
+      return success;
+    }
+    function applyReceiptMode(mode) {
+      document.body.className = mode + '-mode';
+      if (mode === 'preview') {
+        document.querySelectorAll('[contenteditable]').forEach(function(el) {
+          el.setAttribute('data-original-ce', 'true');
+          el.contentEditable = false;
+        });
+        document.querySelectorAll('input, textarea, select').forEach(function(el) {
+          if (!el.closest('.modal-overlay')) {
+            el.setAttribute('data-original-disabled', el.disabled === true ? 'true' : 'false');
+            el.disabled = true;
+            if (el.tagName !== 'SELECT') el.readOnly = true;
+          }
+        });
+        document.querySelectorAll('button').forEach(function(el) {
+          if (!el.classList.contains('always-enabled') && !el.closest('.modal-overlay')) {
+            el.setAttribute('data-original-disabled', el.disabled === true ? 'true' : 'false');
+            el.disabled = true;
+          }
+        });
+      } else {
+        document.querySelectorAll('[data-original-ce]').forEach(function(el) {
+          el.contentEditable = true;
+          el.removeAttribute('data-original-ce');
+        });
+        document.querySelectorAll('input[data-original-disabled], textarea[data-original-disabled], select[data-original-disabled]').forEach(function(el) {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          if (el.tagName !== 'SELECT') el.readOnly = false;
+          el.removeAttribute('data-original-disabled');
+        });
+        document.querySelectorAll('button[data-original-disabled]').forEach(function(el) {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          el.removeAttribute('data-original-disabled');
+        });
+        // Fallback: force-enable any still-disabled fields and buttons
+        document.querySelectorAll('[contenteditable]').forEach(function(el) {
+          if (el.contentEditable === 'false' || el.contentEditable === false) el.contentEditable = true;
+        });
+        document.querySelectorAll('input, textarea, select').forEach(function(el) {
+          if (el.disabled) el.disabled = false;
+          if (el.tagName !== 'SELECT' && el.readOnly) el.readOnly = false;
+        });
+        document.querySelectorAll('button').forEach(function(btn) {
+          if (btn.disabled) btn.disabled = false;
+        });
+      }
+    }
+    window.addEventListener('message', function(event) {
+      // Only accept messages from the direct parent (ignore other windows/tabs)
+      if (event.source !== window.parent) return;
+      if (event.data && event.data.type === 'request-size') {
+        sendSizeToParent();
+      }
+      if (event.data && event.data.type === 'switch-mode') {
+        applyReceiptMode(event.data.mode || 'edit');
+      }
+      if (event.data && event.data.type === 'update-branding') {
+        applyBrandingFromStorage();
+      }
+      if (event.data && event.data.type === 'invoice-action') {
+        var action = event.data.action;
+        if (action === 'saveInvoice') {
+          try {
+            var ok = typeof saveAndArchiveReceipt === 'function' && saveAndArchiveReceipt();
+            if (window.parent && window.parent !== window) {
+              if (ok) {
+                window.parent.postMessage({ type: 'invoice-saved', documentType: 'receipt' }, '*');
+              } else {
+                window.parent.postMessage({ type: 'invoice-save-failed', documentType: 'receipt' }, '*');
+              }
+            }
+          } catch (e) {
+            console.warn('Receipt save failed:', e);
+            if (window.parent && window.parent !== window) {
+              try { window.parent.postMessage({ type: 'invoice-save-failed', documentType: 'receipt' }, '*'); } catch (e2) {}
+            }
+          }
+        } else if (action === 'sendInvoice') {
+          (function doSendReceipt() {
+            try {
+              if (typeof saveAndArchiveReceipt !== 'function' || !saveAndArchiveReceipt()) {
+                if (window.parent) window.parent.postMessage({ type: 'invoice-save-failed', documentType: 'receipt' }, '*');
+                return;
+              }
+              if (window.parent) window.parent.postMessage({ type: 'invoice-saved', documentType: 'receipt' }, '*');
+              var page = document.getElementById('receipt');
+              if (!page) { alert('Receipt element not found.'); return; }
+              applyReceiptMode('preview');
+              var a4Width = 794;
+              var exportHeight = Math.max(page.scrollHeight || 1123, 1123);
+              var requestId = 'capture-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+              var handler = function(e) {
+                if (!e.data || e.data.type !== 'parent-capture-result' || e.data.requestId !== requestId) return;
+                window.removeEventListener('message', handler);
+                clearTimeout(timeoutId);
+                applyReceiptMode('edit');
+                if (e.data.error) {
+                  alert(e.data.error || 'Export failed.');
+                  return;
+                }
+                var link = document.createElement('a');
+                link.download = e.data.filename || 'receipt.png';
+                link.href = e.data.dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              };
+              window.addEventListener('message', handler);
+              window.parent.postMessage({ type: 'parent-capture-export', requestId: requestId, a4Width: a4Width, exportHeight: exportHeight }, '*');
+              var timeoutId = setTimeout(function() {
+                window.removeEventListener('message', handler);
+                applyReceiptMode('edit');
+              }, 60000);
+            } catch (e) {
+              console.warn('Receipt send failed:', e);
+              applyReceiptMode('edit');
+              if (window.parent) window.parent.postMessage({ type: 'invoice-save-failed', documentType: 'receipt' }, '*');
+            }
+          })();
+        }
+      }
+      if (event.data && event.data.type === 'populate-receipt-from-invoice' && event.data.payload) {
+        function doPopulate() {
+          if (document.querySelector('.items-table tbody')) {
+            populateReceiptFromInvoice(event.data.payload);
+          } else {
+            setTimeout(doPopulate, 50);
+          }
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', doPopulate);
+        } else {
+          doPopulate();
+        }
+      }
+    });
+
+    function ensureReceiptRows(count) {
+      const tbody = document.querySelector('.items-table tbody');
+      if (!tbody) return;
+      const rows = tbody.querySelectorAll('tr');
+      const existing = rows.length;
+      if (count <= existing) return;
+      const lastRow = rows[rows.length - 1];
+      for (let i = existing; i < count; i++) {
+        const newRow = lastRow.cloneNode(true);
+        const idx = i + 1;
+        const cells = newRow.querySelectorAll('td');
+        if (cells[0]) { cells[0].id = 'date' + idx; cells[0].textContent = ''; }
+        if (cells[1]) { cells[1].id = 'ref' + idx; cells[1].textContent = ''; }
+        if (cells[2]) { cells[2].id = 'desc' + idx; cells[2].textContent = ''; }
+        const qtyCell = newRow.querySelector('.qty');
+        const upCell = newRow.querySelector('.unit-price');
+        const amtCell = newRow.querySelector('.amount');
+        if (qtyCell) { qtyCell.id = 'qty' + idx; qtyCell.textContent = '0'; }
+        if (upCell) { upCell.id = 'unitPrice' + idx; upCell.textContent = '£0.00'; }
+        if (amtCell) { amtCell.id = 'amount' + idx; amtCell.textContent = '£0.00'; }
+        tbody.appendChild(newRow);
+      }
+    }
+
+    function ensureCurrencyDisplay(val) {
+      if (val == null || val === '') return '£0.00';
+      var s = String(val).trim();
+      if (s === '') return '£0.00';
+      var n = parseNum(s);
+      return formatCurrency(n);
+    }
+
+    function populateReceiptFromInvoice(inv) {
+      if (!inv) return;
+      window.__receiptSourceInvoiceId = inv.id || inv.originalId || '';
+      var receiptNoEl = document.getElementById('receiptNo');
+      if (receiptNoEl && typeof GlobalStorage !== 'undefined') {
+        receiptNoEl.textContent = GlobalStorage.formatStatementNumber(GlobalStorage.getNextStatementNumber());
+      }
+      var receiptDateEl = document.getElementById('receiptDate');
+      if (receiptDateEl) receiptDateEl.textContent = new Date().toLocaleDateString();
+      var periodEl = document.getElementById('statementPeriod');
+      if (periodEl) periodEl.textContent = inv.invoiceDate != null ? String(inv.invoiceDate) : '';
+      var prevBalEl = document.getElementById('previousBalance');
+      if (prevBalEl) prevBalEl.textContent = ensureCurrencyDisplay(inv.previousBalance);
+      var customerNameEl = document.getElementById('customerName');
+      if (customerNameEl) customerNameEl.textContent = inv.customerName != null ? String(inv.customerName) : '';
+      var customerAddressEl = document.getElementById('customerAddress');
+      if (customerAddressEl) customerAddressEl.textContent = inv.customerAddress != null ? String(inv.customerAddress) : '';
+      var customerCityEl = document.getElementById('customerCity');
+      if (customerCityEl) customerCityEl.textContent = inv.customerCity != null ? String(inv.customerCity) : '';
+      var customerPhoneEl = document.getElementById('customerPhone');
+      if (customerPhoneEl) customerPhoneEl.textContent = inv.customerPhone != null ? String(inv.customerPhone) : '';
+      var customerEmailEl = document.getElementById('customerEmail');
+      if (customerEmailEl) customerEmailEl.textContent = inv.customerEmail != null ? String(inv.customerEmail) : '';
+      var items = Array.isArray(inv.items) ? inv.items : [];
+      var rowCount = Math.max(1, items.length);
+      ensureReceiptRows(rowCount);
+      var tbody = document.querySelector('.items-table tbody');
+      if (tbody) {
+        var rows = tbody.querySelectorAll('tr');
+        var invRef = inv.invoiceNo != null ? String(inv.invoiceNo) : (inv.statementNo != null ? String(inv.statementNo) : '');
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          var dateCell = row.querySelector('td:nth-child(1)');
+          var refCell = row.querySelector('td:nth-child(2)');
+          var descCell = row.querySelector('td:nth-child(3)');
+          var qtyCell = row.querySelector('.qty');
+          var unitPriceCell = row.querySelector('.unit-price');
+          var amountCell = row.querySelector('.amount');
+          if (dateCell) dateCell.textContent = i < items.length && items[i].date != null ? String(items[i].date) : '';
+          if (refCell) refCell.textContent = i < items.length ? invRef : '';
+          if (descCell) descCell.textContent = i < items.length && items[i].description != null ? String(items[i].description) : '';
+          if (qtyCell) qtyCell.textContent = i < items.length && items[i].qty != null ? String(items[i].qty) : '0';
+          if (unitPriceCell) unitPriceCell.textContent = i < items.length && items[i].unitPrice != null ? ensureCurrencyDisplay(items[i].unitPrice) : '£0.00';
+          if (amountCell) amountCell.textContent = i < items.length && items[i].amount != null ? ensureCurrencyDisplay(items[i].amount) : '£0.00';
+        }
+      }
+      var refEl = document.getElementById('reference');
+      if (refEl) refEl.textContent = (inv.reference != null ? String(inv.reference) : '') || invRef || '';
+      var bankEl = document.getElementById('bankName');
+      if (bankEl) bankEl.textContent = inv.bankName != null ? String(inv.bankName) : '';
+      var accountNameEl = document.getElementById('accountName');
+      if (accountNameEl) accountNameEl.textContent = inv.accountName != null ? String(inv.accountName) : '';
+      var sortCodeEl = document.getElementById('sortCode');
+      if (sortCodeEl) sortCodeEl.textContent = inv.sortCode != null ? String(inv.sortCode) : '';
+      var accountEl = document.getElementById('account');
+      if (accountEl) accountEl.textContent = inv.account != null ? String(inv.account) : '';
+      var subtotalEl = document.getElementById('subtotal');
+      if (subtotalEl) subtotalEl.textContent = ensureCurrencyDisplay(inv.subtotal);
+      var totalEl = document.getElementById('total');
+      if (totalEl) totalEl.textContent = ensureCurrencyDisplay(inv.total);
+      var amountPaidEl = document.getElementById('amountPaid');
+      if (amountPaidEl) amountPaidEl.textContent = ensureCurrencyDisplay(inv.amountPaid);
+      var outstandingEl = document.getElementById('outstanding');
+      if (outstandingEl) outstandingEl.textContent = ensureCurrencyDisplay(inv.outstanding);
+      var outstandingBalanceEl = document.getElementById('outstandingBalance');
+      if (outstandingBalanceEl) outstandingBalanceEl.textContent = ensureCurrencyDisplay(inv.outstanding);
+      if (typeof calculateAmounts === 'function') calculateAmounts();
+      if (typeof attachCalculationListeners === 'function') attachCalculationListeners();
+      setTimeout(function() {
+        if (typeof calculateAmounts === 'function') calculateAmounts();
+        if (typeof attachCalculationListeners === 'function') attachCalculationListeners();
+        sendSizeToParent();
+      }, 0);
+      sendSizeToParent();
+    }
+  </script>
+</div>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Blank Document</title>
+
+  <script src="../js/global-storage.js"></script>
+
+  <style>
+    :root {
+      --gray-bg: #f8f6f3;
+      --gray-border: #ddd8cf;
+      --gray-text: #4a4541;
+    }
+
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+
+    html {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--gray-bg);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: auto;
+      overflow: hidden;
+      color: var(--gray-text);
+    }
+
+    .main-content {
+      margin-top: 0;
+      width: 210mm;
+      min-width: 800px;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: #fff;
+      padding: 0;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-banner {
+      background-color: #926E4C;
+      height: 60px;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .doc-page {
+      flex: 1;
+      padding: 20mm 25mm;
+      min-height: 0;
+      box-sizing: border-box;
+      outline: none;
+      overflow-wrap: break-word;
+      line-height: 1.5;
+      font-size: 12pt;
+    }
+
+    .doc-page img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0.5em 0;
+    }
+
+    .doc-page p {
+      margin: 0 0 0.75em 0;
+    }
+
+    .doc-page h1, .doc-page h2, .doc-page h3 {
+      margin: 1em 0 0.5em 0;
+      font-weight: 600;
+    }
+
+    .doc-page h1 { font-size: 1.5em; }
+    .doc-page h2 { font-size: 1.25em; }
+    .doc-page h3 { font-size: 1.1em; }
+
+    .footer-banner {
+      background-color: #926E4C;
+      height: 30px;
+      width: 100%;
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+
+    /* Let clicks pass through to overlays sent to back; keep inputs/buttons clickable */
+    .a4 > *:not(.page-overlay-wrapper) {
+      pointer-events: none;
+    }
+    .a4 > *:not(.page-overlay-wrapper) input,
+    .a4 > *:not(.page-overlay-wrapper) select,
+    .a4 > *:not(.page-overlay-wrapper) textarea,
+    .a4 > *:not(.page-overlay-wrapper) button,
+    .a4 > *:not(.page-overlay-wrapper) a,
+    .a4 > *:not(.page-overlay-wrapper) img,
+    .a4 > *:not(.page-overlay-wrapper) [contenteditable="true"] {
+      pointer-events: auto;
+    }
+
+    .footer-banner .branding-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .footer-banner .branding-footer p {
+      margin: 0;
+      font-size: 12px;
+      color: #fff;
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .a4 {
+        width: 100%;
+        max-width: 210mm;
+        margin: 0 auto;
+      }
+      .doc-page {
+        padding: 15mm 18mm;
+      }
+    }
+  </style>
+</head>
+<body class="edit-mode">
+
+  <div class="main-content">
+    <div class="a4" id="invoice">
+      <div class="header-banner"></div>
+      <div class="doc-page" id="docContent" contenteditable="true"></div>
+      <div class="footer-banner">
+        <div class="branding-footer">
+          <p>Powered by <strong>GuaPxL</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="imageInput" accept="image/*" style="display: none;" aria-hidden="true">
+
+  <script>
+    (function() {
+      const docContent = document.getElementById('docContent');
+      const imageInput = document.getElementById('imageInput');
+
+      // Paste: insert images from clipboard
+      docContent.addEventListener('paste', function(e) {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            e.preventDefault();
+            const file = items[i].getAsFile();
+            if (file) insertImageFromFile(file);
+            return;
+          }
+        }
+      });
+
+      function insertImageFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = function() {
+          const img = document.createElement('img');
+          img.src = reader.result;
+          img.alt = file.name || 'Image';
+          docContent.focus();
+          const sel = window.getSelection();
+          const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+          if (range && docContent.contains(range.commonAncestorContainer)) {
+            range.deleteContents();
+            range.insertNode(img);
+            range.setStartAfter(img);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          } else {
+            docContent.appendChild(img);
+          }
+          debouncedSendSize();
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // Optional: allow programmatic image insert (e.g. from parent or toolbar)
+      window.insertImageFromFile = insertImageFromFile;
+      window.insertImageFromInput = function() {
+        imageInput.click();
+      };
+      imageInput.addEventListener('change', function() {
+        const file = this.files && this.files[0];
+        if (file) {
+          insertImageFromFile(file);
+          this.value = '';
+        }
+      });
+
+      // Notify parent of size for iframe sizing / render
+      function sendSizeToParent() {
+        try {
+          const page = document.getElementById('invoice');
+          const w = page ? Math.max(page.scrollWidth, page.offsetWidth) : 0;
+          const h = page ? Math.max(page.scrollHeight, page.offsetHeight) : 0;
+          const width = w || document.documentElement.scrollWidth;
+          const height = h || document.documentElement.scrollHeight;
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'iframe-resize', width, height }, '*');
+          }
+        } catch (err) {}
+      }
+
+      let _lastW = 0, _lastH = 0, _debounce = null;
+      function debouncedSendSize() {
+        if (_debounce) clearTimeout(_debounce);
+        _debounce = setTimeout(function() {
+          _debounce = null;
+          const page = document.getElementById('invoice');
+          const w = page ? Math.max(page.scrollWidth, page.offsetWidth) : 0;
+          const h = page ? Math.max(page.scrollHeight, page.offsetHeight) : 0;
+          if (w === _lastW && h === _lastH) return;
+          _lastW = w;
+          _lastH = h;
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'iframe-resize', width: w, height: h }, '*');
+          }
+        }, 150);
+      }
+
+      window.addEventListener('load', function() {
+        sendSizeToParent();
+      });
+
+      const observer = new MutationObserver(function(mutations) {
+        const fromOverlay = mutations.some(function(m) {
+          var el = m.target;
+          return el && (el.id === 'overlay-container' || el.id === 'overlay-images-container' || el.id === 'draw-layer' || (el.closest && (el.closest('#overlay-container') || el.closest('#overlay-images-container') || el.closest('.page-overlay-wrapper') || el.closest('.overlay-image'))));
+        });
+        if (!fromOverlay) debouncedSendSize();
+      });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+
+      window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'request-size') {
+          sendSizeToParent();
+        }
+        if (event.data && event.data.type === 'invoice-action') {
+          var action = event.data.action;
+          if (action === 'saveInvoice') {
+            try {
+              if (window.parent) window.parent.postMessage({ type: 'invoice-saved', documentType: 'document' }, '*');
+            } catch (e) {}
+          } else if (action === 'sendInvoice') {
+            (function doSend() {
+              var page = document.getElementById('invoice');
+              if (!page) { alert('Document element not found.'); return; }
+              var docContent = document.getElementById('docContent');
+              var wasEditable = docContent && docContent.contentEditable === 'true';
+              if (docContent) docContent.contentEditable = 'false';
+              document.body.classList.add('preview-mode');
+              var a4Width = 794;
+              var exportHeight = Math.max(page.scrollHeight || 1123, 1123);
+              var requestId = 'capture-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+              var handler = function(e) {
+                if (!e.data || e.data.type !== 'parent-capture-result' || e.data.requestId !== requestId) return;
+                window.removeEventListener('message', handler);
+                clearTimeout(timeoutId);
+                document.body.classList.remove('preview-mode');
+                if (docContent && wasEditable) docContent.contentEditable = 'true';
+                if (e.data.error) {
+                  alert(e.data.error || 'Export failed.');
+                  return;
+                }
+                var link = document.createElement('a');
+                link.download = e.data.filename || 'document.png';
+                link.href = e.data.dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              };
+              window.addEventListener('message', handler);
+              window.parent.postMessage({ type: 'parent-capture-export', requestId: requestId, a4Width: a4Width, exportHeight: exportHeight }, '*');
+              var timeoutId = setTimeout(function() {
+                window.removeEventListener('message', handler);
+                document.body.classList.remove('preview-mode');
+                if (docContent && wasEditable) docContent.contentEditable = 'true';
+              }, 60000);
+            })();
+          }
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
