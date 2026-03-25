@@ -1,6 +1,6 @@
 /**
  * Shell bootstrap: sidebar, receipt/statement modals, postMessage, category shortcuts, page overlays.
- * Requires: js/global-storage.js before this script. Loads before invoice-shell-app.js (defer order).
+ * Requires: js/global-storage.js before this script. Loads before canvas-shell-ctrls.js (defer order).
  * @file invoice-shell-bootstrap.js
  */
     function handleSidebarIframeLoad(iframe) {
@@ -29,10 +29,10 @@
       var iframe = document.getElementById('invoiceFrame');
       if (!iframe) return;
       function sendNewInvoice() {
-        if (window.app && window.app.invoiceAction) window.app.invoiceAction('newInvoice');
+        if (window.canvasShell && window.canvasShell.invoiceAction) window.canvasShell.invoiceAction('newInvoice');
       }
       function sendShowList() {
-        if (window.app && window.app.invoiceAction) window.app.invoiceAction('showInvoiceList');
+        if (window.canvasShell && window.canvasShell.invoiceAction) window.canvasShell.invoiceAction('showInvoiceList');
       }
       function switchAndSend(templatePath, afterLoad, forceReload) {
         var src = (iframe.src || '').replace(/#.*/, '');
@@ -86,10 +86,10 @@
           if (btn) btn.click();
           break;
         case 'saveBtn':
-          if (window.app && window.app.invoiceAction) window.app.invoiceAction('saveInvoice');
+          if (window.canvasShell && window.canvasShell.invoiceAction) window.canvasShell.invoiceAction('saveInvoice');
           break;
         case 'sendBtn':
-          if (window.app && window.app.invoiceAction) window.app.invoiceAction('sendInvoice');
+          if (window.canvasShell && window.canvasShell.invoiceAction) window.canvasShell.invoiceAction('sendInvoice');
           break;
         default:
           var fallback = document.getElementById(id);
@@ -408,7 +408,7 @@
         } else {
           if (action === 'invoke' && e.data.id) {
             handleSidebarInvoke(e.data.id);
-          } else if (action === 'setMode' && e.data.mode && window.app) {
+          } else if (action === 'setMode' && e.data.mode && window.canvasShell) {
             var modeBtn = document.querySelector('.mode-btn[data-mode="' + e.data.mode + '"]');
             if (modeBtn) modeBtn.click();
           } else if (action === 'print') {
@@ -667,7 +667,7 @@
         btn.addEventListener('click', function() {
           if (b.action === 'invoke' && b.id) handleSidebarInvoke(b.id);
           else if (b.action === 'addToPage' && b.type) handleAddToPage(b.type);
-          else if (b.action === 'setMode' && b.mode && window.app) {
+          else if (b.action === 'setMode' && b.mode && window.canvasShell) {
             var modeBtn = document.querySelector('.mode-btn[data-mode="' + b.mode + '"]');
             if (modeBtn) modeBtn.click();
           }
@@ -693,15 +693,15 @@
       var handleLeft = document.getElementById('categoryShortcutHandleLeft');
       var handleRight = document.getElementById('categoryShortcutHandleRight');
       if (!drawer || !handleLeft || !handleRight) return;
-      if (window.app && window.app.initCategoryShortcutDragging) {
-        window.app.initCategoryShortcutDragging(drawer, handleLeft, handleRight);
+      if (window.canvasShell && window.canvasShell.initCategoryShortcutDragging) {
+        window.canvasShell.initCategoryShortcutDragging(drawer, handleLeft, handleRight);
       }
     }
     document.addEventListener('DOMContentLoaded', function() {
-      if (window.app && window.app.initCategoryShortcutDragging) initCategoryShortcutDrawer();
+      if (window.canvasShell && window.canvasShell.initCategoryShortcutDragging) initCategoryShortcutDrawer();
     });
 
-    // Wire trigger buttons so click runs same logic as sidebar invoke (dataManagementBtn/saveBtn keep app-only listeners to avoid double fire)
+    // Wire trigger buttons so click runs same logic as sidebar invoke (dataManagementBtn/saveBtn keep canvasShell-only listeners to avoid double fire)
     (function() {
       var ids = ['newInvoiceBtn', 'newReceiptBtn', 'exportBtn', 'newSummaryBtn', 'newOrderListBtn', 'newDocumentBtn', 'loadInvoiceBtnEdit', 'loadReceiptBtnEdit', 'loadStatementBtnEdit', 'newTransactionsBtn', 'sendBtn'];
       ids.forEach(function(id) {
