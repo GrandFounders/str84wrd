@@ -1124,14 +1124,9 @@
             const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
             if (touchState.lastPinchDistance > 0) {
               const scale = distance / touchState.lastPinchDistance;
-              const newZoom = this.camera.zoom * scale;
-              this.camera.zoom = Math.max(0.1, Math.min(5, newZoom));
               const centerX = (t1.clientX + t2.clientX) / 2;
               const centerY = (t1.clientY + t2.clientY) / 2;
-              const zoomFactor = scale - 1;
-              this.camera.x -= (centerX - window.innerWidth / 2) * zoomFactor;
-              this.camera.y -= (centerY - window.innerHeight / 2) * zoomFactor;
-              this.updateCanvasTransform();
+              this.applyPinchGestureStep(scale, centerX, centerY);
             }
             touchState.lastPinchDistance = distance;
           }
@@ -1294,7 +1289,7 @@
       }
 
       /**
-       * Same-origin iframe documents: route zoom gestures to shell camera (never browser-zoom the subframe).
+       * Same-origin iframe: wheel/keyboard to shell; two-finger pinch updates shell camera (coords mapped to parent viewport).
        */
       attachSubdocumentZoomToShellCamera(iframe) {
         if (!iframe || !iframe.contentWindow) return;
@@ -1310,6 +1305,69 @@
             if (!(e.ctrlKey || e.metaKey)) return;
             this.applyTrackpadCanvasGesture(e);
           };
+          const pinch = { lastSpan: 0, raf: 0, pending: null };
+          const clearPinch = (e) => {
+            if (!e.touches || e.touches.length < 2) {
+              pinch.lastSpan = 0;
+              pinch.pending = null;
+              if (pinch.raf) {
+                cancelAnimationFrame(pinch.raf);
+                pinch.raf = 0;
+              }
+            }
+          };
+          const flushPinch = () => {
+            pinch.raf = 0;
+            const step = pinch.pending;
+            pinch.pending = null;
+            if (!step) return;
+            const parentWin = iframe.contentWindow.parent;
+            const app = parentWin && parentWin.app;
+            if (!app || typeof app.applyPinchGestureStep !== 'function') return;
+            const rect = iframe.getBoundingClientRect();
+            app.applyPinchGestureStep(step.scale, rect.left + step.cx, rect.top + step.cy);
+          };
+          doc.addEventListener(
+            'touchstart',
+            (e) => {
+              if (e.touches.length === 2) {
+                e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                pinch.lastSpan = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+              } else {
+                pinch.lastSpan = 0;
+              }
+            },
+            cap
+          );
+          doc.addEventListener(
+            'touchmove',
+            (e) => {
+              if (e.touches.length !== 2) return;
+              e.preventDefault();
+              const t1 = e.touches[0];
+              const t2 = e.touches[1];
+              const span = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+              if (pinch.lastSpan > 0) {
+                const scale = span / pinch.lastSpan;
+                const cx = (t1.clientX + t2.clientX) / 2;
+                const cy = (t1.clientY + t2.clientY) / 2;
+                if (pinch.pending) {
+                  pinch.pending.scale *= scale;
+                  pinch.pending.cx = cx;
+                  pinch.pending.cy = cy;
+                } else {
+                  pinch.pending = { scale, cx, cy };
+                }
+                if (!pinch.raf) pinch.raf = requestAnimationFrame(flushPinch);
+              }
+              pinch.lastSpan = span;
+            },
+            cap
+          );
+          doc.addEventListener('touchend', clearPinch, cap);
+          doc.addEventListener('touchcancel', clearPinch, cap);
           doc.addEventListener('wheel', onWheel, cap);
           doc.addEventListener('keydown', (e) => this.applyShellKeyboardNavFromEvent(e, doc), cap);
           ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
@@ -1341,7 +1399,9 @@
           '.category-shortcut-drawer',
           '.category-shortcut-handle',
           '.category-shortcut-btn',
-          '.modal-overlay'
+          '.modal-overlay',
+          '.menu-hamburger',
+          '.render-progress-overlay'
         ];
 
         const bindShell = (root) => {
@@ -1379,6 +1439,21 @@
           passiveFalse
         );
 
+        /* Block OS/browser tab pinch-zoom (not on infinite canvas — canvas already preventDefault + touch-action: none; avoids double-suppression flicker). */
+        const blockTabMultiTouchZoom = (e) => {
+          if (!(e.touches && e.touches.length > 1)) return;
+          const el = e.target;
+          if (el && el.closest && el.closest('#infiniteCanvas')) return;
+          e.preventDefault();
+        };
+        document.addEventListener('touchstart', blockTabMultiTouchZoom, { ...passiveFalse, capture: true });
+        document.addEventListener('touchmove', blockTabMultiTouchZoom, { ...passiveFalse, capture: true });
+
+        /* Safari: block page pinch-zoom; workspace zoom uses shell camera / canvas handlers only */
+        ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+          document.addEventListener(type, (e) => e.preventDefault(), passiveFalse);
+        });
+
         document.addEventListener('keydown', (e) => {
           this.applyShellKeyboardNavFromEvent(e, document);
         });
@@ -1387,9 +1462,16 @@
           const style = document.createElement('style');
           style.id = 'shell-zoom-prevention-style';
           style.textContent = `
+            html {
+              touch-action: pan-x pan-y;
+            }
+            body {
+              touch-action: pan-x pan-y;
+            }
             .zoom-drawer, .zoom-hamburger, .zoom-overlay, .zoom-btn,
-            .mobile-overlay, .mobile-drawer, .category-shortcut-drawer, .category-shortcut-handle, .category-shortcut-btn {
-              touch-action: manipulation !important;
+            .mobile-overlay, .mobile-drawer, .category-shortcut-drawer, .category-shortcut-handle, .category-shortcut-btn,
+            .modal-overlay, .menu-hamburger, .render-progress-overlay {
+              touch-action: pan-x pan-y !important;
               -webkit-touch-callout: none !important;
               -webkit-user-select: none !important;
               user-select: none !important;
@@ -1421,11 +1503,25 @@
         this.updateCanvasTransform();
       }
 
+      /**
+       * Two-finger pinch step in **parent viewport** client pixels (centerClientX/Y).
+       * Drives shell camera only — fixed menus/chrome are not scaled.
+       */
+      applyPinchGestureStep(relativeScale, centerClientX, centerClientY) {
+        if (!(relativeScale > 0) || !Number.isFinite(relativeScale)) return;
+        const newZoom = this.camera.zoom * relativeScale;
+        this.camera.zoom = Math.max(0.1, Math.min(5, newZoom));
+        const zoomFactor = relativeScale - 1;
+        this.camera.x -= (centerClientX - window.innerWidth / 2) * zoomFactor;
+        this.camera.y -= (centerClientY - window.innerHeight / 2) * zoomFactor;
+        this.updateCanvasTransform();
+      }
+
       updateOverlayTransform() {
         const overlay = document.getElementById('canvasOverlay');
         if (overlay) {
-          // Apply camera transform: translate by camera position, then scale by zoom
-          overlay.style.transform = `translate(${this.camera.x}px, ${this.camera.y}px) scale(${this.camera.zoom})`;
+          // translate3d promotes a stable compositor layer during touch pinch (fewer flashes than translate2d)
+          overlay.style.transform = `translate3d(${this.camera.x}px, ${this.camera.y}px, 0) scale(${this.camera.zoom})`;
         }
       }
 

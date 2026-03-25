@@ -356,6 +356,8 @@ body {
   background-size: 40px 40px;
   background-position: 0 0;
   display: block;
+  /* Shell handles pan/pinch via JS — stop browser page pinch on the workspace plane */
+  touch-action: none;
 }
 
 .infinite-canvas:active {
@@ -372,6 +374,8 @@ body {
   z-index: 1;
   /* Ensure overlay stays below zoom controls */
   isolation: isolate;
+  /* Inline transform updates on every pinch frame — no transition */
+  transition: none;
 }
 
 /* Render progress overlay (on canvas) */
@@ -447,7 +451,8 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   background: white;
-  transition: all 0.3s ease;
+  /* Avoid transition: all — parent transform animates every pinch frame and causes flicker */
+  transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease;
   margin: 0;
   padding: 0;
   display: block;
