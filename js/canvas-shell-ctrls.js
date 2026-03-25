@@ -82,6 +82,8 @@
         /** Last touch sample for flick velocity (client px + time). */
         this._touchPanInertPrev = null;
         this._touchPanInertEma = { vx: 0, vy: 0 };
+        /** While true, skip clamp so finger delta isn’t fought each frame (reduces motion jitter near slack). */
+        this._skipClampDuringShellTouchPan = false;
 
         this.isPanning = false;
         this.lastPanX = 0;
@@ -1148,6 +1150,7 @@
               touchState.startCameraY = this.camera.y;
               touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
               canvas.classList.add('panning');
+              this._skipClampDuringShellTouchPan = true;
               this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
             }
           } else if (e.touches.length === 2) {
@@ -1175,6 +1178,7 @@
               const t = e.touches[0];
               const d = touchState.touches.get(t.identifier);
               if (d) {
+                this._skipClampDuringShellTouchPan = true;
                 const deltaX = t.clientX - touchState.oneFingerStart.x;
                 const deltaY = t.clientY - touchState.oneFingerStart.y;
                 // Match iframe path: scale pan by zoom on all touch devices (touchscreen laptops are not "mobile").
@@ -1220,10 +1224,12 @@
             canvas.classList.remove('panning');
             this.setWorkspacePinchActive(false);
             this.setWorkspaceGestureActive(false);
+            this._skipClampDuringShellTouchPan = false;
             if (wasOneFingerPan) {
               this.kickTouchPanInertiaIfFastEnough();
             }
             this._touchPanInertPrev = null;
+            this.updateCanvasTransform();
           }
           if (e.touches.length === 1) {
             const t = e.touches[0];
@@ -1232,6 +1238,9 @@
             touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
             touchState.lastPinchDistance = 0;
             this.setWorkspacePinchActive(false);
+            if (!window._drawModeActive) {
+              this._skipClampDuringShellTouchPan = true;
+            }
             this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
           }
         }, passiveFalse);
@@ -1244,7 +1253,9 @@
           canvas.classList.remove('panning');
           this.setWorkspacePinchActive(false);
           this.setWorkspaceGestureActive(false);
+          this._skipClampDuringShellTouchPan = false;
           this.abortTouchPanInertiaSampling();
+          this.updateCanvasTransform();
         }, passiveFalse);
 
         canvas.addEventListener('wheel', (e) => {
@@ -1504,6 +1515,7 @@
                   if (shell && shell.camera) {
                     pan.camX = shell.camera.x;
                     pan.camY = shell.camera.y;
+                    shell._skipClampDuringShellTouchPan = true;
                     if (typeof shell.resetTouchPanInertiaTracking === 'function') {
                       shell.resetTouchPanInertiaTracking(pan.startX, pan.startY);
                     }
@@ -1542,6 +1554,7 @@
                 const shell = parentShell();
                 const t = e.touches[0];
                 if (shell && shell.camera) {
+                  shell._skipClampDuringShellTouchPan = true;
                   const panDiv =
                     typeof shell.mobilePanPixelDivisor === 'function'
                       ? shell.mobilePanPixelDivisor()
@@ -1574,6 +1587,12 @@
             if (!e.touches || e.touches.length === 0) {
               pan.active = false;
               const sh = parentShell();
+              if (sh) {
+                sh._skipClampDuringShellTouchPan = false;
+                if (typeof sh.updateCanvasTransform === 'function') {
+                  sh.updateCanvasTransform();
+                }
+              }
               if (sh && typeof sh.setWorkspaceGestureActive === 'function') {
                 sh.setWorkspaceGestureActive(false);
               }
@@ -1587,6 +1606,12 @@
             clearPinch(e);
             pan.active = false;
             const sh = parentShell();
+            if (sh) {
+              sh._skipClampDuringShellTouchPan = false;
+              if (typeof sh.updateCanvasTransform === 'function') {
+                sh.updateCanvasTransform();
+              }
+            }
             if (sh && typeof sh.setWorkspaceGestureActive === 'function') {
               sh.setWorkspaceGestureActive(false);
             }
@@ -2009,20 +2034,19 @@
 
       /**
        * One-finger **touch** pan: divide finger delta by this (canvas + iframe, all touch devices).
-       * Uses max(floor, z) so:
-       * - Zoomed in (z>1): divisor grows with z → calmer pan (avoids “runaway” vs screen pixels).
-       * - Zoomed out / near 1×: at least ~1.08 so pans are steadier than raw 1:1.
-       * Critical: **no branch at z===1** — the old `z>1 ? z : max(1.08,z*1.08)` jumped ~8% in
-       * sensitivity across 1× and felt erratic while pinching or working slightly zoomed.
+       * `clientX`/`clientY` are usually whole pixels; divisor = z makes each step ≈1/z world px when
+       * zoomed in → visible stairstep/jitter. Use a **sub-linear** curve in z (still monotonic, no jump at 1×).
        */
       mobilePanPixelDivisor() {
         const z = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
         const touchPanFloor = 1.08;
-        return Math.max(touchPanFloor, z);
+        const curved = Math.pow(z, 0.76);
+        return Math.max(touchPanFloor, curved);
       }
 
       /** Keep pan from drifting arbitrarily far on mobile (reduces “flies off screen”). */
       clampCameraBounds() {
+        if (this._skipClampDuringShellTouchPan) return;
         const z = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
         const iframe = document.getElementById('invoiceFrame');
         let iw = 800;
@@ -2048,6 +2072,14 @@
         }
         if (Number.isFinite(this.camera.y)) {
           this.camera.y = Math.max(-maxY, Math.min(maxY, this.camera.y));
+        }
+        const v = this._shellPanMomentumVel;
+        if (v && this._shellPanMomentumRaf != null) {
+          const eps = 0.5;
+          if (this.camera.x <= -maxX + eps && v.vx < 0) v.vx = 0;
+          if (this.camera.x >= maxX - eps && v.vx > 0) v.vx = 0;
+          if (this.camera.y <= -maxY + eps && v.vy < 0) v.vy = 0;
+          if (this.camera.y >= maxY - eps && v.vy > 0) v.vy = 0;
         }
         if (this.isShellCameraDebug() && (this.camera.x !== x0 || this.camera.y !== y0)) {
           this.logShellCameraThrottled('clamp-bounds', 400, 'clamp applied', {
