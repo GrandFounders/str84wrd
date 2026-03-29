@@ -1594,6 +1594,9 @@
             const shell = parentShell();
             const p = pendingIframeOneFingerPan;
             if (!shell || !shell.camera || !p || !pan.active) return;
+            if (typeof shell.stopShellPanMomentum === 'function') {
+              shell.stopShellPanMomentum();
+            }
             const panDiv = resolveIframePanDivisor(shell);
             shell._skipClampDuringShellTouchPan = true;
             shell.camera.x = pan.camX + (p.cx - pan.startX) / panDiv;
@@ -1680,17 +1683,6 @@
               if (hadPan) {
                 pendingIframeOneFingerPan = { cx: ev.clientX, cy: ev.clientY };
                 flushIframeOneFingerPan();
-                const panDivRel = sh ? resolveIframePanDivisor(sh) : 1;
-                if (sh && typeof sh.sampleTouchPanInertiaForRelease === 'function') {
-                  sh.sampleTouchPanInertiaForRelease(
-                    pan.lastMoveCx,
-                    pan.lastMoveCy,
-                    pan.lastMoveT,
-                    ev.clientX,
-                    ev.clientY,
-                    panDivRel
-                  );
-                }
               }
               pendingIframeOneFingerPan = null;
               pan.active = false;
@@ -1703,8 +1695,8 @@
               if (hadPan && sh && typeof sh.setWorkspaceGestureActive === 'function') {
                 sh.setWorkspaceGestureActive(false);
               }
-              if (hadPan && sh && typeof sh.kickTouchPanInertiaIfFastEnough === 'function') {
-                sh.kickTouchPanInertiaIfFastEnough();
+              if (hadPan && sh && typeof sh.abortTouchPanInertiaSampling === 'function') {
+                sh.abortTouchPanInertiaSampling();
               }
               iframeMouseShellPanDragging = false;
               removeIframeMouseShellListeners();
@@ -1994,18 +1986,6 @@
               const ch = e.changedTouches[0];
               pendingIframeOneFingerPan = { cx: ch.clientX, cy: ch.clientY };
               flushIframeOneFingerPan();
-              const sh0 = parentShell();
-              if (sh0 && typeof sh0.sampleTouchPanInertiaForRelease === 'function') {
-                const panDiv0 = resolveIframePanDivisor(sh0);
-                sh0.sampleTouchPanInertiaForRelease(
-                  pan.lastMoveCx,
-                  pan.lastMoveCy,
-                  pan.lastMoveT,
-                  ch.clientX,
-                  ch.clientY,
-                  panDiv0
-                );
-              }
             }
             pendingIframeOneFingerPan = null;
             clearPinch(e);
@@ -2024,8 +2004,8 @@
               if (sh && typeof sh.setWorkspaceGestureActive === 'function') {
                 sh.setWorkspaceGestureActive(false);
               }
-              if (hadShellPan && sh && typeof sh.kickTouchPanInertiaIfFastEnough === 'function') {
-                sh.kickTouchPanInertiaIfFastEnough();
+              if (hadShellPan && sh && typeof sh.abortTouchPanInertiaSampling === 'function') {
+                sh.abortTouchPanInertiaSampling();
               }
             }
           };
@@ -2451,6 +2431,7 @@
 
       /** Trackpad cardinal swipe: extra coast so rapid two-finger scrolls match OS-like inertia. */
       impulseShellPanMomentumTrackpad(panX, panY) {
+        if (this._skipClampDuringShellTouchPan) return;
         if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
         const k = 0.017;
         const carry = 0.86;
