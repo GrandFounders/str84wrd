@@ -9,6 +9,7 @@
   
   <!-- Global Storage Manager - project root so upgrade shares reference browser storage -->
   <script src="../js/global-storage.js"></script>
+  <script src="../js/invoice-app-catalog-storage.js"></script>
   
   <style>
     /* Theme (match index.html) */
@@ -1740,129 +1741,43 @@
       
       loadData() {
         try {
-          // Load products
-          const savedProducts = localStorage.getItem('invoiceApp_products');
-          this.data.products = savedProducts ? JSON.parse(savedProducts) : this.getDefaultProducts();
-          
-          // Initialize global items list from products
+          const C = window.InvoiceAppCatalogStorage;
+          if (!C) throw new Error('InvoiceAppCatalogStorage missing');
+          const loaded = C.loadCatalogState();
+          this.data.products = loaded.products;
+          this.data.clients = loaded.clients;
+          this.data.company = loaded.company;
+          this.data.settings = loaded.settings;
+          this.data.customTerms = loaded.customTerms;
           this.globalItemsList = this.data.products.map(product => product.name);
-          
-          // Load clients
-          const savedClients = localStorage.getItem('invoiceApp_clients');
-          this.data.clients = savedClients ? JSON.parse(savedClients) : this.getDefaultClients();
-          
-          // Load company info
-          const savedCompany = localStorage.getItem('invoiceApp_company');
-          this.data.company = savedCompany ? JSON.parse(savedCompany) : this.getDefaultCompany();
-          
-          // Load settings
-          const savedSettings = localStorage.getItem('invoiceApp_settings');
-          this.data.settings = savedSettings ? JSON.parse(savedSettings) : { currentMode: 'edit', autoSave: true, defaultCurrency: '£' };
-          
-          // Load custom terms (for reuse across invoices)
-          const savedCustomTerms = localStorage.getItem('invoiceApp_customTerms');
-          this.data.customTerms = savedCustomTerms ? JSON.parse(savedCustomTerms) : [];
-          if (!Array.isArray(this.data.customTerms)) this.data.customTerms = [];
-          
           console.log('📁 Data loaded from localStorage');
         } catch (error) {
           console.error('Error loading data:', error);
-          this.data = {
-            products: this.getDefaultProducts(),
-            clients: this.getDefaultClients(),
-            company: this.getDefaultCompany(),
-            settings: { currentMode: 'edit', autoSave: true, defaultCurrency: '£' },
-            customTerms: []
-          };
+          const C = window.InvoiceAppCatalogStorage;
+          if (C) {
+            const fb = C.loadCatalogState();
+            this.data = {
+              products: fb.products,
+              clients: fb.clients,
+              company: fb.company,
+              settings: fb.settings,
+              customTerms: fb.customTerms
+            };
+            this.globalItemsList = this.data.products.map(product => product.name);
+          }
         }
       }
       
       saveData() {
         try {
-          localStorage.setItem('invoiceApp_products', JSON.stringify(this.data.products));
-          localStorage.setItem('invoiceApp_clients', JSON.stringify(this.data.clients));
-          localStorage.setItem('invoiceApp_company', JSON.stringify(this.data.company));
-          localStorage.setItem('invoiceApp_settings', JSON.stringify(this.data.settings));
-          localStorage.setItem('invoiceApp_customTerms', JSON.stringify(this.data.customTerms || []));
+          const C = window.InvoiceAppCatalogStorage;
+          if (C) {
+            C.saveCatalogState(this.data);
+          }
           console.log('💾 Data saved to localStorage');
         } catch (error) {
           console.error('Error saving data:', error);
         }
-      }
-      
-      // ========================================
-      // DEFAULT DATA
-      // ========================================
-      
-      getDefaultProducts() {
-        return [
-          {
-            id: 1,
-            name: 'Example Product',
-            category: 'product',
-            icon: '📦',
-            image: null,
-            description: 'Sample product for demonstration',
-            price: 0.00
-          },
-          {
-            id: 2,
-            name: 'Service Example',
-            category: 'service',
-            icon: '🔧',
-            image: null,
-            description: 'Sample service for demonstration',
-            price: 0.00
-          }
-        ];
-      }
-      
-      getDefaultClients() {
-        return [
-          {
-            clientId: 1,
-            client: {
-              name: 'John Smith',
-              address: '123 Main Street',
-              city: 'London, E1 1AA',
-              phone: '+44 20 1234 5678',
-              email: 'john.smith@email.com',
-              type: 'Individual',
-              status: 'active',
-              notes: 'Regular customer, prefers morning deliveries'
-            }
-          },
-          {
-            clientId: 2,
-            client: {
-              name: 'Sarah Johnson',
-              address: '456 High Road',
-              city: 'Manchester, M1 1AA',
-              phone: '+44 161 123 4567',
-              email: 'sarah.j@email.com',
-              type: 'Company',
-              status: 'active',
-              notes: 'Business client, office hours only'
-            }
-          }
-        ];
-      }
-      
-      getDefaultCompany() {
-        return {
-          name: 'Your Company Name',
-          address: 'Your Company Address',
-          city: 'Your City, Postcode',
-          phone: 'Your Phone Number',
-          email: 'your.email@company.com',
-          companyNumber: 'Your Company Number',
-          vatNumber: 'Your VAT Number',
-          bankName: 'Your Bank Name',
-          accountName: 'Your Account Name',
-          sortCode: 'Your Sort Code',
-          account: 'Your Account Number',
-          logo: null
-        };
       }
       
       switchMode(mode) {
@@ -2063,20 +1978,14 @@
               alert('Invalid file: not a JSON object.');
               return;
             }
-            if (Array.isArray(data.products)) {
-              localStorage.setItem('invoiceApp_products', JSON.stringify(data.products));
-            }
-            if (Array.isArray(data.clients)) {
-              localStorage.setItem('invoiceApp_clients', JSON.stringify(data.clients));
-            }
-            if (data.company && typeof data.company === 'object') {
-              localStorage.setItem('invoiceApp_company', JSON.stringify(data.company));
-            }
-            if (data.settings && typeof data.settings === 'object') {
-              localStorage.setItem('invoiceApp_settings', JSON.stringify(data.settings));
-            }
-            if (Array.isArray(data.customTerms)) {
-              localStorage.setItem('invoiceApp_customTerms', JSON.stringify(data.customTerms));
+            const toSave = {};
+            if (Array.isArray(data.products)) toSave.products = data.products;
+            if (Array.isArray(data.clients)) toSave.clients = data.clients;
+            if (data.company && typeof data.company === 'object') toSave.company = data.company;
+            if (data.settings && typeof data.settings === 'object') toSave.settings = data.settings;
+            if (Array.isArray(data.customTerms)) toSave.customTerms = data.customTerms;
+            if (window.InvoiceAppCatalogStorage) {
+              window.InvoiceAppCatalogStorage.saveCatalogState(toSave);
             }
             const existingGlobal = GlobalStorage.getGlobalData();
             const globalData = {
@@ -2195,11 +2104,9 @@
         if (!confirm('Are you sure you want to clear ALL invoice data? This will remove products, clients, company, current invoice, archived invoices, and the invoice number counter. This cannot be undone!')) {
           return;
         }
-        localStorage.removeItem('invoiceApp_products');
-        localStorage.removeItem('invoiceApp_clients');
-        localStorage.removeItem('invoiceApp_company');
-        localStorage.removeItem('invoiceApp_settings');
-        localStorage.removeItem('invoiceApp_customTerms');
+        if (window.InvoiceAppCatalogStorage) {
+          window.InvoiceAppCatalogStorage.clearCatalogKeys();
+        }
         localStorage.removeItem('invoiceApp_currentInvoice');
         localStorage.removeItem('invoiceApp_globalData');
         this.loadData();

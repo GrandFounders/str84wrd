@@ -5,8 +5,10 @@
     // ========================================
     // ARCHITECTURE (separation of concerns)
     // ========================================
-    // - index.html + invoice-shell-bootstrap.js + canvas-shell-ctrls.js: CanvasShellControls — canvas, drawers, Settings,
-    //   localStorage for products/clients/company/settings, and postMessage to #invoiceFrame.
+    // - js/invoice-app-catalog-storage.js: catalog localStorage (shared with templates).
+    // - js/invoice-catalog-admin.js: data modal (products/clients/company/counter); shell holds data + delegates for app.*.
+    // - index.html + invoice-shell-bootstrap.js + canvas-shell-ctrls.js: CanvasShellControls — canvas, drawers,
+    //   mode toggle, InvoiceAppCatalogStorage + InvoiceCatalogAdmin, postMessage to #invoiceFrame.
     // - templates/invoice.html: StaticInvoiceApp = full invoice document (table, totals, draft,
     //   list UI). Reload shared data via syncSharedDataFromStorage when the shell saves settings.
     //
@@ -1176,17 +1178,15 @@
             });
           }
           if (e.touches.length === 1) {
-            if (!window._drawModeActive) {
-              const t = e.touches[0];
-              touchState.startCameraX = this.camera.x;
-              touchState.startCameraY = this.camera.y;
-              touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
-              canvas.classList.add('panning');
-              this._skipClampDuringShellTouchPan = true;
-              cancelCanvasOneFingerPanRaf();
-              pendingCanvasOneFingerPan = null;
-              this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
-            }
+            const t = e.touches[0];
+            touchState.startCameraX = this.camera.x;
+            touchState.startCameraY = this.camera.y;
+            touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
+            canvas.classList.add('panning');
+            this._skipClampDuringShellTouchPan = true;
+            cancelCanvasOneFingerPanRaf();
+            pendingCanvasOneFingerPan = null;
+            this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
           } else if (e.touches.length === 2) {
             this.setWorkspacePinchActive(true);
             const t1 = e.touches[0];
@@ -1208,16 +1208,14 @@
           }
 
           if (e.touches.length === 1) {
-            if (!window._drawModeActive) {
-              const t = e.touches[0];
-              const d = touchState.touches.get(t.identifier);
-              if (d) {
-                pendingCanvasOneFingerPan = { cx: t.clientX, cy: t.clientY, id: t.identifier };
-                const div = this.mobilePanPixelDivisor();
-                this.touchPanInertiaSampleFromMove(t.clientX, t.clientY, div);
-                if (canvasOneFingerPanRaf == null) {
-                  canvasOneFingerPanRaf = requestAnimationFrame(applyCanvasOneFingerPanFromPending);
-                }
+            const t = e.touches[0];
+            const d = touchState.touches.get(t.identifier);
+            if (d) {
+              pendingCanvasOneFingerPan = { cx: t.clientX, cy: t.clientY, id: t.identifier };
+              const div = this.mobilePanPixelDivisor();
+              this.touchPanInertiaSampleFromMove(t.clientX, t.clientY, div);
+              if (canvasOneFingerPanRaf == null) {
+                canvasOneFingerPanRaf = requestAnimationFrame(applyCanvasOneFingerPanFromPending);
               }
             }
           } else if (e.touches.length === 2) {
@@ -1275,9 +1273,7 @@
             touchState.oneFingerStart = { x: t.clientX, y: t.clientY };
             touchState.lastPinchDistance = 0;
             this.setWorkspacePinchActive(false);
-            if (!window._drawModeActive) {
-              this._skipClampDuringShellTouchPan = true;
-            }
+            this._skipClampDuringShellTouchPan = true;
             this.resetTouchPanInertiaTracking(t.clientX, t.clientY);
           }
         }, passiveFalse);
@@ -1431,8 +1427,8 @@
       }
 
       /**
-       * Same-origin iframe: wheel/keyboard to shell; two-finger pinch; one-finger drag on non-interactive
-       * areas pans the shell camera (whitespace / margins — not table cells or inputs).
+       * Same-origin iframe: wheel/keyboard to shell; two-finger pinch; one-finger / primary-button drag on
+       * non-interactive areas pans the shell camera (whitespace / margins — not table cells or inputs).
        */
       attachSubdocumentZoomToShellCamera(iframe) {
         if (!iframe || !iframe.contentWindow) return;
@@ -1443,19 +1439,25 @@
           if (this._subdocZoomHooked.has(doc)) return;
           this._subdocZoomHooked.add(doc);
 
+          const isParentDrawModeActive = () => {
+            try {
+              return !!(iframe.contentWindow.parent && iframe.contentWindow.parent._drawModeActive);
+            } catch (_) {
+              return false;
+            }
+          };
+          /** Draw layer while parent draw mode on: shell pan only after press-and-hold (see drawModeIframeHold). */
+          const isDrawLayerDeferShellPan = (el) => {
+            if (!el || typeof el.closest !== 'function') return false;
+            return !!el.closest('#draw-layer') && isParentDrawModeActive();
+          };
           const allowIframeShellPanTarget = (el) => {
             if (!el || typeof el.closest !== 'function') return false;
             if (el.closest('input, textarea, select, button, a[href], label')) return false;
             if (el.closest('[contenteditable]:not([contenteditable="false"])')) return false;
             if (el.closest('.items-table tbody')) return false;
             if (el.closest('.overlay-image, .page-overlay-wrapper')) return false;
-            if (el.closest('#draw-layer')) {
-              try {
-                if (iframe.contentWindow.parent && iframe.contentWindow.parent._drawModeActive) {
-                  return false;
-                }
-              } catch (_) {}
-            }
+            if (isDrawLayerDeferShellPan(el)) return false;
             return true;
           };
 
@@ -1497,48 +1499,310 @@
               return;
             }
             if (!isTrackpadLikeWheel(e)) return;
-            if (!allowIframeShellPanTarget(e.target)) return;
+            /** Draw-mode draw-layer blocks pointer pan (hold-to-pan) but trackpad swipe is not inking—allow shell pan. */
+            if (!allowIframeShellPanTarget(e.target) && !isDrawLayerDeferShellPan(e.target)) return;
             this.applyTrackpadCanvasGesture(e);
           };
           const pinch = { lastSpan: 0, deferredToGraphic: false };
-          const pan = { active: false, startX: 0, startY: 0, camX: 0, camY: 0 };
-          let iframeOneFingerPanRaf = null;
-          let pendingIframeOneFingerPan = null;
-          const cancelIframeOneFingerPanRaf = () => {
-            if (iframeOneFingerPanRaf != null) {
-              cancelAnimationFrame(iframeOneFingerPanRaf);
-              iframeOneFingerPanRaf = null;
+          const pan = {
+            active: false,
+            startX: 0,
+            startY: 0,
+            camX: 0,
+            camY: 0,
+            /** Locked at gesture start so pan speed does not flicker if zoom/divisor shifts mid-drag. */
+            panDivLocked: null,
+            /** Last move position/time for release-only flick sampling (not updated on pointer up). */
+            lastMoveCx: 0,
+            lastMoveCy: 0,
+            lastMoveT: null
+          };
+          const iframePanNow = () =>
+            typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+          const DRAW_MODE_IFRAME_PAN_HOLD_MS = 420;
+          const DRAW_MODE_IFRAME_PAN_HOLD_SLOP_PX = 14;
+          /** Touch: wait for hold on draw layer before shell pan; cleared on slop or release. */
+          let drawModeIframeHold = null;
+          /** True if draw-layer was paused for shell pan (hold path); resume when pan ends. */
+          let iframeShellPanPausedDrawForHold = false;
+          let drawModeMouseHoldCleanup = null;
+          /** After a 2-finger pinch, the lifted finger leaves one active touch with no new touchstart — arm pan on first move. */
+          let iframePanArmAfterPinchRelease = false;
+          /** Remove iframe + top window mouse listeners for shell pan. */
+          let iframeMouseShellPanCleanup = null;
+          /** True between iframe primary-down and matching mouseup (touch can preempt mid-drag). */
+          let iframeMouseShellPanDragging = false;
+          const removeIframeMouseShellListeners = () => {
+            if (typeof iframeMouseShellPanCleanup !== 'function') return;
+            iframeMouseShellPanCleanup();
+            iframeMouseShellPanCleanup = null;
+          };
+          /** Drop mouse listeners; if a mouse drag was in progress, reset shell pan state (e.g. touch preempted). */
+          const resumeDrawLayerAfterShellHoldPan = () => {
+            if (!iframeShellPanPausedDrawForHold) return;
+            iframeShellPanPausedDrawForHold = false;
+            const w = iframe.contentWindow;
+            if (w && typeof w.setDrawPausedForShellPan === 'function') {
+              w.setDrawPausedForShellPan(false);
             }
+          };
+          const removeDrawModeMouseHoldListeners = () => {
+            if (typeof drawModeMouseHoldCleanup !== 'function') return;
+            drawModeMouseHoldCleanup();
+            drawModeMouseHoldCleanup = null;
+          };
+          const teardownIframeMouseShellPan = () => {
+            removeDrawModeMouseHoldListeners();
+            removeIframeMouseShellListeners();
+            drawModeIframeHold = null;
+            if (!iframeMouseShellPanDragging) return;
+            iframeMouseShellPanDragging = false;
+            pendingIframeOneFingerPan = null;
+            pan.active = false;
+            pan.panDivLocked = null;
+            resumeDrawLayerAfterShellHoldPan();
+            const sh = parentShell();
+            if (sh) {
+              sh._skipClampDuringShellTouchPan = false;
+              if (typeof sh.updateCanvasTransform === 'function') sh.updateCanvasTransform();
+              if (typeof sh.abortTouchPanInertiaSampling === 'function') sh.abortTouchPanInertiaSampling();
+              if (typeof sh.setWorkspaceGestureActive === 'function') sh.setWorkspaceGestureActive(false);
+            }
+          };
+          /** True while the iframe 2-finger gesture is driving the shell (not deferred to overlay graphic). */
+          let iframePinchWentToShell = false;
+          let pendingIframeOneFingerPan = null;
+          const resolveIframePanDivisor = (shell) => {
+            if (
+              pan.panDivLocked != null &&
+              Number.isFinite(pan.panDivLocked) &&
+              pan.panDivLocked > 0
+            ) {
+              return pan.panDivLocked;
+            }
+            return typeof shell.mobilePanPixelDivisor === 'function'
+              ? shell.mobilePanPixelDivisor()
+              : Math.max(1, shell.camera.zoom || 1);
           };
           const flushIframeOneFingerPan = () => {
             const shell = parentShell();
             const p = pendingIframeOneFingerPan;
             if (!shell || !shell.camera || !p || !pan.active) return;
-            const panDiv =
-              typeof shell.mobilePanPixelDivisor === 'function'
-                ? shell.mobilePanPixelDivisor()
-                : Math.max(1, shell.camera.zoom || 1);
+            const panDiv = resolveIframePanDivisor(shell);
             shell._skipClampDuringShellTouchPan = true;
             shell.camera.x = pan.camX + (p.cx - pan.startX) / panDiv;
             shell.camera.y = pan.camY + (p.cy - pan.startY) / panDiv;
             shell.updateCanvasTransform();
             if (shell.isShellCameraDebug && shell.isShellCameraDebug()) {
-              shell.logShellCameraThrottled('pan-iframe', 200, '1-finger pan (iframe)', {
+              shell.logShellCameraThrottled('pan-iframe', 200, 'shell pan (iframe)', {
                 panDiv,
                 delta: { x: p.cx - pan.startX, y: p.cy - pan.startY },
                 camera: { x: shell.camera.x, y: shell.camera.y, zoom: shell.camera.zoom }
               });
             }
           };
-          const applyIframeOneFingerPanFromPending = () => {
-            iframeOneFingerPanRaf = null;
-            flushIframeOneFingerPan();
-          };
           const parentShell = () =>
             iframe.contentWindow.parent &&
             (iframe.contentWindow.parent.canvasShell || iframe.contentWindow.parent.app);
+
+          const tryCommitDrawModeHoldPanTouch = (e, t) => {
+            const h = drawModeIframeHold;
+            if (!h || pan.active || !t) return false;
+            const dx = t.clientX - h.startX;
+            const dy = t.clientY - h.startY;
+            if (Math.hypot(dx, dy) > DRAW_MODE_IFRAME_PAN_HOLD_SLOP_PX) {
+              drawModeIframeHold = null;
+              return false;
+            }
+            if (iframePanNow() - h.startT < DRAW_MODE_IFRAME_PAN_HOLD_MS) return false;
+            const ox = h.startX;
+            const oy = h.startY;
+            drawModeIframeHold = null;
+            const w = iframe.contentWindow;
+            if (w && typeof w.abortStrokeInProgress === 'function') w.abortStrokeInProgress();
+            if (w && typeof w.setDrawPausedForShellPan === 'function') w.setDrawPausedForShellPan(true);
+            iframeShellPanPausedDrawForHold = true;
+            const shell = parentShell();
+            if (!shell || !shell.camera) {
+              resumeDrawLayerAfterShellHoldPan();
+              return false;
+            }
+            pan.active = true;
+            pan.startX = ox;
+            pan.startY = oy;
+            pan.camX = shell.camera.x;
+            pan.camY = shell.camera.y;
+            pan.panDivLocked =
+              typeof shell.mobilePanPixelDivisor === 'function'
+                ? shell.mobilePanPixelDivisor()
+                : Math.max(1, shell.camera.zoom || 1);
+            shell._skipClampDuringShellTouchPan = true;
+            if (typeof shell.resetTouchPanInertiaTracking === 'function') {
+              shell.resetTouchPanInertiaTracking(ox, oy);
+            }
+            pan.lastMoveCx = t.clientX;
+            pan.lastMoveCy = t.clientY;
+            pan.lastMoveT = iframePanNow();
+            pendingIframeOneFingerPan = { cx: t.clientX, cy: t.clientY };
+            flushIframeOneFingerPan();
+            shellPreventDefaultIfCancelable(e);
+            return true;
+          };
+
+          const attachIframeMouseShellPanListeners = (shell) => {
+            if (typeof shell.setWorkspaceGestureActive === 'function') {
+              shell.setWorkspaceGestureActive(true);
+            }
+            const winIframe = iframe.contentWindow;
+            const winTop = window;
+            const onMouseMove = (ev) => {
+              if (!pan.active) return;
+              shellPreventDefaultIfCancelable(ev);
+              const sh = parentShell();
+              if (!sh || !sh.camera) return;
+              pendingIframeOneFingerPan = { cx: ev.clientX, cy: ev.clientY };
+              flushIframeOneFingerPan();
+              pan.lastMoveCx = ev.clientX;
+              pan.lastMoveCy = ev.clientY;
+              pan.lastMoveT = iframePanNow();
+            };
+            const onMouseUp = (ev) => {
+              if (ev.button !== 0) return;
+              if (iframeMouseShellPanCleanup == null) return;
+              const sh = parentShell();
+              const hadPan = pan.active;
+              if (hadPan) {
+                pendingIframeOneFingerPan = { cx: ev.clientX, cy: ev.clientY };
+                flushIframeOneFingerPan();
+                const panDivRel = sh ? resolveIframePanDivisor(sh) : 1;
+                if (sh && typeof sh.sampleTouchPanInertiaForRelease === 'function') {
+                  sh.sampleTouchPanInertiaForRelease(
+                    pan.lastMoveCx,
+                    pan.lastMoveCy,
+                    pan.lastMoveT,
+                    ev.clientX,
+                    ev.clientY,
+                    panDivRel
+                  );
+                }
+              }
+              pendingIframeOneFingerPan = null;
+              pan.active = false;
+              pan.panDivLocked = null;
+              resumeDrawLayerAfterShellHoldPan();
+              if (sh) {
+                sh._skipClampDuringShellTouchPan = false;
+                if (typeof sh.updateCanvasTransform === 'function') sh.updateCanvasTransform();
+              }
+              if (hadPan && sh && typeof sh.setWorkspaceGestureActive === 'function') {
+                sh.setWorkspaceGestureActive(false);
+              }
+              if (hadPan && sh && typeof sh.kickTouchPanInertiaIfFastEnough === 'function') {
+                sh.kickTouchPanInertiaIfFastEnough();
+              }
+              iframeMouseShellPanDragging = false;
+              removeIframeMouseShellListeners();
+            };
+            iframeMouseShellPanCleanup = () => {
+              winIframe.removeEventListener('mousemove', onMouseMove, cap);
+              winIframe.removeEventListener('mouseup', onMouseUp, cap);
+              winTop.removeEventListener('mousemove', onMouseMove, cap);
+              winTop.removeEventListener('mouseup', onMouseUp, cap);
+            };
+            winIframe.addEventListener('mousemove', onMouseMove, cap);
+            winIframe.addEventListener('mouseup', onMouseUp, cap);
+            winTop.addEventListener('mousemove', onMouseMove, cap);
+            winTop.addEventListener('mouseup', onMouseUp, cap);
+          };
+
+          const beginIframeMouseShellPan = (shell, startClientX, startClientY, curClientX, curClientY, sourceEvent) => {
+            if (sourceEvent) shellPreventDefaultIfCancelable(sourceEvent);
+            shell.stopShellPanMomentum();
+            teardownIframeMouseShellPan();
+            iframeMouseShellPanDragging = true;
+            pan.active = true;
+            pan.startX = startClientX;
+            pan.startY = startClientY;
+            pan.camX = shell.camera.x;
+            pan.camY = shell.camera.y;
+            pan.panDivLocked =
+              typeof shell.mobilePanPixelDivisor === 'function'
+                ? shell.mobilePanPixelDivisor()
+                : Math.max(1, shell.camera.zoom || 1);
+            shell._skipClampDuringShellTouchPan = true;
+            if (typeof shell.resetTouchPanInertiaTracking === 'function') {
+              shell.resetTouchPanInertiaTracking(startClientX, startClientY);
+            }
+            pan.lastMoveCx = curClientX;
+            pan.lastMoveCy = curClientY;
+            pan.lastMoveT = iframePanNow();
+            pendingIframeOneFingerPan = { cx: curClientX, cy: curClientY };
+            flushIframeOneFingerPan();
+            attachIframeMouseShellPanListeners(shell);
+          };
+
+          const startDrawModeMouseHold = (downEvent) => {
+            removeDrawModeMouseHoldListeners();
+            const winIframe = iframe.contentWindow;
+            const winTop = window;
+            const holdState = {
+              startT: iframePanNow(),
+              startX: downEvent.clientX,
+              startY: downEvent.clientY,
+              active: true
+            };
+            const finishHoldWithoutPan = () => {
+              holdState.active = false;
+              removeDrawModeMouseHoldListeners();
+            };
+            const onHoldMouseMove = (ev) => {
+              if (!holdState.active || pan.active) return;
+              const dx = ev.clientX - holdState.startX;
+              const dy = ev.clientY - holdState.startY;
+              if (Math.hypot(dx, dy) > DRAW_MODE_IFRAME_PAN_HOLD_SLOP_PX) {
+                finishHoldWithoutPan();
+                return;
+              }
+              if (iframePanNow() - holdState.startT < DRAW_MODE_IFRAME_PAN_HOLD_MS) return;
+              holdState.active = false;
+              removeDrawModeMouseHoldListeners();
+              const shell = parentShell();
+              if (!shell || !shell.camera) {
+                resumeDrawLayerAfterShellHoldPan();
+                return;
+              }
+              const ox = holdState.startX;
+              const oy = holdState.startY;
+              const w = iframe.contentWindow;
+              if (w && typeof w.abortStrokeInProgress === 'function') w.abortStrokeInProgress();
+              if (w && typeof w.setDrawPausedForShellPan === 'function') w.setDrawPausedForShellPan(true);
+              iframeShellPanPausedDrawForHold = true;
+              beginIframeMouseShellPan(shell, ox, oy, ev.clientX, ev.clientY, ev);
+            };
+            const onHoldMouseUp = (ev) => {
+              if (ev.button !== 0) return;
+              if (!holdState.active) return;
+              finishHoldWithoutPan();
+            };
+            drawModeMouseHoldCleanup = () => {
+              holdState.active = false;
+              winIframe.removeEventListener('mousemove', onHoldMouseMove, cap);
+              winIframe.removeEventListener('mouseup', onHoldMouseUp, cap);
+              winTop.removeEventListener('mousemove', onHoldMouseMove, cap);
+              winTop.removeEventListener('mouseup', onHoldMouseUp, cap);
+            };
+            winIframe.addEventListener('mousemove', onHoldMouseMove, cap);
+            winIframe.addEventListener('mouseup', onHoldMouseUp, cap);
+            winTop.addEventListener('mousemove', onHoldMouseMove, cap);
+            winTop.addEventListener('mouseup', onHoldMouseUp, cap);
+          };
+
           const clearPinch = (e) => {
             if (!e.touches || e.touches.length < 2) {
+              if (e.touches && e.touches.length === 1 && iframePinchWentToShell) {
+                iframePanArmAfterPinchRelease = true;
+              }
+              iframePinchWentToShell = false;
               pinch.lastSpan = 0;
               pinch.deferredToGraphic = false;
               const shell = parentShell();
@@ -1550,24 +1814,29 @@
           doc.addEventListener(
             'touchstart',
             (e) => {
+              iframePanArmAfterPinchRelease = false;
+              teardownIframeMouseShellPan();
               const shellGesture = parentShell();
               if (shellGesture && typeof shellGesture.setWorkspaceGestureActive === 'function') {
                 shellGesture.setWorkspaceGestureActive(true);
               }
               if (e.touches.length === 2) {
-                cancelIframeOneFingerPanRaf();
+                drawModeIframeHold = null;
                 pendingIframeOneFingerPan = null;
                 pan.active = false;
+                pan.panDivLocked = null;
                 const shell2 = parentShell();
                 if (shell2 && typeof shell2.abortTouchPanInertiaSampling === 'function') {
                   shell2.abortTouchPanInertiaSampling();
                 }
                 if (shouldDeferPinchToSelectedGraphic(e)) {
                   pinch.deferredToGraphic = true;
+                  iframePinchWentToShell = false;
                   pinch.lastSpan = 0;
                   return;
                 }
                 pinch.deferredToGraphic = false;
+                iframePinchWentToShell = true;
                 shellPreventDefaultIfCancelable(e);
                 const shell = parentShell();
                 if (shell && typeof shell.setWorkspacePinchActive === 'function') {
@@ -1579,25 +1848,60 @@
               } else if (e.touches.length === 1) {
                 pinch.lastSpan = 0;
                 const t = e.target;
+                const t0 = e.touches[0];
                 if (allowIframeShellPanTarget(t)) {
+                  drawModeIframeHold = null;
                   pan.active = true;
-                  pan.startX = e.touches[0].clientX;
-                  pan.startY = e.touches[0].clientY;
+                  pan.startX = t0.clientX;
+                  pan.startY = t0.clientY;
                   const shell = parentShell();
                   if (shell && shell.camera) {
                     pan.camX = shell.camera.x;
                     pan.camY = shell.camera.y;
+                    pan.panDivLocked =
+                      typeof shell.mobilePanPixelDivisor === 'function'
+                        ? shell.mobilePanPixelDivisor()
+                        : Math.max(1, shell.camera.zoom || 1);
                     shell._skipClampDuringShellTouchPan = true;
                     if (typeof shell.resetTouchPanInertiaTracking === 'function') {
                       shell.resetTouchPanInertiaTracking(pan.startX, pan.startY);
                     }
+                    pan.lastMoveCx = pan.startX;
+                    pan.lastMoveCy = pan.startY;
+                    pan.lastMoveT = iframePanNow();
                   } else {
                     pan.active = false;
+                    pan.panDivLocked = null;
                   }
                 } else {
                   pan.active = false;
+                  pan.panDivLocked = null;
+                  if (isDrawLayerDeferShellPan(t)) {
+                    drawModeIframeHold = {
+                      startT: iframePanNow(),
+                      startX: t0.clientX,
+                      startY: t0.clientY
+                    };
+                  } else {
+                    drawModeIframeHold = null;
+                  }
                 }
               }
+            },
+            cap
+          );
+          doc.addEventListener(
+            'mousedown',
+            (e) => {
+              if (e.button !== 0) return;
+              if (pan.active) return;
+              if (!allowIframeShellPanTarget(e.target)) {
+                if (isDrawLayerDeferShellPan(e.target)) startDrawModeMouseHold(e);
+                return;
+              }
+              const shell = parentShell();
+              if (!shell || !shell.camera) return;
+              beginIframeMouseShellPan(shell, e.clientX, e.clientY, e.clientX, e.clientY, e);
             },
             cap
           );
@@ -1605,7 +1909,6 @@
             'touchmove',
             (e) => {
               if (e.touches.length === 2) {
-                cancelIframeOneFingerPanRaf();
                 pendingIframeOneFingerPan = null;
                 if (pinch.deferredToGraphic) return;
                 shellPreventDefaultIfCancelable(e);
@@ -1617,36 +1920,64 @@
                   const scale = span / pinch.lastSpan;
                   const cx = (t1.clientX + t2.clientX) / 2;
                   const cy = (t1.clientY + t2.clientY) / 2;
-                  const rect = iframe.getBoundingClientRect();
-                  shell.applyPinchGestureStep(scale, rect.left + cx, rect.top + cy);
+                  /** clientX/Y are already in the parent viewport — same as canvas pinch handlers. */
+                  shell.applyPinchGestureStep(scale, cx, cy);
                 }
                 pinch.lastSpan = span;
                 return;
+              }
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                if (drawModeIframeHold && !pan.active) {
+                  tryCommitDrawModeHoldPanTouch(e, t);
+                }
+                const shellArm = parentShell();
+                if (
+                  !pan.active &&
+                  iframePanArmAfterPinchRelease &&
+                  allowIframeShellPanTarget(e.target) &&
+                  shellArm &&
+                  shellArm.camera
+                ) {
+                  iframePanArmAfterPinchRelease = false;
+                  pan.active = true;
+                  pan.startX = t.clientX;
+                  pan.startY = t.clientY;
+                  pan.camX = shellArm.camera.x;
+                  pan.camY = shellArm.camera.y;
+                  pan.panDivLocked =
+                    typeof shellArm.mobilePanPixelDivisor === 'function'
+                      ? shellArm.mobilePanPixelDivisor()
+                      : Math.max(1, shellArm.camera.zoom || 1);
+                  shellArm._skipClampDuringShellTouchPan = true;
+                  if (typeof shellArm.resetTouchPanInertiaTracking === 'function') {
+                    shellArm.resetTouchPanInertiaTracking(pan.startX, pan.startY);
+                  }
+                  pan.lastMoveCx = pan.startX;
+                  pan.lastMoveCy = pan.startY;
+                  pan.lastMoveT = iframePanNow();
+                }
               }
               if (e.touches.length === 1 && pan.active) {
                 shellPreventDefaultIfCancelable(e);
                 const shell = parentShell();
                 const t = e.touches[0];
                 if (shell && shell.camera) {
-                  const panDiv =
-                    typeof shell.mobilePanPixelDivisor === 'function'
-                      ? shell.mobilePanPixelDivisor()
-                      : Math.max(1, shell.camera.zoom || 1);
-                  if (typeof shell.touchPanInertiaSampleFromMove === 'function') {
-                    shell.touchPanInertiaSampleFromMove(t.clientX, t.clientY, panDiv);
-                  }
                   pendingIframeOneFingerPan = { cx: t.clientX, cy: t.clientY };
-                  if (iframeOneFingerPanRaf == null) {
-                    iframeOneFingerPanRaf = requestAnimationFrame(applyIframeOneFingerPanFromPending);
-                  }
+                  flushIframeOneFingerPan();
+                  pan.lastMoveCx = t.clientX;
+                  pan.lastMoveCy = t.clientY;
+                  pan.lastMoveT = iframePanNow();
                 }
               }
             },
             cap
           );
           const onTouchEndOrCancel = (e) => {
+            if (!e.touches || e.touches.length === 0) {
+              drawModeIframeHold = null;
+            }
             const hadShellPan = pan.active;
-            cancelIframeOneFingerPanRaf();
             if (
               hadShellPan &&
               pan.active &&
@@ -1658,18 +1989,25 @@
               pendingIframeOneFingerPan = { cx: ch.clientX, cy: ch.clientY };
               flushIframeOneFingerPan();
               const sh0 = parentShell();
-              if (sh0 && typeof sh0.touchPanInertiaSampleFromMove === 'function') {
-                const panDiv0 =
-                  typeof sh0.mobilePanPixelDivisor === 'function'
-                    ? sh0.mobilePanPixelDivisor()
-                    : Math.max(1, sh0.camera.zoom || 1);
-                sh0.touchPanInertiaSampleFromMove(ch.clientX, ch.clientY, panDiv0);
+              if (sh0 && typeof sh0.sampleTouchPanInertiaForRelease === 'function') {
+                const panDiv0 = resolveIframePanDivisor(sh0);
+                sh0.sampleTouchPanInertiaForRelease(
+                  pan.lastMoveCx,
+                  pan.lastMoveCy,
+                  pan.lastMoveT,
+                  ch.clientX,
+                  ch.clientY,
+                  panDiv0
+                );
               }
             }
             pendingIframeOneFingerPan = null;
             clearPinch(e);
             if (!e.touches || e.touches.length === 0) {
+              iframePanArmAfterPinchRelease = false;
               pan.active = false;
+              pan.panDivLocked = null;
+              resumeDrawLayerAfterShellHoldPan();
               const sh = parentShell();
               if (sh) {
                 sh._skipClampDuringShellTouchPan = false;
@@ -1687,10 +2025,14 @@
           };
           doc.addEventListener('touchend', onTouchEndOrCancel, cap);
           doc.addEventListener('touchcancel', (e) => {
-            cancelIframeOneFingerPanRaf();
             pendingIframeOneFingerPan = null;
+            drawModeIframeHold = null;
+            teardownIframeMouseShellPan();
             clearPinch(e);
+            iframePanArmAfterPinchRelease = false;
             pan.active = false;
+            pan.panDivLocked = null;
+            resumeDrawLayerAfterShellHoldPan();
             const sh = parentShell();
             if (sh) {
               sh._skipClampDuringShellTouchPan = false;
@@ -2035,6 +2377,30 @@
         this._touchPanInertEma.vy = 0;
       }
 
+      /**
+       * Flick sample on pointer up: velocity from last drag point → release only (not averaged over the stroke).
+       * Call after synchronous pan flush; avoids EMA churn during drag and pairs with immediate pan updates.
+       */
+      sampleTouchPanInertiaForRelease(lastCx, lastCy, lastT, endCx, endCy, panDiv) {
+        if (!Number.isFinite(endCx) || !Number.isFinite(endCy)) return;
+        const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+        if (
+          lastT == null ||
+          !Number.isFinite(lastCx) ||
+          !Number.isFinite(lastCy) ||
+          !Number.isFinite(lastT)
+        ) {
+          this._touchPanInertPrev = { x: endCx, y: endCy, t: now };
+          if (!this._touchPanInertEma) this._touchPanInertEma = { vx: 0, vy: 0 };
+          this._touchPanInertEma.vx = 0;
+          this._touchPanInertEma.vy = 0;
+          return;
+        }
+        this._touchPanInertPrev = { x: lastCx, y: lastCy, t: lastT };
+        this.touchPanInertiaSampleFromMove(endCx, endCy, panDiv);
+      }
+
+      /** Samples touch velocity for **flick on release only** — does not move the camera during drag. */
       touchPanInertiaSampleFromMove(clientX, clientY, panDiv) {
         const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
         const p = this._touchPanInertPrev;
@@ -2067,8 +2433,10 @@
         if (sp < minV) return;
         if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
         const boost = 1.06;
-        this._shellPanMomentumVel.vx += e.vx * boost;
-        this._shellPanMomentumVel.vy += e.vy * boost;
+        const z = Math.max(0.15, Math.min(5, this.camera.zoom || 1));
+        const inertiaZoom = z < 1 ? Math.max(0.22, z * z) : 1;
+        this._shellPanMomentumVel.vx += e.vx * boost * inertiaZoom;
+        this._shellPanMomentumVel.vy += e.vy * boost * inertiaZoom;
         this._touchPanInertEma.vx = 0;
         this._touchPanInertEma.vy = 0;
         this._touchPanInertPrev = null;
@@ -2095,6 +2463,10 @@
       }
 
       shellPanMomentumTick(ts) {
+        if (this._skipClampDuringShellTouchPan) {
+          this.stopShellPanMomentum();
+          return;
+        }
         if (!this._shellPanMomentumVel) this._shellPanMomentumVel = { vx: 0, vy: 0 };
         if (this._shellPanMomFrameTs == null) this._shellPanMomFrameTs = ts;
         let dt = ts - this._shellPanMomFrameTs;
@@ -2120,18 +2492,18 @@
 
       /**
        * One-finger **touch** pan sensitivity vs shell zoom `z`.
-       * - **Below 100%:** divisor must scale **down** with z (not stay on a constant floor), otherwise pan feels
-       *   sluggish vs how much content is on screen.
-       * - **Above 100%:** sub-linear `pow(z,·)` softens integer touch steps (stairstep/jitter) vs raw divisor=z.
-       * - **At 100%:** both branches meet at `z·1.08` / `max(1.08, z^k)` → same baseline ~1.08 (no sensitivity jump).
+       * Pan uses `translate(px) scale(z)` — translation is in **parent CSS pixels**, so the same camera delta moves
+       * the overlay the same distance on screen at every zoom. When zoomed out the invoice is tiny, so 1:1 finger→camera
+       * px feels like the page “flies off”; we scale the divisor up as `baseline / z` so each finger pixel moves the
+       * camera **less** when `z` is small.
+       * **Above 100%:** sub-linear `pow(z,·)` softens integer touch steps vs raw divisor=z.
        */
       mobilePanPixelDivisor() {
         const z = Math.max(0.1, Math.min(5, this.camera.zoom || 1));
         const baseline = 1.08;
-        const minDiv = 0.72;
         const zoomInGamma = 0.78;
         if (z <= 1) {
-          return Math.max(minDiv, z * baseline);
+          return baseline / z;
         }
         return Math.max(baseline, Math.pow(z, zoomInGamma));
       }
@@ -2373,119 +2745,40 @@
       
       loadData() {
         try {
-          // Load products
-          const savedProducts = localStorage.getItem('invoiceApp_products');
-          this.data.products = savedProducts ? JSON.parse(savedProducts) : this.getDefaultProducts();
-          
-          // Load clients
-          const savedClients = localStorage.getItem('invoiceApp_clients');
-          this.data.clients = savedClients ? JSON.parse(savedClients) : this.getDefaultClients();
-          
-          // Load company info
-          const savedCompany = localStorage.getItem('invoiceApp_company');
-          this.data.company = savedCompany ? JSON.parse(savedCompany) : this.getDefaultCompany();
-          
-          // Load settings
-          const savedSettings = localStorage.getItem('invoiceApp_settings');
-          this.data.settings = savedSettings ? JSON.parse(savedSettings) : { currentMode: 'edit', autoSave: true, defaultCurrency: '£' };
-          
+          const C = window.InvoiceAppCatalogStorage;
+          if (!C || typeof C.loadCatalogState !== 'function') {
+            throw new Error('InvoiceAppCatalogStorage missing (load invoice-app-catalog-storage.js before canvas-shell-ctrls.js)');
+          }
+          const loaded = C.loadCatalogState();
+          this.data.products = loaded.products;
+          this.data.clients = loaded.clients;
+          this.data.company = loaded.company;
+          this.data.settings = loaded.settings;
           console.log('📁 Data loaded from localStorage');
         } catch (error) {
           console.error('Error loading data:', error);
-          this.data = {
-            products: this.getDefaultProducts(),
-            clients: this.getDefaultClients(),
-            company: this.getDefaultCompany(),
-            settings: { currentMode: 'edit', autoSave: true, defaultCurrency: '£' }
-          };
+          const C = window.InvoiceAppCatalogStorage;
+          if (C) {
+            this.data = {
+              products: C.getDefaultProducts(),
+              clients: C.getDefaultClients(),
+              company: C.getDefaultCompany(),
+              settings: C.getDefaultSettings()
+            };
+          }
         }
       }
       
       saveData() {
         try {
-          localStorage.setItem('invoiceApp_products', JSON.stringify(this.data.products));
-          localStorage.setItem('invoiceApp_clients', JSON.stringify(this.data.clients));
-          localStorage.setItem('invoiceApp_company', JSON.stringify(this.data.company));
-          localStorage.setItem('invoiceApp_settings', JSON.stringify(this.data.settings));
+          const C = window.InvoiceAppCatalogStorage;
+          if (C && typeof C.saveCatalogState === 'function') {
+            C.saveCatalogState(this.data);
+          }
           console.log('💾 Data saved to localStorage');
         } catch (error) {
           console.error('Error saving data:', error);
         }
-      }
-      
-      // ========================================
-      // DEFAULT DATA
-      // ========================================
-      
-      getDefaultProducts() {
-        return [
-          {
-            id: 1,
-            name: 'Example Product',
-            category: 'product',
-            icon: '📦',
-            image: null,
-            description: 'Sample product for demonstration',
-            price: 0.00
-          },
-          {
-            id: 2,
-            name: 'Service Example',
-            category: 'service',
-            icon: '🔧',
-            image: null,
-            description: 'Sample service for demonstration',
-            price: 0.00
-          }
-        ];
-      }
-      
-      getDefaultClients() {
-        return [
-          {
-            clientId: 1,
-            client: {
-              name: 'John Smith',
-              address: '123 Main Street',
-              city: 'London, E1 1AA',
-              phone: '+44 20 1234 5678',
-              email: 'john.smith@email.com',
-              type: 'Individual',
-              status: 'active',
-              notes: 'Regular customer, prefers morning deliveries'
-            }
-          },
-          {
-            clientId: 2,
-            client: {
-              name: 'Sarah Johnson',
-              address: '456 High Road',
-              city: 'Manchester, M1 1AA',
-              phone: '+44 161 123 4567',
-              email: 'sarah.j@email.com',
-              type: 'Company',
-              status: 'active',
-              notes: 'Business client, office hours only'
-            }
-          }
-        ];
-      }
-      
-      getDefaultCompany() {
-        return {
-          name: 'Your Company Name',
-          address: 'Your Company Address',
-          city: 'Your City, Postcode',
-          phone: 'Your Phone Number',
-          email: 'your.email@company.com',
-          companyNumber: 'Your Company Number',
-          vatNumber: 'Your VAT Number',
-          bankName: 'Your Bank Name',
-          accountName: 'Your Account Name',
-          sortCode: 'Your Sort Code',
-          account: 'Your Account Number',
-          logo: null
-        };
       }
       
       // ========================================
@@ -2609,506 +2902,60 @@
       // Event prevention methods removed - using CSS-based approach instead
       
       // ========================================
-      // DATA MANAGEMENT MODAL
+      // CATALOG DATA MODAL (implementation: js/invoice-catalog-admin.js)
       // ========================================
-      
-      showDataManagement() {
-        const modal = document.getElementById('dataModal');
-        modal.classList.add('show');
-        this.populateDataModal();
-      }
       
       initDataManagement() {
-        const dataBtn = document.getElementById('dataManagementBtn');
-        const modal = document.getElementById('dataModal');
-        const closeBtn = document.getElementById('closeModal');
-        
-        // Open modal
-        dataBtn.addEventListener('click', () => {
-          this.showDataManagement();
-        });
-        
-        // Close modal
-        closeBtn.addEventListener('click', () => {
-          modal.classList.remove('show');
-          this.syncInvoiceFrameFromStorage();
-        });
-        
-        // Close on overlay click
-        modal.addEventListener('click', (e) => {
-          if (e.target === modal) {
-            modal.classList.remove('show');
-            this.syncInvoiceFrameFromStorage();
-          }
-        });
-        
-        // Tab switching
-        document.querySelectorAll('.tab-button').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const tabId = e.target.dataset.tab;
-            this.switchTab(tabId);
-          });
-        });
-        
-        // Initialize forms
-        this.initProductForm();
-        this.initClientForm();
-        this.initCompanyForm();
-        this.initCounterControl();
+        if (typeof window.InvoiceCatalogAdmin !== 'function') {
+          console.warn('InvoiceCatalogAdmin missing — load js/invoice-catalog-admin.js before canvas-shell-ctrls.js');
+          return;
+        }
+        this._catalogAdmin = new window.InvoiceCatalogAdmin(this);
+        this._catalogAdmin.init();
       }
       
+      /** Delegates for inline onclick="app.*" inside the data modal */
+      showDataManagement() {
+        return this._catalogAdmin && this._catalogAdmin.showDataManagement();
+      }
       switchTab(tabId) {
-        // Update tab buttons
-        document.querySelectorAll('.tab-button').forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.tab === tabId);
-        });
-        
-        // Update tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.toggle('active', content.id === `${tabId}-tab`);
-        });
-        
-        // Refresh tab-specific content
-        if (tabId === 'products') {
-          this.populateProductsList();
-        } else if (tabId === 'clients') {
-          this.populateClientsList();
-        } else if (tabId === 'company') {
-          this.populateCompanyForm();
-        } else if (tabId === 'export') {
-          this.refreshCounterControl();
-        }
+        return this._catalogAdmin && this._catalogAdmin.switchTab(tabId);
       }
-      
       populateDataModal() {
-        this.populateProductsList();
-        this.populateClientsList();
-        this.populateCompanyForm();
-        this.refreshCounterControl();
+        return this._catalogAdmin && this._catalogAdmin.populateDataModal();
       }
-
-      initCounterControl() {
-        const input = document.getElementById('counterInput');
-        const minusBtn = document.getElementById('counterStepperMinus');
-        const plusBtn = document.getElementById('counterStepperPlus');
-        const resetBtn = document.getElementById('counterResetBtn');
-        if (!input || !minusBtn || !plusBtn || !resetBtn) return;
-
-        const syncInputFromStorage = () => {
-          const n = typeof GlobalStorage !== 'undefined' ? GlobalStorage.getNextInvoiceNumber() : 1;
-          input.value = n;
-        };
-
-        const applyAndUpdate = (value) => {
-          const n = Math.max(1, Math.min(99999, Math.floor(Number(value)) || 1));
-          if (typeof GlobalStorage !== 'undefined' && GlobalStorage.setNextInvoiceNumber) {
-            GlobalStorage.setNextInvoiceNumber(n);
-          } else if (typeof GlobalStorage !== 'undefined') {
-            GlobalStorage.saveGlobalData({ nextInvoiceNumber: n });
-          }
-          input.value = n;
-          if (window.canvasShell && window.canvasShell.invoiceAction) {
-            window.canvasShell.invoiceAction('applyCounterToDraft', { value: n });
-          }
-          this.syncInvoiceFrameFromStorage();
-        };
-
-        syncInputFromStorage();
-
-        minusBtn.addEventListener('click', () => {
-          const current = Math.max(1, Math.floor(Number(input.value)) || 1);
-          applyAndUpdate(current - 1);
-        });
-        plusBtn.addEventListener('click', () => {
-          const current = Math.max(1, Math.floor(Number(input.value)) || 1);
-          applyAndUpdate(current + 1);
-        });
-        resetBtn.addEventListener('click', () => applyAndUpdate(1));
-
-        input.addEventListener('change', () => applyAndUpdate(input.value));
-        input.addEventListener('blur', () => {
-          const v = input.value;
-          if (v === '' || isNaN(Number(v))) syncInputFromStorage();
-          else applyAndUpdate(v);
-        });
-      }
-
       refreshCounterControl() {
-        const input = document.getElementById('counterInput');
-        if (input && typeof GlobalStorage !== 'undefined') {
-          input.value = GlobalStorage.getNextInvoiceNumber();
-        }
+        return this._catalogAdmin && this._catalogAdmin.refreshCounterControl();
       }
-      
-      // ========================================
-      // PRODUCTS MANAGEMENT
-      // ========================================
-      
-      initProductForm() {
-        document.getElementById('addProductBtn').addEventListener('click', () => {
-          this.showProductForm();
-        });
+      showProductForm(product) {
+        return this._catalogAdmin && this._catalogAdmin.showProductForm(product);
       }
-      
-      showProductForm(product = null) {
-        const isEdit = !!product;
-        const formHtml = `
-          <div class="form-row">
-            <div class="form-group">
-              <label>Name *</label>
-              <input type="text" id="productName" value="${product?.name || ''}" required>
-            </div>
-            <div class="form-group">
-              <label>Type</label>
-              <select id="productCategory">
-                <option value="product" ${product?.category === 'product' ? 'selected' : ''}>Product</option>
-                <option value="service" ${product?.category === 'service' ? 'selected' : ''}>Service</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Price (£)</label>
-              <input type="number" id="productPrice" step="0.01" value="${product?.price || '0.00'}" placeholder="0.00">
-            </div>
-            <div class="form-group">
-              <label>Icon</label>
-              <input type="text" id="productIcon" value="${product?.icon || '📦'}" placeholder="📦">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Description</label>
-            <textarea id="productDescription" placeholder="Item description...">${product?.description || ''}</textarea>
-          </div>
-          <div class="form-group">
-            <label>Item Image</label>
-            <div class="image-upload" onclick="document.getElementById('productImageFile').click()">
-              <input type="file" id="productImageFile" accept="image/*" style="display: none;">
-              <p>📁 Click to upload item image</p>
-              <div class="image-preview" id="productImagePreview">
-                ${product?.image ? `<img src="${product.image}" alt="Item">` : ''}
-              </div>
-            </div>
-          </div>
-          <div class="text-center mt-20">
-            <button type="button" class="btn btn-primary" onclick="app.saveProduct(${isEdit ? product.id : 'null'})">
-              💾 ${isEdit ? 'Update' : 'Add'} Item
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="app.populateProductsList()">
-              ❌ Cancel
-            </button>
-          </div>
-        `;
-        
-        document.getElementById('productsList').innerHTML = formHtml;
-        
-        // Handle image upload
-        document.getElementById('productImageFile').addEventListener('change', (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              document.getElementById('productImagePreview').innerHTML = 
-                `<img src="${e.target.result}" alt="Product">`;
-            };
-            reader.readAsDataURL(file);
-          }
-        });
+      saveProduct(editId) {
+        return this._catalogAdmin && this._catalogAdmin.saveProduct(editId);
       }
-      
-      saveProduct(editId = null) {
-        const name = document.getElementById('productName').value.trim();
-        const category = document.getElementById('productCategory').value;
-        const price = parseFloat(document.getElementById('productPrice').value) || 0.00;
-        const icon = document.getElementById('productIcon').value.trim() || '📦';
-        const description = document.getElementById('productDescription').value.trim();
-        const imagePreview = document.querySelector('#productImagePreview img');
-        const image = imagePreview ? imagePreview.src : null;
-        
-        if (!name) {
-          alert('Name is required!');
-          return;
-        }
-        
-        const productData = { name, category, price, icon, description, image };
-        
-        if (editId) {
-          // Update existing product
-          const index = this.data.products.findIndex(p => p.id === editId);
-          if (index !== -1) {
-            this.data.products[index] = { ...this.data.products[index], ...productData };
-          }
-        } else {
-          // Add new product
-          const newId = Math.max(...this.data.products.map(p => p.id), 0) + 1;
-          this.data.products.push({ id: newId, ...productData });
-        }
-        
-        this.saveData();
-        this.populateProductsList();
-        this.syncInvoiceFrameFromStorage();
-        
-        console.log(`✅ Product ${editId ? 'updated' : 'added'}: ${name}`);
-      }
-      
       deleteProduct(id) {
-        if (confirm('Are you sure you want to delete this product?')) {
-          this.data.products = this.data.products.filter(p => p.id !== id);
-          this.saveData();
-          this.populateProductsList();
-          this.syncInvoiceFrameFromStorage();
-          console.log(`🗑️ Product deleted: ID ${id}`);
-        }
+        return this._catalogAdmin && this._catalogAdmin.deleteProduct(id);
       }
-      
       populateProductsList() {
-        const container = document.getElementById('productsList');
-        if (this.data.products.length === 0) {
-          container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">No products added yet.</div>';
-          return;
-        }
-        
-        const html = this.data.products.map(product => `
-          <div class="data-item">
-            <div class="data-item-info">
-              <div class="data-item-name">${product.icon} ${product.name}</div>
-              <div class="data-item-details">
-                ${product.category} • £${product.price.toFixed(2)} • ${product.description}
-              </div>
-            </div>
-            <div class="data-item-actions">
-              <button class="btn-sm btn-edit" onclick="app.showProductForm(${JSON.stringify(product).replace(/"/g, '&quot;')})">
-                ✏️ Edit
-              </button>
-              <button class="btn-sm btn-delete" onclick="app.deleteProduct(${product.id})">
-                🗑️ Delete
-              </button>
-            </div>
-          </div>
-        `).join('');
-        
-        container.innerHTML = html;
+        return this._catalogAdmin && this._catalogAdmin.populateProductsList();
       }
-      
-      // ========================================
-      // CLIENTS MANAGEMENT  
-      // ========================================
-      
-      initClientForm() {
-        document.getElementById('addClientBtn').addEventListener('click', () => {
-          this.showClientForm();
-        });
+      showClientForm(clientData) {
+        return this._catalogAdmin && this._catalogAdmin.showClientForm(clientData);
       }
-      
-      showClientForm(clientData = null) {
-        const isEdit = !!clientData;
-        const client = clientData?.client || {};
-        
-        const formHtml = `
-          <div class="form-row">
-            <div class="form-group">
-              <label>Client Name *</label>
-              <input type="text" id="clientName" value="${client.name || ''}" required>
-            </div>
-            <div class="form-group">
-              <label>Type</label>
-              <select id="clientType">
-                <option value="Individual" ${client.type === 'Individual' ? 'selected' : ''}>Individual</option>
-                <option value="Company" ${client.type === 'Company' ? 'selected' : ''}>Company</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Address</label>
-              <input type="text" id="clientAddress" value="${client.address || ''}">
-            </div>
-            <div class="form-group">
-              <label>City</label>
-              <input type="text" id="clientCity" value="${client.city || ''}">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Phone</label>
-              <input type="text" id="clientPhone" value="${client.phone || ''}">
-            </div>
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" id="clientEmail" value="${client.email || ''}">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Notes</label>
-            <textarea id="clientNotes" placeholder="Additional notes...">${client.notes || ''}</textarea>
-          </div>
-          <div class="text-center mt-20">
-            <button type="button" class="btn btn-primary" onclick="app.saveClient(${isEdit ? clientData.clientId : 'null'})">
-              💾 ${isEdit ? 'Update' : 'Add'} Client
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="app.populateClientsList()">
-              ❌ Cancel
-            </button>
-          </div>
-        `;
-        
-        document.getElementById('clientsList').innerHTML = formHtml;
+      saveClient(editId) {
+        return this._catalogAdmin && this._catalogAdmin.saveClient(editId);
       }
-      
-      saveClient(editId = null) {
-        const name = document.getElementById('clientName').value.trim();
-        const type = document.getElementById('clientType').value;
-        const address = document.getElementById('clientAddress').value.trim();
-        const city = document.getElementById('clientCity').value.trim();
-        const phone = document.getElementById('clientPhone').value.trim();
-        const email = document.getElementById('clientEmail').value.trim();
-        const notes = document.getElementById('clientNotes').value.trim();
-        
-        if (!name) {
-          alert('Client name is required!');
-          return;
-        }
-        
-        const clientData = {
-          client: { name, type, address, city, phone, email, notes, status: 'active' }
-        };
-        
-        if (editId) {
-          // Update existing client
-          const index = this.data.clients.findIndex(c => c.clientId === editId);
-          if (index !== -1) {
-            this.data.clients[index] = { clientId: editId, ...clientData };
-          }
-        } else {
-          // Add new client
-          const newId = Math.max(...this.data.clients.map(c => c.clientId), 0) + 1;
-          this.data.clients.push({ clientId: newId, ...clientData });
-        }
-        
-        this.saveData();
-        this.populateClientsList();
-        this.syncInvoiceFrameFromStorage();
-        
-        console.log(`✅ Client ${editId ? 'updated' : 'added'}: ${name}`);
-      }
-      
       deleteClient(id) {
-        if (confirm('Are you sure you want to delete this client?')) {
-          this.data.clients = this.data.clients.filter(c => c.clientId !== id);
-          this.saveData();
-          this.populateClientsList();
-          this.syncInvoiceFrameFromStorage();
-          console.log(`🗑️ Client deleted: ID ${id}`);
-        }
+        return this._catalogAdmin && this._catalogAdmin.deleteClient(id);
       }
-      
       populateClientsList() {
-        const container = document.getElementById('clientsList');
-        if (this.data.clients.length === 0) {
-          container.innerHTML = '<div class="text-center" style="padding: 40px; color: #666;">No clients added yet.</div>';
-          return;
-        }
-        
-        const html = this.data.clients.map(clientData => {
-          const client = clientData.client;
-          return `
-            <div class="data-item">
-              <div class="data-item-info">
-                <div class="data-item-name">👤 ${client.name}</div>
-                <div class="data-item-details">
-                  ${client.type} • ${client.address}, ${client.city} • ${client.phone} • ${client.email}
-                </div>
-              </div>
-              <div class="data-item-actions">
-                <button class="btn-sm btn-edit" onclick="app.showClientForm(${JSON.stringify(clientData).replace(/"/g, '&quot;')})">
-                  ✏️ Edit
-                </button>
-                <button class="btn-sm btn-delete" onclick="app.deleteClient(${clientData.clientId})">
-                  🗑️ Delete
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
-        
-        container.innerHTML = html;
+        return this._catalogAdmin && this._catalogAdmin.populateClientsList();
       }
-      
-      // ========================================
-      // COMPANY MANAGEMENT
-      // ========================================
-      
-      initCompanyForm() {
-        const form = document.getElementById('companyForm');
-        const logoUpload = document.getElementById('logoUpload');
-        const logoFile = document.getElementById('logoFile');
-        
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          this.saveCompanyInfo();
-        });
-        
-        logoUpload.addEventListener('click', () => {
-          logoFile.click();
-        });
-        
-        logoFile.addEventListener('change', (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              document.getElementById('logoPreview').innerHTML = 
-                `<img src="${e.target.result}" alt="Company Logo">`;
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-      
       populateCompanyForm() {
-        document.getElementById('companyName').value = this.data.company.name || '';
-        document.getElementById('companyPhone').value = this.data.company.phone || '';
-        document.getElementById('companyAddress').value = this.data.company.address || '';
-        document.getElementById('companyCity').value = this.data.company.city || '';
-        document.getElementById('companyEmail').value = this.data.company.email || '';
-        document.getElementById('companyNumber').value = this.data.company.companyNumber || '';
-        document.getElementById('vatNumber').value = this.data.company.vatNumber || '';
-        document.getElementById('companyBankName').value = this.data.company.bankName || '';
-        document.getElementById('companyAccountName').value = this.data.company.accountName || '';
-        document.getElementById('companySortCode').value = this.data.company.sortCode || '';
-        document.getElementById('companyAccountNo').value = this.data.company.account || '';
-        
-        const logoPreview = document.getElementById('logoPreview');
-        if (this.data.company.logo) {
-          logoPreview.innerHTML = `<img src="${this.data.company.logo}" alt="Company Logo">`;
-        } else {
-          logoPreview.innerHTML = '';
-        }
+        return this._catalogAdmin && this._catalogAdmin.populateCompanyForm();
       }
-      
       saveCompanyInfo() {
-        const logoPreview = document.querySelector('#logoPreview img');
-        
-        this.data.company = {
-          name: document.getElementById('companyName').value.trim(),
-          phone: document.getElementById('companyPhone').value.trim(),
-          address: document.getElementById('companyAddress').value.trim(),
-          city: document.getElementById('companyCity').value.trim(),
-          email: document.getElementById('companyEmail').value.trim(),
-          companyNumber: document.getElementById('companyNumber').value.trim(),
-          vatNumber: document.getElementById('vatNumber').value.trim(),
-          bankName: document.getElementById('companyBankName').value.trim(),
-          accountName: document.getElementById('companyAccountName').value.trim(),
-          sortCode: document.getElementById('companySortCode').value.trim(),
-          account: document.getElementById('companyAccountNo').value.trim(),
-          logo: logoPreview ? logoPreview.src : this.data.company.logo
-        };
-        
-        this.saveData();
-        this.syncInvoiceFrameFromStorage();
-        
-        alert('✅ Company information saved successfully!');
-        console.log('✅ Company information updated');
+        return this._catalogAdmin && this._catalogAdmin.saveCompanyInfo();
       }
       
       // ========================================

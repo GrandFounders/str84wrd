@@ -8,6 +8,7 @@
   <!-- Global Storage Manager - project root so upgrade shares reference browser storage -->
   <!-- Note: html2canvas removed - rendering is now handled by parent (index.html) -->
   <script src="../js/global-storage.js"></script>
+  <script src="../js/invoice-app-catalog-storage.js"></script>
   
   <style>
     /* Theme (match index.html) */
@@ -1727,43 +1728,33 @@
       
       loadData() {
         try {
-          // Load products
-          const savedProducts = localStorage.getItem("invoiceApp_products");
-          this.data.products = savedProducts ? JSON.parse(savedProducts) : this.getDefaultProducts();
-          
-          // Initialize global items list from products
+          const C = window.InvoiceAppCatalogStorage;
+          if (!C) throw new Error("InvoiceAppCatalogStorage missing");
+          const loaded = C.loadCatalogState({ defaultProducts: this.getDefaultProducts() });
+          this.data.products = loaded.products;
+          this.data.clients = loaded.clients;
+          this.data.company = loaded.company;
+          this.data.settings = loaded.settings;
           this.globalItemsList = this.data.products.map(product => product.name);
-          
-          // Load clients
-          const savedClients = localStorage.getItem("invoiceApp_clients");
-          this.data.clients = savedClients ? JSON.parse(savedClients) : this.getDefaultClients();
-          
-          // Load company info
-          const savedCompany = localStorage.getItem("invoiceApp_company");
-          this.data.company = savedCompany ? JSON.parse(savedCompany) : this.getDefaultCompany();
-          
-          // Load settings
-          const savedSettings = localStorage.getItem("invoiceApp_settings");
-          this.data.settings = savedSettings ? JSON.parse(savedSettings) : { currentMode: "edit", autoSave: true, defaultCurrency: "£" };
-          
           console.log("📁 Data loaded from localStorage");
         } catch (error) {
           console.error("Error loading data:", error);
-          this.data = {
-            products: this.getDefaultProducts(),
-            clients: this.getDefaultClients(),
-            company: this.getDefaultCompany(),
-            settings: { currentMode: "edit", autoSave: true, defaultCurrency: "£" }
-          };
+          const C = window.InvoiceAppCatalogStorage;
+          if (C) {
+            const fb = C.loadCatalogState({ defaultProducts: this.getDefaultProducts() });
+            this.data.products = fb.products;
+            this.data.clients = fb.clients;
+            this.data.company = fb.company;
+            this.data.settings = fb.settings;
+            this.globalItemsList = this.data.products.map(product => product.name);
+          }
         }
       }
       
       saveData() {
         try {
-          localStorage.setItem("invoiceApp_products", JSON.stringify(this.data.products));
-          localStorage.setItem("invoiceApp_clients", JSON.stringify(this.data.clients));
-          localStorage.setItem("invoiceApp_company", JSON.stringify(this.data.company));
-          localStorage.setItem("invoiceApp_settings", JSON.stringify(this.data.settings));
+          const C = window.InvoiceAppCatalogStorage;
+          if (C) C.saveCatalogState(this.data);
           console.log("💾 Data saved to localStorage");
         } catch (error) {
           console.error("Error saving data:", error);
@@ -1771,7 +1762,7 @@
       }
       
       // ========================================
-      // DEFAULT DATA
+      // DEFAULT DATA (statement line types — shared catalog key uses this fallback when empty)
       // ========================================
       
       getDefaultProducts() {
@@ -1781,54 +1772,6 @@
           { id: 3, name: "Credit Note", category: "transaction", price: 0 },
           { id: 4, name: "Adjustment", category: "transaction", price: 0 }
         ];
-      }
-      
-      getDefaultClients() {
-        return [
-          {
-            clientId: 1,
-            client: {
-              name: "John Smith",
-              address: "123 Main Street",
-              city: "London, E1 1AA",
-              phone: "+44 20 1234 5678",
-              email: "john.smith@email.com",
-              type: "Individual",
-              status: "active",
-              notes: "Regular customer, prefers morning deliveries"
-            }
-          },
-          {
-            clientId: 2,
-            client: {
-              name: "Sarah Johnson",
-              address: "456 High Road",
-              city: "Manchester, M1 1AA",
-              phone: "+44 161 123 4567",
-              email: "sarah.j@email.com",
-              type: "Company",
-              status: "active",
-              notes: "Business client, office hours only"
-            }
-          }
-        ];
-      }
-      
-      getDefaultCompany() {
-        return {
-          name: "Your Company Name",
-          address: "Your Company Address",
-          city: "Your City, Postcode",
-          phone: "Your Phone Number",
-          email: "your.email@company.com",
-          companyNumber: "Your Company Number",
-          vatNumber: "Your VAT Number",
-          bankName: "Your Bank Name",
-          accountName: "Your Account Name",
-          sortCode: "Your Sort Code",
-          account: "Your Account Number",
-          logo: null
-        };
       }
       
       // ========================================

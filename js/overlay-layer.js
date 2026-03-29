@@ -75,7 +75,7 @@
     if (!document.getElementById('overlay-layer-styles')) {
       const style = document.createElement('style');
       style.id = 'overlay-layer-styles';
-      style.textContent = '#draw-layer{position:absolute;left:0;top:0;z-index:2147483647;pointer-events:none;touch-action:none}#draw-layer.draw-mode{pointer-events:auto;cursor:crosshair}.overlay-image{position:absolute;pointer-events:auto;cursor:move;z-index:1;display:flex;align-items:center;justify-content:center;overflow:visible;transform-origin:center center;touch-action:none}.overlay-image .overlay-image-handle{touch-action:none}.overlay-image img{width:auto;height:auto;max-width:100%;max-height:100%;pointer-events:none}.overlay-image .overlay-image-handle{opacity:0;pointer-events:none;transition:opacity 0.15s}.overlay-image.selected .overlay-image-handle{opacity:1;pointer-events:auto}.overlay-image.selected{outline:1px dashed #926E4C;outline-offset:2px}.overlay-image-handle{position:absolute;width:8px;height:8px;background:#926E4C;border:1px solid #fff;border-radius:2px;z-index:10;touch-action:none}.overlay-image-toolbar{position:absolute;top:-36px;left:0;right:0;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;opacity:0;pointer-events:none;z-index:11;transition:opacity 0.15s}.overlay-image.selected .overlay-image-toolbar{opacity:1;pointer-events:auto}.overlay-image-toolbar-btn{width:24px;height:24px;background:#926E4C;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;flex-shrink:0}.overlay-image-toolbar-btn:hover{background:#7a5a3d}.overlay-image-toolbar-btn.delete{background:#c45c1a}.overlay-image-toolbar-btn.delete:hover{background:#a34a15}.overlay-image-rotate-handle{position:absolute;top:-56px;left:50%;margin-left:-10px;width:20px;height:20px;border-radius:50%;background:#926E4C;border:1px solid #fff;cursor:grab;z-index:12;opacity:0;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}.overlay-image.selected .overlay-image-rotate-handle{opacity:1;pointer-events:auto}.overlay-image.locked .overlay-image-handle,.overlay-image.locked .overlay-image-toolbar,.overlay-image.locked .overlay-image-rotate-handle{opacity:0!important;pointer-events:none!important}.overlay-image.locked .overlay-image-lock-badge{opacity:1!important;pointer-events:auto!important}.overlay-image-lock-badge{position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#926E4C;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;z-index:20;transition:opacity 0.15s}body.capture-exporting .overlay-image-handle,body.capture-exporting .overlay-image-toolbar,body.capture-exporting .overlay-image-rotate-handle,body.capture-exporting .overlay-image-lock-badge{display:none!important}body.capture-exporting .overlay-image.selected{outline:none!important}@media (pointer:coarse){.overlay-image-handle{min-width:20px;min-height:20px;flex-shrink:0}.overlay-image-toolbar{top:-44px}.overlay-image-toolbar-btn{width:28px;height:28px;font-size:14px;min-width:28px;min-height:28px}.overlay-image-rotate-handle{top:-60px;width:20px;height:20px;margin-left:-10px;min-width:20px;min-height:20px}.overlay-image-lock-badge{width:22px;height:22px;min-width:22px;min-height:22px;font-size:11px}}';
+      style.textContent = '#draw-layer{position:absolute;left:0;top:0;z-index:2147483647;pointer-events:none;touch-action:none}#draw-layer.draw-mode{pointer-events:auto;cursor:crosshair}#draw-layer.draw-mode.draw-pinch-pause{pointer-events:none!important}.overlay-image{position:absolute;pointer-events:auto;cursor:move;z-index:1;display:flex;align-items:center;justify-content:center;overflow:visible;transform-origin:center center;touch-action:none}.overlay-image .overlay-image-handle{touch-action:none}.overlay-image img{width:auto;height:auto;max-width:100%;max-height:100%;pointer-events:none}.overlay-image .overlay-image-handle{opacity:0;pointer-events:none;transition:opacity 0.15s}.overlay-image.selected .overlay-image-handle{opacity:1;pointer-events:auto}.overlay-image.selected{outline:1px dashed #926E4C;outline-offset:2px}.overlay-image-handle{position:absolute;width:8px;height:8px;background:#926E4C;border:1px solid #fff;border-radius:2px;z-index:10;touch-action:none}.overlay-image-toolbar{position:absolute;top:-36px;left:0;right:0;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;opacity:0;pointer-events:none;z-index:11;transition:opacity 0.15s}.overlay-image.selected .overlay-image-toolbar{opacity:1;pointer-events:auto}.overlay-image-toolbar-btn{width:24px;height:24px;background:#926E4C;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;touch-action:manipulation;flex-shrink:0}.overlay-image-toolbar-btn:hover{background:#7a5a3d}.overlay-image-toolbar-btn.delete{background:#c45c1a}.overlay-image-toolbar-btn.delete:hover{background:#a34a15}.overlay-image-rotate-handle{position:absolute;top:-56px;left:50%;margin-left:-10px;width:20px;height:20px;border-radius:50%;background:#926E4C;border:1px solid #fff;cursor:grab;z-index:12;opacity:0;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}.overlay-image.selected .overlay-image-rotate-handle{opacity:1;pointer-events:auto}.overlay-image.locked .overlay-image-handle,.overlay-image.locked .overlay-image-toolbar,.overlay-image.locked .overlay-image-rotate-handle{opacity:0!important;pointer-events:none!important}.overlay-image.locked .overlay-image-lock-badge{opacity:1!important;pointer-events:auto!important}.overlay-image-lock-badge{position:absolute;bottom:2px;right:2px;width:20px;height:20px;background:#926E4C;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;z-index:20;transition:opacity 0.15s}body.capture-exporting .overlay-image-handle,body.capture-exporting .overlay-image-toolbar,body.capture-exporting .overlay-image-rotate-handle,body.capture-exporting .overlay-image-lock-badge{display:none!important}body.capture-exporting .overlay-image.selected{outline:none!important}@media (pointer:coarse){.overlay-image-handle{min-width:20px;min-height:20px;flex-shrink:0}.overlay-image-toolbar{top:-44px}.overlay-image-toolbar-btn{width:28px;height:28px;font-size:14px;min-width:28px;min-height:28px}.overlay-image-rotate-handle{top:-60px;width:20px;height:20px;margin-left:-10px;min-width:20px;min-height:20px}.overlay-image-lock-badge{width:22px;height:22px;min-width:22px;min-height:22px;font-size:11px}}';
       (document.head || document.documentElement).appendChild(style);
     }
     let canvas = document.getElementById('draw-layer');
@@ -278,6 +278,40 @@
     canvas.addEventListener('touchend', endStroke, { passive: false });
   }
 
+  function abortStrokeInProgress() {
+    if (!drawing) return;
+    drawing = false;
+    currentStroke = [];
+    const canvas = document.getElementById('draw-layer');
+    if (!canvas || !canvas.getContext) return;
+    const size = getDocSize();
+    redrawStrokes(canvas.getContext('2d'), size.width, size.height);
+  }
+
+  function setDrawPausedForIframePinch(paused) {
+    if (!drawModeEnabled) return;
+    const canvas = document.getElementById('draw-layer');
+    if (!canvas) return;
+    if (paused) {
+      canvas.classList.add('draw-pinch-pause');
+    } else {
+      canvas.classList.remove('draw-pinch-pause');
+    }
+  }
+
+  function onDocumentTouchPinchMaybePauseDraw(e) {
+    if (!drawModeEnabled || !e.touches || e.touches.length < 2) return;
+    abortStrokeInProgress();
+    setDrawPausedForIframePinch(true);
+  }
+
+  function onDocumentTouchPinchMaybeResumeDraw(e) {
+    if (!drawModeEnabled) return;
+    if (!e.touches || e.touches.length < 2) {
+      setDrawPausedForIframePinch(false);
+    }
+  }
+
   function setDrawTool(tool) {
     currentTool = (tool === 'eraser') ? 'eraser' : 'draw';
     const canvas = document.getElementById('draw-layer');
@@ -290,6 +324,7 @@
     drawModeEnabled = true;
     const canvas = ensureDrawLayer();
     canvas.classList.add('draw-mode');
+    canvas.classList.remove('draw-pinch-pause');
     canvas.style.pointerEvents = 'auto';
     canvas.style.cursor = currentTool === 'eraser' ? 'cell' : 'crosshair';
   }
@@ -300,7 +335,7 @@
     currentStroke = [];
     const canvas = document.getElementById('draw-layer');
     if (canvas) {
-      canvas.classList.remove('draw-mode');
+      canvas.classList.remove('draw-mode', 'draw-pinch-pause');
       canvas.style.pointerEvents = 'none';
       canvas.style.cursor = '';
     }
@@ -680,6 +715,10 @@
 
   window.enableDrawMode = enableDrawMode;
   window.disableDrawMode = disableDrawMode;
+  /** Called by parent shell iframe pan: cancel in-progress stroke before pan takes over. */
+  window.abortStrokeInProgress = abortStrokeInProgress;
+  /** Pause/resume draw-layer hit-testing (same as two-finger pinch pause). */
+  window.setDrawPausedForShellPan = setDrawPausedForIframePinch;
   window.setDrawTool = setDrawTool;
   window.getStrokes = getStrokes;
   window.setStrokes = setStrokes;
@@ -693,6 +732,13 @@
   ensureDrawLayer();
   resizeDrawLayer();
   setupDrawing();
+
+  /** While two fingers are on the iframe, pause draw-layer hit-testing so shell / graphic pinch wins; abort any in-progress stroke. */
+  const pinchPauseCap = { capture: true, passive: true };
+  document.addEventListener('touchstart', onDocumentTouchPinchMaybePauseDraw, pinchPauseCap);
+  document.addEventListener('touchmove', onDocumentTouchPinchMaybePauseDraw, pinchPauseCap);
+  document.addEventListener('touchend', onDocumentTouchPinchMaybeResumeDraw, pinchPauseCap);
+  document.addEventListener('touchcancel', onDocumentTouchPinchMaybeResumeDraw, pinchPauseCap);
 
   /** Two-finger pinch on a selected (unlocked) overlay image or page-overlay scales the graphic instead of the shell camera. */
   let selectedGraphicPinch = null;

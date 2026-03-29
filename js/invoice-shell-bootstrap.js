@@ -1,6 +1,6 @@
 /**
  * Shell bootstrap: sidebar, receipt/statement modals, postMessage, category shortcuts, page overlays.
- * Requires: js/global-storage.js before this script. Loads before canvas-shell-ctrls.js (defer order).
+ * Requires: global-storage.js, invoice-app-catalog-storage.js, invoice-catalog-admin.js before deferred shell scripts.
  * @file invoice-shell-bootstrap.js
  */
     function handleSidebarIframeLoad(iframe) {
