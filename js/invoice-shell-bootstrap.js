@@ -3,8 +3,92 @@
  * Requires: global-storage.js, invoice-app-catalog-storage.js, invoice-catalog-admin.js before deferred shell scripts.
  * @file invoice-shell-bootstrap.js
  */
+
+    var _shellBlurAttachedDocs = new WeakSet();
+
+    /** True if the event target is (or is inside) an element that should keep focus / keyboard open. */
+    function isShellPointerOnTextFieldTarget(el) {
+      if (!el || typeof el.closest !== 'function') return false;
+      if (el.closest('input, textarea, select')) return true;
+      var ce = el.closest('[contenteditable]');
+      if (ce && ce.getAttribute('contenteditable') !== 'false') return true;
+      return false;
+    }
+
+    /** Blur focused fields in parent shell + invoice + sidebar so tapping canvas/overlays dismisses the mobile keyboard. */
+    function blurShellDocumentsTextFocusSkipTarget(targetEl) {
+      if (isShellPointerOnTextFieldTarget(targetEl)) return;
+      function blurIfField(doc) {
+        if (!doc || !doc.activeElement) return;
+        var ae = doc.activeElement;
+        if (!ae || ae === doc.body || ae === doc.documentElement) return;
+        var tag = ae.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+          ae.blur();
+          return;
+        }
+        if (ae.isContentEditable) ae.blur();
+      }
+      try {
+        blurIfField(document);
+      } catch (e) {}
+      try {
+        var inv = document.getElementById('invoiceFrame');
+        if (inv && inv.contentDocument) blurIfField(inv.contentDocument);
+      } catch (e) {}
+      try {
+        var sb = document.getElementById('sidebarIframe');
+        if (sb && sb.contentDocument) blurIfField(sb.contentDocument);
+      } catch (e) {}
+    }
+
+    function attachBlurInputsOnOutsideForDocument(doc) {
+      if (!doc || !doc.documentElement || _shellBlurAttachedDocs.has(doc)) return;
+      _shellBlurAttachedDocs.add(doc);
+      var capTouch = { capture: true, passive: true };
+      var capMouse = { capture: true };
+      function onPointer(e) {
+        blurShellDocumentsTextFocusSkipTarget(e.target);
+      }
+      doc.addEventListener('touchstart', onPointer, capTouch);
+      doc.addEventListener('mousedown', onPointer, capMouse);
+    }
+
+    function initShellBlurInputsOnOutsidePointer() {
+      attachBlurInputsOnOutsideForDocument(document);
+      var inv = document.getElementById('invoiceFrame');
+      if (inv) {
+        inv.addEventListener('load', function () {
+          try {
+            if (inv.contentDocument) attachBlurInputsOnOutsideForDocument(inv.contentDocument);
+          } catch (err) {}
+        });
+        try {
+          if (inv.contentDocument && inv.contentDocument.readyState === 'complete') {
+            attachBlurInputsOnOutsideForDocument(inv.contentDocument);
+          }
+        } catch (err) {}
+      }
+      var sb = document.getElementById('sidebarIframe');
+      if (sb) {
+        sb.addEventListener('load', function () {
+          try {
+            if (sb.contentDocument) attachBlurInputsOnOutsideForDocument(sb.contentDocument);
+          } catch (err) {}
+        });
+        try {
+          if (sb.contentDocument && sb.contentDocument.readyState === 'complete') {
+            attachBlurInputsOnOutsideForDocument(sb.contentDocument);
+          }
+        } catch (err) {}
+      }
+    }
+
     function handleSidebarIframeLoad(iframe) {
       if (iframe && iframe.classList) iframe.classList.add('loaded');
+      try {
+        if (iframe && iframe.contentDocument) attachBlurInputsOnOutsideForDocument(iframe.contentDocument);
+      } catch (e) {}
     }
     function handleSidebarIframeError(iframe) {
       if (!iframe || !iframe.parentElement) return;
@@ -456,8 +540,10 @@
 
     var _addToPageOffset = 0;
     function addElementToPage(type, optSrc) {
+      if (type === 'draw') return;
       var result = getPageOverlaysContainer();
       if (!result) return;
+      exitDrawModeIfActiveForGraphics();
       var doc = result.doc;
       var container = result.container;
       _addToPageOffset = (_addToPageOffset + 30) % 120;
@@ -514,8 +600,6 @@
         wrapper.style.height = '4px';
         innerEl = doc.createElement('div');
         innerEl.style.cssText = 'position:absolute;left:0;top:50%;margin-top:-1px;width:100%;height:0;border-top:2px solid #926E4C;';
-      } else if (type === 'draw') {
-        return;
       } else {
         return;
       }
@@ -546,6 +630,17 @@
         } catch (e) {}
       }
     }
+    /** Turn off freehand draw so graphics / vector overlays can receive pointer events; sync sidebar chip if present. */
+    function exitDrawModeIfActiveForGraphics() {
+      if (!window._drawModeActive) return;
+      setDrawMode(false);
+      try {
+        var sidebar = document.getElementById('sidebarIframe');
+        if (sidebar && sidebar.contentWindow) {
+          sidebar.contentWindow.postMessage({ source: 'parent-invoice', action: 'drawMode', enabled: false }, '*');
+        }
+      } catch (e) {}
+    }
     function toggleDrawMode() {
       setDrawMode(!window._drawModeActive);
       try {
@@ -557,6 +652,7 @@
     }
     function handleAddOverlayImage(src) {
       if (!src) return;
+      exitDrawModeIfActiveForGraphics();
       var iframe = document.getElementById('invoiceFrame');
       if (iframe && iframe.contentWindow && iframe.contentWindow.addOverlayImage) {
         try { iframe.contentWindow.addOverlayImage(src); } catch (e) {}
@@ -564,6 +660,7 @@
     }
     function handleAddToPage(type) {
       if (type === 'stamp') {
+        exitDrawModeIfActiveForGraphics();
         var input = document.getElementById('stampImageInput');
         if (input) {
           input.onchange = function() {
@@ -592,6 +689,7 @@
           try { iframe.contentWindow.setDrawTool('eraser'); } catch (e) {}
         }
       } else if (type === 'overlayImage') {
+        exitDrawModeIfActiveForGraphics();
         var input = document.getElementById('overlayImageInput');
         if (input) {
           input.onchange = function() {
@@ -702,6 +800,7 @@
       }
     }
     document.addEventListener('DOMContentLoaded', function() {
+      initShellBlurInputsOnOutsidePointer();
       if (window.canvasShell && window.canvasShell.initCategoryShortcutDragging) initCategoryShortcutDrawer();
     });
 
