@@ -1456,7 +1456,13 @@
             if (el.closest('input, textarea, select, button, a[href], label')) return false;
             if (el.closest('[contenteditable]:not([contenteditable="false"])')) return false;
             if (el.closest('.items-table tbody')) return false;
-            if (el.closest('.overlay-image, .page-overlay-wrapper')) return false;
+            const shellGraphicRoot = el.closest('.overlay-image, .page-overlay-wrapper');
+            if (shellGraphicRoot) {
+              if (shellGraphicRoot.classList.contains('locked')) {
+                return true;
+              }
+              return false;
+            }
             if (isDrawLayerDeferShellPan(el)) return false;
             return true;
           };
