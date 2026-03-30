@@ -202,14 +202,73 @@
       line-height: 1.25;
     }
 
-    .items-table th:nth-child(1) { width: 36%; } /* Product */
+    .items-table th:nth-child(1) { width: 38%; } /* Product + image */
     .items-table th:nth-child(2) { width: 12%; } /* Sold */
-    .items-table th:nth-child(3) { width: 22%; } /* Amount */
+    .items-table th:nth-child(3) { width: 20%; } /* Amount */
     .items-table th:nth-child(4) { width: 30%; } /* Period */
+
+    .items-table td:nth-child(1) {
+      vertical-align: middle;
+    }
 
     .items-table td:nth-child(2),
     .items-table td:nth-child(3) {
       text-align: right;
+      vertical-align: middle;
+    }
+
+    .items-table td:nth-child(4) {
+      vertical-align: middle;
+    }
+
+    /* Match invoice.html product + image column */
+    .item-with-image {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+    }
+
+    .item-image {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      cursor: default;
+      overflow: hidden;
+    }
+
+    .item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 3px;
+      display: block;
+    }
+
+    .item-image.placeholder {
+      background: linear-gradient(135deg, #e9ecef 25%, transparent 25%),
+        linear-gradient(225deg, #e9ecef 25%, transparent 25%),
+        linear-gradient(45deg, #e9ecef 25%, transparent 25%),
+        linear-gradient(315deg, #e9ecef 25%, transparent 25%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .item-text {
+      flex: 1;
+      min-width: 0;
     }
 
 
@@ -901,8 +960,12 @@ Powered by <strong>GuaPxL</strong> - Professional Inventory
         if (!p || p.name == null || String(p.name).trim() === '') return null;
         var key = normalizeProductKey(p.name);
         var agg = map[key] || { soldQty: 0, amount: 0, dates: [] };
+        var img = p.image != null && String(p.image).trim() !== '' ? String(p.image).trim() : '';
+        var ic = p.icon != null && String(p.icon).trim() !== '' ? String(p.icon).trim() : '📦';
         return {
           name: String(p.name),
+          image: img,
+          icon: ic,
           soldQty: agg.soldQty,
           amount: agg.amount,
           dates: agg.dates
@@ -970,7 +1033,7 @@ Powered by <strong>GuaPxL</strong> - Professional Inventory
         var tr = document.createElement('tr');
         var period = formatPeriodRange(r.dates);
         tr.innerHTML =
-          '<td>' + escapeHtml(r.name) + '</td>' +
+          '<td>' + buildInventoryProductCell(r.name, r.image, r.icon) + '</td>' +
           '<td>' + formatSoldQty(r.soldQty) + '</td>' +
           '<td>' + formatCurrency(parseNum(r.amount)) + '</td>' +
           '<td>' + escapeHtml(period) + '</td>';
@@ -987,6 +1050,21 @@ Powered by <strong>GuaPxL</strong> - Professional Inventory
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function escapeHtmlAttr(str) {
+      return escapeHtml(str).replace(/'/g, '&#39;');
+    }
+
+    /** Same pattern as invoice updateItemImageDisplay: image URL or catalog icon in placeholder. */
+    function buildInventoryProductCell(name, image, icon) {
+      var safeName = escapeHtml(name);
+      var imgUrl = image && String(image).trim() !== '' ? String(image).trim() : '';
+      var showImg = imgUrl.length > 0;
+      var thumb = showImg
+        ? '<div class="item-image"><img src="' + escapeHtmlAttr(imgUrl) + '" alt="' + safeName + '"></div>'
+        : '<div class="item-image placeholder">' + escapeHtml(icon || '📦') + '</div>';
+      return '<div class="item-with-image">' + thumb + '<span class="item-text">' + safeName + '</span></div>';
     }
 
     function loadSummaryFromStorage() {
