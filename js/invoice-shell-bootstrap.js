@@ -165,6 +165,9 @@
         case 'newTransactionsBtn':
           switchAndSend('Transactions.html', function() {}, true);
           break;
+        case 'newInventoryBtn':
+          switchAndSend('Inventory.html', function() {}, true);
+          break;
         case 'dataManagementBtn':
           var btn = document.getElementById('dataManagementBtn');
           if (btn) btn.click();
@@ -806,7 +809,7 @@
 
     // Wire trigger buttons so click runs same logic as sidebar invoke (dataManagementBtn/saveBtn keep canvasShell-only listeners to avoid double fire)
     (function() {
-      var ids = ['newInvoiceBtn', 'newReceiptBtn', 'exportBtn', 'newSummaryBtn', 'newOrderListBtn', 'newDocumentBtn', 'loadInvoiceBtnEdit', 'loadReceiptBtnEdit', 'loadStatementBtnEdit', 'newTransactionsBtn', 'sendBtn'];
+      var ids = ['newInvoiceBtn', 'newReceiptBtn', 'exportBtn', 'newSummaryBtn', 'newOrderListBtn', 'newDocumentBtn', 'loadInvoiceBtnEdit', 'loadReceiptBtnEdit', 'loadStatementBtnEdit', 'newTransactionsBtn', 'newInventoryBtn', 'sendBtn'];
       ids.forEach(function(id) {
         var btn = document.getElementById(id);
         if (btn) btn.addEventListener('click', function() { handleSidebarInvoke(id); });

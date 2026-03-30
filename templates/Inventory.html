@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Inventory</title>
+  <!-- Global Storage Manager - project root so upgrade shares reference browser storage -->
+  <script src="../js/global-storage.js"></script>
+  <script src="../js/invoice-app-catalog-storage.js"></script>
+  <style>
+    /* Page Size: A4 Portrait (match invoice.html / statement.html) */
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+    html {
+      margin: 0;
+      padding: 0;
+    }
+    /* ========================================
+       BASE STYLES (match invoice.html exactly for iframe/size)
+       ======================================== */
+    body {
+      font-family: Arial, sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: auto;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      min-width: auto;
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* ========================================
+       MAIN CONTENT AREA (exact dimensions as invoice)
+       ======================================== */
+    .main-content {
+      margin-top: 0;
+      width: 210mm;
+      min-width: 800px;
+      display: flex;
+      justify-content: center;
+      padding: 0px;
+      transition: all 0.3s ease;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ========================================
+       A4 PAGE (exact size as invoice: 210mm x 297mm, min 800px)
+       ======================================== */
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      min-width: 800px;
+      background: white;
+      padding: 0;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+
+
+    .header-banner {
+      background-color: #926E4C;
+      height: 60px;
+      width: 100%;
+    }
+
+    .invoice-wrapper {
+      padding: 1mm 10mm 0 10mm;
+      position: relative;
+    }
+
+    /* Let clicks pass through to overlays sent to back; keep inputs/buttons clickable */
+    .a4 > *:not(.page-overlay-wrapper) {
+      pointer-events: none;
+    }
+    .a4 > *:not(.page-overlay-wrapper) input,
+    .a4 > *:not(.page-overlay-wrapper) select,
+    .a4 > *:not(.page-overlay-wrapper) textarea,
+    .a4 > *:not(.page-overlay-wrapper) button,
+    .a4 > *:not(.page-overlay-wrapper) a,
+    .a4 > *:not(.page-overlay-wrapper) img,
+    .a4 > *:not(.page-overlay-wrapper) [contenteditable="true"] {
+      pointer-events: auto;
+    }
+
+    .top-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .branding {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 2;
+    }
+
+    .branding img {
+      width: 100px;
+      height: auto;
+      margin-top: -36px; /* Float logo over the top header bar */
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 3;
+    }
+
+    .company-info {
+      margin-top: -6px; /* Push address block up under floated logo */
+      margin-bottom: 15px;
+    }
+
+    .company-info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .statement-title {
+      font-size: 52px;
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #926E4C;
+    }
+
+    .statement-details {
+      text-align: right;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .statement-details p {
+      margin: 5px 0;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .customer-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .bill-to, .ship-to, .account-summary {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .bill-to h3, .ship-to h3, .account-summary h3 {
+      margin: 0 0 10px 0;
+      color: #926E4C;
+      font-size: 16px;
+    }
+
+    .bill-to p, .ship-to p, .account-summary p {
+      margin: 3px 0;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    th, td {
+      padding: 6px 5px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    th {
+      background-color: #2f3f46;
+      color: white;
+      font-weight: bold;
+    }
+
+    .summary-label-sub {
+      display: block;
+      font-weight: normal;
+      font-size: 11px;
+      opacity: 0.88;
+      margin-top: 3px;
+      line-height: 1.25;
+    }
+
+    .items-table th:nth-child(1) { width: 36%; } /* Product */
+    .items-table th:nth-child(2) { width: 12%; } /* Sold */
+    .items-table th:nth-child(3) { width: 22%; } /* Amount */
+    .items-table th:nth-child(4) { width: 30%; } /* Period */
+
+    .items-table td:nth-child(2),
+    .items-table td:nth-child(3) {
+      text-align: right;
+    }
+
+
+    .summary-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .summary-table {
+      width: 300px;
+      border-collapse: collapse;
+    }
+
+    .summary-table td {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    .summary-table td:first-child {
+      font-weight: bold;
+      background-color: #f8f9fa;
+      width: 60%;
+    }
+
+    .summary-table td:last-child {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .total-row td {
+      background-color: #926E4C !important;
+      color: white !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
+    }
+
+    .outstanding-row td {
+      background-color: #d4edda !important; /* Medium light green - more visible */
+      color: #155724 !important;
+      font-weight: bold !important;
+    }
+    
+    /* Amount Paid styling */
+    .amount-paid-row td {
+      background-color: #ffeaa7 !important; /* Medium light orange - more visible */
+      color: #856404 !important;
+      font-weight: bold !important;
+    }
+
+    .summary-table tr.inventory-summary-row td {
+      background-color: #e3f2fd !important;
+      color: #1565c0 !important;
+      font-weight: bold !important;
+    }
+
+    .summary-table tr.inventory-revenue-row td {
+      background-color: #bbdefb !important;
+      color: #0d47a1 !important;
+      font-weight: bold !important;
+      font-size: 15px !important;
+    }
+
+    .summary-table tr.summary-divider td {
+      background-color: #eceff1 !important;
+      color: #455a64 !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      text-align: center !important;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 8px 10px !important;
+    }
+
+    .summary-table tr.summary-invoice-total-row td {
+      background-color: #fff8e1 !important;
+      color: #e65100 !important;
+      font-weight: bold !important;
+    }
+
+    .footer-banner {
+      background-color: #926E4C;
+      height: 30px;
+      width: 100%;
+      margin-top: auto;
+    }
+
+    [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      padding: 2px;
+      min-width: 50px;
+    }
+
+    /* Edit/Preview mode (match invoice/statement) */
+    body.edit-mode [contenteditable] {
+      border-bottom: 1px dashed #ccc;
+      pointer-events: auto;
+    }
+    body.preview-mode [contenteditable] {
+      border-bottom: none !important;
+      outline: none !important;
+      pointer-events: none !important;
+      user-select: text;
+      cursor: default !important;
+    }
+    body.preview-mode input,
+    body.preview-mode select,
+    body.preview-mode textarea,
+    body.preview-mode button:not(.always-enabled) {
+      pointer-events: none !important;
+      cursor: default !important;
+    }
+    body.preview-mode select,
+    body.preview-mode input[type="text"],
+    body.preview-mode textarea {
+      color: #222 !important;
+      -webkit-text-fill-color: #222 !important;
+      opacity: 1 !important;
+    }
+    body.preview-mode .always-enabled {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* Image/export capture: allow full text to show (no clipping) */
+    body.capture-exporting .items-table {
+      table-layout: auto !important;
+    }
+    body.capture-exporting .items-table tbody tr {
+      height: auto !important;
+      max-height: none !important;
+    }
+    body.capture-exporting .items-table th,
+    body.capture-exporting .items-table td {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    body.capture-exporting .items-table td[contenteditable="true"] {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+
+    .currency {
+      font-weight: bold;
+    }
+
+    /* Match invoice/statement: A4 fits on mobile */
+    @media (max-width: 768px) {
+      .a4 {
+        width: 100%;
+        max-width: 210mm;
+        margin: 0 auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+      .items-table {
+        font-size: 14px;
+      }
+      .items-table th,
+      .items-table td {
+        padding: 8px 4px;
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .items-table th,
+      .items-table td {
+        padding: 6px 2px;
+        font-size: 12px;
+      }
+      .statement-title {
+        font-size: 44px;
+      }
+      .company-info p,
+      .bill-to p,
+      .ship-to p,
+      .account-summary p {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 768px) and (orientation: landscape) {
+      .a4 {
+        margin: 10px auto;
+      }
+    }
+
+    @media print {
+      .main-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+      }
+      .a4 {
+        box-shadow: none !important;
+        margin: 0 !important;
+      }
+      body {
+        background: white !important;
+      }
+    }
+  </style>
+</head>
+<body class="edit-mode">
+<div class="main-content">
+<div class="a4" id="receipt">
+<div class="header-banner"></div>
+<div class="invoice-wrapper">
+<!-- Top Section -->
+<div class="top-section">
+<div class="branding">
+<img id="companyLogo" alt="Company Logo" src="../logos/invoLOGO.png">
+<div class="company-info" id="companyInfo">
+<p><strong>Your Company Name</strong></p>
+<p>Your Company Address</p>
+<p>Your City, Postcode</p>
+<p>Phone: Your Phone Number</p>
+<p>Email: your.email@company.com</p>
+</div>
+</div>
+<div class="statement-details">
+<div class="statement-title" contenteditable="true">INVENTORY</div>
+<p><span class="label">Products:</span> <span id="totalProducts">0</span></p>
+</div>
+</div>
+<!-- Inventory Table -->
+<table class="items-table" data-inventory-report="true">
+<thead>
+<tr>
+<th>Product</th>
+<th title="Total units: sum of Quantity on each invoice line for this product">Sold</th>
+<th title="Sum of the Amount column on invoice lines for this product">Amount</th>
+<th>Period</th>
+</tr>
+</thead>
+<tbody id="summaryTableBody">
+<tr>
+<td colspan="4" style="text-align: center; color: #777;">Loading…</td>
+</tr>
+</tbody>
+</table>
+<!-- Summary -->
+<div class="summary-section">
+<table class="summary-table" data-inventory-summary="true">
+<tbody>
+<tr class="inventory-summary-row">
+<td>Products (listed above)</td>
+<td id="summaryProductsListed">0</td>
+</tr>
+<tr class="inventory-summary-row">
+<td>Units sold (total)<span class="summary-label-sub">Sum of Quantity on all matching lines</span></td>
+<td id="summaryUnitsSold">0</td>
+</tr>
+<tr class="inventory-summary-row inventory-revenue-row">
+<td>Total revenue<span class="summary-label-sub">All products — sum of line Amounts sold</span></td>
+<td id="inventoryTableRevenue">£0.00</td>
+</tr>
+<tr class="summary-divider">
+<td colspan="2">Invoice totals (each saved invoice)</td>
+</tr>
+<tr class="summary-invoice-total-row">
+<td>Invoiced total<span class="summary-label-sub">Sum of invoice totals (face value)</span></td>
+<td id="invoiceTotalsSum">£0.00</td>
+</tr>
+<tr class="amount-paid-row">
+<td>Amount paid<span class="summary-label-sub">Payments recorded on invoices (toward invoiced total)</span></td>
+<td id="amountPaid">£0.00</td>
+</tr>
+<tr class="outstanding-row">
+<td>Outstanding<span class="summary-label-sub">Balance still to pay on invoices</span></td>
+<td id="outstanding">£0.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Inventory Footer -->
+</div>
+<div class="footer-banner">
+<div class="branding-footer">
+<p style="text-align: center; margin: 10px 0; font-size: 12px; color: #ffffff;">
+Powered by <strong>GuaPxL</strong> - Professional Inventory
+</p>
+</div>
+</div>
+</div>
+<script>
+    function formatCurrency(num) {
+      if (num === null || num === undefined || isNaN(num)) return '£0.00';
+      const n = Number(num);
+      return '£' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function parseNum(val) {
+      if (val === null || val === undefined) return 0;
+      const s = String(val).replace(/[£,\s]/g, '');
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    // Receipt-style line math only; inventory summary rows are set from storage.
+    function calculateAmounts() {
+      if (document.querySelector('.summary-table[data-inventory-summary="true"]')) return;
+      const rows = document.querySelectorAll('.items-table tbody tr');
+      let subtotal = 0;
+      let hasLineItems = false;
+
+      rows.forEach((row) => {
+        const qtyCell = row.querySelector('.qty');
+        const unitPriceCell = row.querySelector('.unit-price');
+        const amountCell = row.querySelector('.amount');
+
+        if (qtyCell && unitPriceCell && amountCell) {
+          hasLineItems = true;
+          const qty = parseNum(qtyCell.textContent);
+          const unitPrice = parseNum(unitPriceCell.textContent);
+          const amount = qty * unitPrice;
+          amountCell.textContent = formatCurrency(amount);
+          subtotal += amount;
+        }
+      });
+
+      const amountPaidEl = document.getElementById('amountPaid');
+      const amountPaid = amountPaidEl ? parseNum(amountPaidEl.textContent) : 0;
+      const subtotalEl = document.getElementById('subtotal');
+      const totalEl = document.getElementById('total');
+      const outstandingEl = document.getElementById('outstanding');
+      const outstandingBalanceEl = document.getElementById('outstandingBalance');
+
+      if (!hasLineItems && subtotalEl && totalEl) {
+        const totalFromDom = parseNum(totalEl.textContent);
+        const subFromDom = parseNum(subtotalEl.textContent);
+        const baseTotal = totalFromDom || subFromDom;
+        const outstanding = Math.max(0, baseTotal - amountPaid);
+        if (outstandingEl) outstandingEl.textContent = formatCurrency(outstanding);
+        if (outstandingBalanceEl) outstandingBalanceEl.textContent = formatCurrency(outstanding);
+        return;
+      }
+
+      const total = subtotal;
+      const outstanding = Math.max(0, total - amountPaid);
+      if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+      if (totalEl) totalEl.textContent = formatCurrency(total);
+      if (outstandingEl) outstandingEl.textContent = formatCurrency(outstanding);
+      if (outstandingBalanceEl) outstandingBalanceEl.textContent = formatCurrency(outstanding);
+    }
+
+    // ========================================
+    // Iframe size (match invoice.html – parent uses this to avoid cutoff)
+    // ========================================
+    let _lastSentWidth = 0, _lastSentHeight = 0;
+    let _sendSizeDebounce = null;
+    const A4_WIDTH = 800, A4_HEIGHT = 1131;
+    function sendSizeToParent() {
+      if (_sendSizeDebounce) clearTimeout(_sendSizeDebounce);
+      _sendSizeDebounce = setTimeout(() => {
+        _sendSizeDebounce = null;
+        try {
+          const page = document.getElementById('receipt');
+          let width, height;
+          if (page) {
+            width = Math.round(Math.max(page.scrollWidth, page.offsetWidth));
+            height = Math.round(Math.max(page.scrollHeight, page.offsetHeight));
+          } else {
+            width = A4_WIDTH;
+            height = A4_HEIGHT;
+          }
+          width = Math.max(400, Math.min(width, 1200));
+          height = Math.max(500, Math.min(height, 5000));
+          if (width === _lastSentWidth && height === _lastSentHeight) return;
+          _lastSentWidth = width;
+          _lastSentHeight = height;
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'iframe-resize', width, height }, '*');
+          }
+        } catch (e) {
+          console.warn('Receipt: could not send size to parent', e);
+        }
+      }, 100);
+    }
+
+    function attachCalculationListeners() {
+      document.querySelectorAll('[contenteditable="true"]').forEach(function(cell) {
+        if (!cell._receiptCalcBound) {
+          cell._receiptCalcBound = true;
+          cell.addEventListener('blur', function() {
+            calculateAmounts();
+          });
+        }
+      });
+    }
+
+    // Apply branding (company name, address, logo) from same localStorage as main app
+    function applyBrandingFromStorage() {
+      try {
+        var raw = localStorage.getItem('invoiceApp_company');
+        var company = raw ? JSON.parse(raw) : null;
+        if (!company) return;
+
+        var companyInfo = document.getElementById('companyInfo');
+        if (companyInfo) {
+          companyInfo.innerHTML =
+            '<p><strong>' + (company.name || 'Your Company Name') + '</strong></p>' +
+            '<p>' + (company.address || 'Your Company Address') + '</p>' +
+            '<p>' + (company.city || 'Your City, Postcode') + '</p>' +
+            '<p>Phone: ' + (company.phone || 'Your Phone Number') + '</p>' +
+            '<p>Email: ' + (company.email || 'your.email@company.com') + '</p>';
+        }
+
+        var logoImg = document.getElementById('companyLogo');
+        if (logoImg && company.logo) {
+          logoImg.src = company.logo;
+        }
+      } catch (e) {
+        console.warn('Receipt: applyBrandingFromStorage error', e);
+      }
+    }
+
+    // Add event listeners for auto-calculation and iframe resize
+    document.addEventListener('DOMContentLoaded', function() {
+      applyBrandingFromStorage();
+      loadSummaryFromStorage();
+      attachCalculationListeners();
+      calculateAmounts();
+      sendSizeToParent();
+      const observer = new MutationObserver(function(mutations) {
+        const fromOverlay = mutations.some(function(m) {
+          var el = m.target;
+          return el && (el.id === 'overlay-container' || el.id === 'overlay-images-container' || el.id === 'draw-layer' || (el.closest && (el.closest('#overlay-container') || el.closest('#overlay-images-container') || el.closest('.page-overlay-wrapper') || el.closest('.overlay-image'))));
+        });
+        if (!fromOverlay) sendSizeToParent();
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+      // Don't send on window resize - parent controls iframe size
+    });
+
+    function saveAndArchiveReceipt() {
+      // Summary is a read-only view; it should never write to GlobalStorage.
+      return false;
+    }
+    function applyReceiptMode(mode) {
+      document.body.className = mode + '-mode';
+      if (mode === 'preview') {
+        document.querySelectorAll('[contenteditable]').forEach(function(el) {
+          el.setAttribute('data-original-ce', 'true');
+          el.contentEditable = false;
+        });
+        document.querySelectorAll('input, textarea, select').forEach(function(el) {
+          if (!el.closest('.modal-overlay')) {
+            el.setAttribute('data-original-disabled', el.disabled === true ? 'true' : 'false');
+            el.disabled = true;
+            if (el.tagName !== 'SELECT') el.readOnly = true;
+          }
+        });
+        document.querySelectorAll('button').forEach(function(el) {
+          if (!el.classList.contains('always-enabled') && !el.closest('.modal-overlay')) {
+            el.setAttribute('data-original-disabled', el.disabled === true ? 'true' : 'false');
+            el.disabled = true;
+          }
+        });
+      } else {
+        document.querySelectorAll('[data-original-ce]').forEach(function(el) {
+          el.contentEditable = true;
+          el.removeAttribute('data-original-ce');
+        });
+        document.querySelectorAll('input[data-original-disabled], textarea[data-original-disabled], select[data-original-disabled]').forEach(function(el) {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          if (el.tagName !== 'SELECT') el.readOnly = false;
+          el.removeAttribute('data-original-disabled');
+        });
+        document.querySelectorAll('button[data-original-disabled]').forEach(function(el) {
+          el.disabled = el.getAttribute('data-original-disabled') === 'true';
+          el.removeAttribute('data-original-disabled');
+        });
+        // Fallback: force-enable any still-disabled fields and buttons
+        document.querySelectorAll('[contenteditable]').forEach(function(el) {
+          if (el.contentEditable === 'false' || el.contentEditable === false) el.contentEditable = true;
+        });
+        document.querySelectorAll('input, textarea, select').forEach(function(el) {
+          if (el.disabled) el.disabled = false;
+          if (el.tagName !== 'SELECT' && el.readOnly) el.readOnly = false;
+        });
+        document.querySelectorAll('button').forEach(function(btn) {
+          if (btn.disabled) btn.disabled = false;
+        });
+      }
+    }
+    window.addEventListener('message', function(event) {
+      // Only accept messages from the direct parent (ignore other windows/tabs)
+      if (event.source !== window.parent) return;
+      if (event.data && event.data.type === 'request-size') {
+        sendSizeToParent();
+      }
+      if (event.data && event.data.type === 'switch-mode') {
+        applyReceiptMode(event.data.mode || 'edit');
+      }
+      if (event.data && event.data.type === 'update-branding') {
+        applyBrandingFromStorage();
+      }
+      if (event.data && event.data.type === 'invoice-action') {
+        var action = event.data.action;
+        if (action === 'saveInvoice') {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'invoice-save-failed', documentType: 'summary' }, '*');
+          }
+        } else if (action === 'sendInvoice') {
+          (function doSendReceipt() {
+            try {
+              var page = document.getElementById('receipt');
+              if (!page) { alert('Inventory element not found.'); return; }
+              applyReceiptMode('preview');
+              var a4Width = 794;
+              var exportHeight = Math.max(page.scrollHeight || 1123, 1123);
+              var requestId = 'capture-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+              var handler = function(e) {
+                if (!e.data || e.data.type !== 'parent-capture-result' || e.data.requestId !== requestId) return;
+                window.removeEventListener('message', handler);
+                clearTimeout(timeoutId);
+                applyReceiptMode('edit');
+                if (e.data.error) {
+                  alert(e.data.error || 'Export failed.');
+                  return;
+                }
+                var link = document.createElement('a');
+                link.download = 'Inventory.png';
+                link.href = e.data.dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              };
+              window.addEventListener('message', handler);
+              window.parent.postMessage({ type: 'parent-capture-export', requestId: requestId, a4Width: a4Width, exportHeight: exportHeight }, '*');
+              var timeoutId = setTimeout(function() {
+                window.removeEventListener('message', handler);
+                applyReceiptMode('edit');
+              }, 60000);
+            } catch (e) {
+              console.warn('Receipt send failed:', e);
+              applyReceiptMode('edit');
+              if (window.parent) window.parent.postMessage({ type: 'invoice-save-failed', documentType: 'summary' }, '*');
+            }
+          })();
+        }
+      }
+      if (event.data && event.data.type === 'populate-receipt-from-invoice' && event.data.payload) {
+        function doPopulate() {
+          if (document.querySelector('.items-table tbody')) {
+            populateReceiptFromInvoice(event.data.payload);
+          } else {
+            setTimeout(doPopulate, 50);
+          }
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', doPopulate);
+        } else {
+          doPopulate();
+        }
+      }
+      if (event.data && event.data.type === 'populate-summary-from-invoices' && Array.isArray(event.data.payload)) {
+        loadSummaryFromStorage();
+        sendSizeToParent();
+      }
+    });
+
+    function normalizeProductKey(name) {
+      return String(name || '').trim().toLowerCase();
+    }
+
+    function parseDateLoose(raw) {
+      if (raw == null || raw === '') return null;
+      var s = String(raw).trim();
+      if (!s) return null;
+      var iso = Date.parse(s);
+      if (!isNaN(iso)) return iso;
+      var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if (m) {
+        var d = parseInt(m[1], 10);
+        var mo = parseInt(m[2], 10);
+        var y = parseInt(m[3], 10);
+        if (y < 100) y += 2000;
+        var dt = new Date(y, mo - 1, d);
+        if (!isNaN(dt.getTime())) return dt.getTime();
+      }
+      return null;
+    }
+
+    function lineDateMs(item, inv) {
+      if (item && item.date != null && String(item.date).trim() !== '') {
+        var t = parseDateLoose(item.date);
+        if (t != null) return t;
+      }
+      if (inv && inv.invoiceDate != null && String(inv.invoiceDate).trim() !== '') {
+        var t2 = parseDateLoose(inv.invoiceDate);
+        if (t2 != null) return t2;
+      }
+      if (inv && inv.createdAt) {
+        var t3 = new Date(inv.createdAt).getTime();
+        if (!isNaN(t3)) return t3;
+      }
+      return null;
+    }
+
+    function formatPeriodRange(dateTimestamps) {
+      var arr = (dateTimestamps || []).filter(function(t) {
+        return t != null && !isNaN(t);
+      });
+      if (arr.length === 0) return '—';
+      arr.sort(function(a, b) { return a - b; });
+      var lo = arr[0];
+      var hi = arr[arr.length - 1];
+      var d0 = new Date(lo);
+      var d1 = new Date(hi);
+      var s0 = d0.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      if (lo === hi) return s0;
+      var s1 = d1.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      return s0 + ' – ' + s1;
+    }
+
+    function formatSoldQty(n) {
+      if (n == null || isNaN(n)) return '0';
+      var x = Number(n);
+      if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
+      return String(Math.round(x * 1000) / 1000);
+    }
+
+    function loadProductsFromCatalog() {
+      try {
+        if (typeof InvoiceAppCatalogStorage !== 'undefined' && typeof InvoiceAppCatalogStorage.loadCatalogState === 'function') {
+          var state = InvoiceAppCatalogStorage.loadCatalogState();
+          return Array.isArray(state.products) ? state.products : [];
+        }
+      } catch (e) {
+        console.warn('Inventory: catalog load failed', e);
+      }
+      return [];
+    }
+
+    function getInvoiceDocumentsForAggregation() {
+      if (typeof GlobalStorage === 'undefined' || typeof GlobalStorage.getAllSavedInvoices !== 'function') return [];
+      return GlobalStorage.getAllSavedInvoices().filter(function(inv) {
+        return inv && (!inv.documentType || inv.documentType === 'invoice');
+      });
+    }
+
+    /** Quantity from invoice line (supports qty or quantity). */
+    function lineItemQty(item) {
+      if (!item) return 0;
+      if (item.qty != null && String(item.qty).trim() !== '') return parseNum(item.qty);
+      if (item.quantity != null && String(item.quantity).trim() !== '') return parseNum(item.quantity);
+      return 0;
+    }
+
+    /** Line Amount column total; if blank, qty × unit price. */
+    function lineItemAmount(item) {
+      if (!item) return 0;
+      if (item.amount != null && String(item.amount).trim() !== '') return parseNum(item.amount);
+      return lineItemQty(item) * parseNum(item.unitPrice);
+    }
+
+    function aggregateSalesByCatalogProduct(products, invoices) {
+      var map = Object.create(null);
+      (products || []).forEach(function(p) {
+        if (!p || p.name == null || String(p.name).trim() === '') return;
+        var key = normalizeProductKey(p.name);
+        if (!key) return;
+        map[key] = { soldQty: 0, amount: 0, dates: [] };
+      });
+      (invoices || []).forEach(function(inv) {
+        var items = Array.isArray(inv.items) ? inv.items : [];
+        items.forEach(function(item) {
+          var desc = item && item.description != null ? String(item.description) : '';
+          var key = normalizeProductKey(desc);
+          if (!map[key]) return;
+          var qty = lineItemQty(item);
+          var lineAmt = lineItemAmount(item);
+          map[key].soldQty += qty;
+          map[key].amount += lineAmt;
+          var t = lineDateMs(item, inv);
+          if (t != null) map[key].dates.push(t);
+        });
+      });
+      return (products || []).map(function(p) {
+        if (!p || p.name == null || String(p.name).trim() === '') return null;
+        var key = normalizeProductKey(p.name);
+        var agg = map[key] || { soldQty: 0, amount: 0, dates: [] };
+        return {
+          name: String(p.name),
+          soldQty: agg.soldQty,
+          amount: agg.amount,
+          dates: agg.dates
+        };
+      }).filter(Boolean);
+    }
+
+    function updateSummaryFooterForInventory(aggRows, invoices) {
+      var rows = Array.isArray(aggRows) ? aggRows : [];
+      var sumProductAmount = 0;
+      var sumUnits = 0;
+      rows.forEach(function(r) {
+        sumProductAmount += parseNum(r.amount);
+        sumUnits += parseNum(r.soldQty);
+      });
+      var docRows = Array.isArray(invoices) ? invoices : [];
+      var sumInvoiceTotals = 0;
+      var sumPaid = 0;
+      var sumOutstanding = 0;
+      docRows.forEach(function(inv) {
+        if (!inv) return;
+        var t = parseNum(inv.total);
+        var p = parseNum(inv.amountPaid);
+        sumInvoiceTotals += t;
+        sumPaid += p;
+        if (inv.outstanding != null && String(inv.outstanding).trim() !== '') {
+          sumOutstanding += parseNum(inv.outstanding);
+        } else {
+          sumOutstanding += Math.max(0, t - p);
+        }
+      });
+      var listedEl = document.getElementById('summaryProductsListed');
+      var unitsEl = document.getElementById('summaryUnitsSold');
+      var revenueEl = document.getElementById('inventoryTableRevenue');
+      var invoicedSumEl = document.getElementById('invoiceTotalsSum');
+      var amountPaidEl = document.getElementById('amountPaid');
+      var outstandingEl = document.getElementById('outstanding');
+      if (listedEl) listedEl.textContent = String(rows.length);
+      if (unitsEl) unitsEl.textContent = formatSoldQty(sumUnits);
+      if (revenueEl) revenueEl.textContent = formatCurrency(sumProductAmount);
+      if (invoicedSumEl) invoicedSumEl.textContent = formatCurrency(sumInvoiceTotals);
+      if (amountPaidEl) amountPaidEl.textContent = formatCurrency(sumPaid);
+      if (outstandingEl) outstandingEl.textContent = formatCurrency(sumOutstanding);
+    }
+
+    function renderInventoryTable() {
+      var tbody = document.getElementById('summaryTableBody');
+      if (!tbody) return;
+      var totalProductsEl = document.getElementById('totalProducts');
+      var products = loadProductsFromCatalog();
+      var invoices = getInvoiceDocumentsForAggregation();
+      var rows = aggregateSalesByCatalogProduct(products, invoices);
+      if (totalProductsEl) totalProductsEl.textContent = String(products.filter(function(p) { return p && String(p.name || '').trim() !== ''; }).length);
+      tbody.innerHTML = '';
+      if (rows.length === 0) {
+        var emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="4" style="text-align: center; color: #777;">No products in catalog</td>';
+        tbody.appendChild(emptyRow);
+        updateSummaryFooterForInventory([], invoices);
+        if (typeof attachCalculationListeners === 'function') attachCalculationListeners();
+        if (typeof calculateAmounts === 'function') calculateAmounts();
+        return;
+      }
+      rows.forEach(function(r) {
+        var tr = document.createElement('tr');
+        var period = formatPeriodRange(r.dates);
+        tr.innerHTML =
+          '<td>' + escapeHtml(r.name) + '</td>' +
+          '<td>' + formatSoldQty(r.soldQty) + '</td>' +
+          '<td>' + formatCurrency(parseNum(r.amount)) + '</td>' +
+          '<td>' + escapeHtml(period) + '</td>';
+        tbody.appendChild(tr);
+      });
+      updateSummaryFooterForInventory(rows, invoices);
+      if (typeof attachCalculationListeners === 'function') attachCalculationListeners();
+      if (typeof calculateAmounts === 'function') calculateAmounts();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function loadSummaryFromStorage() {
+      try {
+        renderInventoryTable();
+      } catch (e) {
+        console.warn('Inventory: failed to load', e);
+        var tbody = document.getElementById('summaryTableBody');
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #777;">Could not load inventory</td></tr>';
+        }
+        updateSummaryFooterForInventory([], []);
+      }
+    }
+
+    function populateReceiptFromInvoice(inv) {
+      if (!document.querySelector('.items-table[data-inventory-report]')) return;
+      loadSummaryFromStorage();
+      sendSizeToParent();
+    }
+  </script>
+</div>
+</body>
+</html>
