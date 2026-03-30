@@ -36,11 +36,13 @@
 
       document.querySelectorAll('.tab-button').forEach((btn) => {
         btn.addEventListener('click', (e) => {
-          const tabId = e.target.dataset.tab;
-          this.switchTab(tabId);
+          const el = e.currentTarget;
+          const tabId = el && el.dataset ? el.dataset.tab : null;
+          if (tabId) this.switchTab(tabId);
         });
       });
 
+      this.initThemePresets();
       this.initProductForm();
       this.initClientForm();
       this.initCompanyForm();
@@ -69,7 +71,37 @@
         this.populateCompanyForm();
       } else if (tabId === 'export') {
         this.refreshCounterControl();
+      } else if (tabId === 'themes') {
+        this.syncThemePresetHighlight();
       }
+      // about, help — static tab content
+    }
+
+    syncThemePresetHighlight() {
+      let current = 'default';
+      try {
+        current = localStorage.getItem('shell-ui-theme') || 'default';
+      } catch (e) {}
+      document.querySelectorAll('.theme-preset-btn').forEach((btn) => {
+        const t = btn.getAttribute('data-shell-theme') || 'default';
+        btn.classList.toggle('theme-preset-btn--active', t === current);
+      });
+    }
+
+    initThemePresets() {
+      this.syncThemePresetHighlight();
+      document.querySelectorAll('.theme-preset-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const t = btn.getAttribute('data-shell-theme') || 'default';
+          try {
+            if (t === 'default') localStorage.removeItem('shell-ui-theme');
+            else localStorage.setItem('shell-ui-theme', t);
+          } catch (e) {}
+          if (t === 'default') document.documentElement.removeAttribute('data-shell-theme');
+          else document.documentElement.setAttribute('data-shell-theme', t);
+          this.syncThemePresetHighlight();
+        });
+      });
     }
 
     populateDataModal() {

@@ -43,7 +43,7 @@
       <button type="button" class="menu-item edit-mode-only" id="loadStatementBtnEdit"></button>
       <button type="button" class="menu-item edit-mode-only" id="newTransactionsBtn" title="View Transactions"></button>
       <button type="button" class="menu-item edit-mode-only" id="newInventoryBtn" title="Inventory"></button>
-      <button type="button" class="menu-item edit-mode-only" id="dataManagementBtn"></button>
+      <button type="button" class="menu-item edit-mode-only" id="dataManagementBtn" title="Settings (Setup)"></button>
       <button type="button" class="menu-item preview-mode-only hidden" id="saveBtn"></button>
       <button type="button" class="menu-item preview-mode-only hidden" id="sendBtn"></button>
       <input type="file" id="stampImageInput" accept="image/*" style="display:none" aria-hidden="true">
@@ -137,10 +137,13 @@
       </div>
       <div class="modal-body">
         <div class="tabs">
-          <button class="tab-button active" data-tab="products">📦 Invoice Details</button>
-          <button class="tab-button" data-tab="clients">👥 Clients</button>
-          <button class="tab-button" data-tab="company">🏢 Company</button>
-          <button class="tab-button" data-tab="export">📤 Export</button>
+          <button type="button" class="tab-button active" data-tab="products">📦 Invoice Details</button>
+          <button type="button" class="tab-button" data-tab="clients">👥 Clients</button>
+          <button type="button" class="tab-button" data-tab="company">🏢 Company</button>
+          <button type="button" class="tab-button" data-tab="export">📤 Export</button>
+          <button type="button" class="tab-button" data-tab="themes">🎨 Themes</button>
+          <button type="button" class="tab-button" data-tab="about">ℹ About</button>
+          <button type="button" class="tab-button" data-tab="help">❓ Help</button>
         </div>
         
         <!-- Products Tab -->
@@ -278,6 +281,38 @@
             <h3 class="data-section-danger-title">Clear all data</h3>
             <p class="data-section-danger-desc">Remove all products, clients, company info, current invoice, archived invoices, and reset the invoice number counter. This cannot be undone.</p>
             <button type="button" class="btn btn-danger" onclick="app.invoiceAction('clearAllData')">🗑️ Clear All Data</button>
+          </div>
+        </div>
+
+        <div class="tab-content" id="themes-tab">
+          <div class="data-section">
+            <h3>Appearance</h3>
+            <p style="color: #666; margin-bottom: 12px;">Shell colors for the workspace and menu. Saved in this browser only.</p>
+            <div class="theme-preset-row" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <button type="button" class="btn btn-primary theme-preset-btn" data-shell-theme="default">Warm default</button>
+              <button type="button" class="btn btn-primary theme-preset-btn" data-shell-theme="slate">Slate</button>
+              <button type="button" class="btn btn-primary theme-preset-btn" data-shell-theme="forest">Forest</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="about-tab">
+          <div class="data-section">
+            <h3>Static Invoice System</h3>
+            <p style="line-height: 1.6; color: #444;">A canvas-based workspace for invoices, receipts, statements, orders, transactions, and blank documents.</p>
+            <p style="line-height: 1.6; color: #666;">Products, clients, company details, and archives are stored locally in your browser unless you export or import JSON from <strong>Export</strong> in Settings.</p>
+          </div>
+        </div>
+
+        <div class="tab-content" id="help-tab">
+          <div class="data-section">
+            <h3>Quick tips</h3>
+            <ul style="line-height: 1.65; color: #444; margin: 0; padding-left: 1.2rem;">
+              <li style="margin-bottom: 8px;"><strong>Edit</strong> mode changes the document; <strong>Preview</strong> hides editing chrome.</li>
+              <li style="margin-bottom: 8px;"><strong>Setup</strong> opens invoice details, clients, company, and export/counter. Use <strong>Themes</strong> for shell colors.</li>
+              <li style="margin-bottom: 8px;">Open the menu (top right) for templates, canvas tools, and zoom.</li>
+              <li>Drag the canvas to pan; use the floating zoom control to zoom in or out.</li>
+            </ul>
           </div>
         </div>
       </div>

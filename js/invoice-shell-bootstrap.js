@@ -108,6 +108,36 @@
       document.body.style.overflow = '';
     }
 
+    /** Restore shell palette from localStorage (see Settings → Themes). */
+    function applySavedShellTheme() {
+      try {
+        var t = localStorage.getItem('shell-ui-theme') || 'default';
+        if (t && t !== 'default') {
+          document.documentElement.setAttribute('data-shell-theme', t);
+        } else {
+          document.documentElement.removeAttribute('data-shell-theme');
+        }
+      } catch (err) {}
+    }
+    applySavedShellTheme();
+
+    /** Open the Settings modal and show a specific tab (products | clients | company | export | themes | about | help). */
+    function openSettingsAtTab(tabId) {
+      function switchNow() {
+        if (window.canvasShell && typeof window.canvasShell.switchTab === 'function') {
+          window.canvasShell.switchTab(tabId || 'products');
+        }
+      }
+      if (window.canvasShell && typeof window.canvasShell.showDataManagement === 'function') {
+        window.canvasShell.showDataManagement();
+        switchNow();
+        return;
+      }
+      var btn = document.getElementById('dataManagementBtn');
+      if (btn) btn.click();
+      setTimeout(switchNow, 50);
+    }
+
     // Sidebar invoke: one place for New Invoice, New Receipt, Statement, Load Invoice/Receipt/Statement, Setup, Save, Send
     function handleSidebarInvoke(id) {
       var iframe = document.getElementById('invoiceFrame');
@@ -169,8 +199,17 @@
           switchAndSend('Inventory.html', function() {}, true);
           break;
         case 'dataManagementBtn':
-          var btn = document.getElementById('dataManagementBtn');
-          if (btn) btn.click();
+        case 'settingsSetupBtn':
+          openSettingsAtTab('products');
+          break;
+        case 'settingsThemesBtn':
+          openSettingsAtTab('themes');
+          break;
+        case 'settingsAboutBtn':
+          openSettingsAtTab('about');
+          break;
+        case 'settingsHelpBtn':
+          openSettingsAtTab('help');
           break;
         case 'saveBtn':
           if (window.canvasShell && window.canvasShell.invoiceAction) window.canvasShell.invoiceAction('saveInvoice');
@@ -731,13 +770,14 @@
         { label: 'Load Invoice', icon: '\u229E', action: 'invoke', id: 'loadInvoiceBtnEdit' },
         { label: 'Load Receipt', icon: '\u229E', action: 'invoke', id: 'loadReceiptBtnEdit' },
         { label: 'Load Statement', icon: '\u229E', action: 'invoke', id: 'loadStatementBtnEdit' },
-        { label: 'View Transactions', icon: '\u229E', action: 'invoke', id: 'newTransactionsBtn' }
+        { label: 'View Transactions', icon: '\u229E', action: 'invoke', id: 'newTransactionsBtn' },
+        { label: 'Inventory', icon: '\u25A1', action: 'invoke', id: 'newInventoryBtn' }
       ],
       Settings: [
-        { label: 'Setup', icon: '\u2699', action: 'invoke', id: 'dataManagementBtn' },
-        { label: 'Themes', icon: '\u25C7', action: 'invoke', id: 'dataManagementBtn' },
-        { label: 'About', icon: '\u2139', action: 'invoke', id: 'dataManagementBtn' },
-        { label: 'Help', icon: '?', action: 'invoke', id: 'dataManagementBtn' }
+        { label: 'Setup', icon: '\u2699', action: 'invoke', id: 'settingsSetupBtn' },
+        { label: 'Themes', icon: '\u25C7', action: 'invoke', id: 'settingsThemesBtn' },
+        { label: 'About', icon: '\u2139', action: 'invoke', id: 'settingsAboutBtn' },
+        { label: 'Help', icon: '?', action: 'invoke', id: 'settingsHelpBtn' }
       ],
       Tools: [
         { label: 'Rectangle', icon: '\u25AD', action: 'addToPage', type: 'rectangle' },

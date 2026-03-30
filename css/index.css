@@ -17,6 +17,52 @@
   --accent-strip-border: #d4b8a0;
 }
 
+/* Shell palette presets (Settings → Themes); applied on <html data-shell-theme="…"> */
+html[data-shell-theme="slate"] {
+  --gray-bg: #eceff4;
+  --gray-shade-1: #e3e8f0;
+  --gray-shade-2: #d8dee9;
+  --gray-shade-3: #c9d1dc;
+  --gray-shade-4: #aeb8c7;
+  --gray-surface: #dfe6ef;
+  --gray-border: #c5ceda;
+  --gray-border-light: #d8dee9;
+  --gray-muted: #5a6578;
+  --gray-text: #2e3440;
+  --gray-text-bright: #1a1d24;
+  --accent-amber: #5e81ac;
+  --accent-orange: #4c6a92;
+  --accent-strip-bg: #e5eaf3;
+  --accent-strip-border: #b8c5db;
+}
+html[data-shell-theme="slate"] body {
+  background: #e8ecf2;
+}
+html[data-shell-theme="forest"] {
+  --gray-bg: #f2f7f4;
+  --gray-shade-1: #eaf0ec;
+  --gray-shade-2: #dfe8e2;
+  --gray-shade-3: #d0ddcf;
+  --gray-shade-4: #b8c9b8;
+  --gray-surface: #e8f0ea;
+  --gray-border: #c5d4c5;
+  --gray-border-light: #d8e5da;
+  --gray-muted: #4a5c52;
+  --gray-text: #2d3b32;
+  --gray-text-bright: #1a241e;
+  --accent-amber: #2f6f4e;
+  --accent-orange: #1e5a3d;
+  --accent-strip-bg: #e8f2ec;
+  --accent-strip-border: #9cbfa8;
+}
+html[data-shell-theme="forest"] body {
+  background: #e9f0eb;
+}
+
+.theme-preset-btn--active {
+  box-shadow: 0 0 0 2px var(--accent-orange), 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
 /* ========================================
    BASE STYLES (From Original)
    ======================================== */
@@ -1212,6 +1258,8 @@ th {
    ======================================== */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0;
   border-bottom: 1px solid var(--accent-strip-border);
   background: var(--accent-strip-bg);
 }
