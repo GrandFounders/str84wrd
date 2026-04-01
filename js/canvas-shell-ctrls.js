@@ -262,9 +262,28 @@
         this.invoiceAction('importFromFile', { file });
       }
 
+      /**
+       * Push catalog/company/settings from the parent into #invoiceFrame.
+       * Required when the iframe is a different storage partition than the shell (e.g. file:// per-document
+       * origins). iframe-only syncSharedDataFromStorage + loadData() would read the wrong localStorage.
+       */
+      pushInvoiceCatalogToFrame() {
+        const iframe = this.getInvoiceFrame();
+        if (!iframe || !iframe.contentWindow) return;
+        try {
+          const C = window.InvoiceAppCatalogStorage;
+          if (C && typeof C.loadCatalogState === 'function') {
+            const catalog = C.loadCatalogState();
+            iframe.contentWindow.postMessage({ type: 'apply-invoice-catalog', catalog }, '*');
+          }
+        } catch (e) {
+          console.warn('pushInvoiceCatalogToFrame failed:', e);
+        }
+      }
+
       /** Parent wrote shared catalog/company to localStorage — refresh the iframe document. */
       syncInvoiceFrameFromStorage() {
-        this.invoiceAction('syncSharedDataFromStorage');
+        this.pushInvoiceCatalogToFrame();
       }
 
       initAutoFade() {
@@ -732,6 +751,10 @@
             try {
               iframe.contentWindow.postMessage({ type: 'switch-mode', mode: this.currentMode || 'edit' }, '*');
             } catch (_) {}
+            // Defer so the iframe message listener and window.app are ready; then apply shell catalog.
+            setTimeout(() => {
+              this.pushInvoiceCatalogToFrame();
+            }, 0);
             this.requestIframeSize();
             this.attachSubdocumentZoomToShellCamera(iframe);
             this.injectOverlayLayer();

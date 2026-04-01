@@ -1683,7 +1683,7 @@
   <script>
     // ========================================
     // STATIC DATA MANAGEMENT SYSTEM (invoice document — loaded inside parent #invoiceFrame)
-    // Parent shell: ../index.html (CanvasShellControls / window.canvasShell). Sync catalog when shell saves: syncSharedDataFromStorage.
+    // Parent shell: ../index.html — catalog is pushed via postMessage apply-invoice-catalog (localStorage may differ per iframe under file://).
     // ========================================
     
     class StaticInvoiceApp {
@@ -2132,6 +2132,34 @@
         this.syncReferenceToInvoiceNumber();
       }
       
+      /**
+       * Merge catalog from parent shell (postMessage). Keeps iframe UI in sync when the iframe does not
+       * share the same localStorage as index.html (common under file://).
+       */
+      applyCatalogFromParent(catalog) {
+        if (!catalog || typeof catalog !== 'object') return;
+        if (Array.isArray(catalog.products)) this.data.products = catalog.products;
+        if (Array.isArray(catalog.clients)) this.data.clients = catalog.clients;
+        if (catalog.company && typeof catalog.company === 'object' && !Array.isArray(catalog.company)) {
+          this.data.company = catalog.company;
+        }
+        if (catalog.settings && typeof catalog.settings === 'object' && !Array.isArray(catalog.settings)) {
+          this.data.settings = Object.assign({}, this.data.settings, catalog.settings);
+        }
+        if (Array.isArray(catalog.customTerms)) this.data.customTerms = catalog.customTerms;
+        this.globalItemsList = this.data.products.map((product) => product.name);
+        try {
+          const C = window.InvoiceAppCatalogStorage;
+          if (C && typeof C.saveCatalogState === 'function') C.saveCatalogState(this.data);
+        } catch (e) {
+          console.warn('applyCatalogFromParent mirror save failed:', e);
+        }
+        this.updateAllDropdowns();
+        this.updateUI();
+        this.updateAllItemImages();
+        this.updateAllItemPrices();
+      }
+
       /**
        * Parent shell saves products/clients/company/settings to localStorage.
        * Invoice DOM (line items, totals, branding) lives only here — reload shared data and refresh UI.
@@ -4143,6 +4171,9 @@
     window.addEventListener('message', (event) => {
       if (event.data && event.data.type === 'request-size') {
         sendSizeToParent();
+      }
+      if (event.data && event.data.type === 'apply-invoice-catalog' && window.app && event.data.catalog) {
+        window.app.applyCatalogFromParent(event.data.catalog);
       }
       if (event.data && event.data.type === 'update-branding' && window.app && typeof window.app.syncSharedDataFromStorage === 'function') {
         window.app.syncSharedDataFromStorage();
