@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <!-- Lock browser pinch-zoom so fixed chrome stays put; workspace zoom is shell camera only. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#926E4C">
   <title>Static Invoice System</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/img00001.PNG">
   <link rel="stylesheet" href="css/index.css">
   
   <!-- html2canvas for export (shell export capture) -->
@@ -378,5 +381,23 @@
     </div>
   </div>
 
+  <!-- Learning panel: always visible on supported origins (hidden by sw-register.js if SW unavailable / wrong protocol). -->
+  <div
+    id="sw-dev-hint"
+    style="position:fixed;bottom:12px;left:12px;right:auto;z-index:100001;max-width:min(420px,calc(100vw - 24px));padding:12px 14px;background:#1e1e2e;color:#e8e6e3;border:1px solid #444;font:13px/1.4 system-ui,sans-serif;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.35);"
+  >
+    <strong id="sw-dev-hint-title" style="display:block;margin-bottom:6px;">Service worker (learning)</strong>
+    <span id="sw-dev-hint-status" style="display:block;opacity:.9">Initializing registration…</span>
+    <button
+      type="button"
+      id="swSkipWaitingBtn"
+      disabled
+      style="margin-top:10px;padding:8px 12px;border-radius:6px;border:none;background:#c17a2e;color:#fff;font-weight:600;cursor:pointer;width:100%;opacity:.45;"
+    >
+      Activate service worker update
+    </button>
+  </div>
+
+  <script defer src="js/sw-register.js"></script>
 </body>
 </html>
