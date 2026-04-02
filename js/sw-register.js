@@ -19,6 +19,8 @@
   'use strict';
 
   var LOG = '[sw:page]';
+  /** Set true to show the bottom-left service worker learning panel again. */
+  var SHOW_SW_LEARNING_PANEL = false;
 
   function hideSwLearningPanel() {
     var hint = document.getElementById('sw-dev-hint');
@@ -37,6 +39,10 @@
     console.info(LOG, 'Skipped: need https or localhost (not file://).');
     hideSwLearningPanel();
     return;
+  }
+
+  if (!SHOW_SW_LEARNING_PANEL) {
+    hideSwLearningPanel();
   }
 
   function describeRegistration(reg) {
@@ -85,6 +91,8 @@
   }
 
   function updateWaitingUi(reg) {
+    if (!SHOW_SW_LEARNING_PANEL) return;
+
     var hint = document.getElementById('sw-dev-hint');
     var btn = document.getElementById('swSkipWaitingBtn');
     var title = document.getElementById('sw-dev-hint-title');
@@ -162,6 +170,7 @@
     });
   };
 
+  console.log(LOG, 'Service worker registration starting…');
   /** What is controlling this page right now (may be null on first ever visit before activation). */
   if (navigator.serviceWorker.controller) {
     console.log(LOG, 'This page is controlled by:', workerBrief(navigator.serviceWorker.controller));
@@ -238,6 +247,7 @@
       })
       .catch(function (err) {
         console.warn(LOG, 'register() rejected', err);
+        if (!SHOW_SW_LEARNING_PANEL) return;
         var title = document.getElementById('sw-dev-hint-title');
         var statusEl = document.getElementById('sw-dev-hint-status');
         var btn = document.getElementById('swSkipWaitingBtn');
